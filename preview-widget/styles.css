@@ -85,7 +85,8 @@ label.f{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
 /* ===== widget-home ===== */
 html,body{font-family:var(--fb,-apple-system,system-ui,sans-serif);overscroll-behavior:none}
 h1,h2,h3,.wn,.wt{font-family:var(--fh,inherit)}
-body{position:fixed;inset:0;overflow:hidden}
+body{position:fixed;inset:0;overflow:hidden;width:100%;height:100vh;height:-webkit-fill-available;height:100dvh;border-radius:0;box-shadow:none}
+html{height:-webkit-fill-available}
 #app{max-width:none;padding:0;height:100%;min-height:0}
 .pillbtn{border:0;background:var(--card2);color:var(--text);border-radius:999px;min-height:36px;min-width:44px;padding:0 14px;font-weight:650;cursor:pointer}
 .pillbtn.on{background:var(--accent);color:var(--on)}
@@ -206,7 +207,7 @@ small.good{color:var(--ok)!important;font-weight:650}small.bad{color:var(--warn)
 .glass{flex:1;min-height:16px;margin-top:4px;border-radius:10px;background:var(--card2);position:relative;overflow:hidden}
 .glass i{position:absolute;left:0;right:0;bottom:0;background:linear-gradient(180deg,color-mix(in srgb,var(--accent) 70%,#fff),var(--accent));border-radius:10px 10px 0 0}
 .wrow .wmac{margin-top:6px;gap:5px}
-@media (min-width:520px){
+@media (min-width:600px) and (min-height:600px) and (hover:hover) and (pointer:fine){
  html{background:#1c1c1e;height:100%}
  html[data-theme=light]{background:#d9dde3}
  body{inset:auto;position:relative;margin:16px auto;height:min(932px,calc(100vh - 32px));width:min(430px,calc(min(932px,100vh - 32px)*.462));transform:translateZ(0);overflow:hidden;border-radius:44px;box-shadow:0 0 0 10px #0d0d0f,0 0 0 11px #3a3a3c,0 30px 80px rgba(0,0,0,.45)}

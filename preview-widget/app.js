@@ -1,4 +1,4 @@
-const PREVIEW_VER='w13';
+const PREVIEW_VER='w14';
 /* themed promise-based dialogs: await ui.confirm({title,message,action,destructive}), ui.prompt({...}) -> string|null, ui.alert({...}) */
 const ui=(()=>{const esc_=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  function open({title='',message='',action='OK',cancel='Cancel',destructive,input,value='',placeholder='',noCancel}){return new Promise(res=>{const prev=document.activeElement;const w=document.createElement('div');w.className='uim';w.setAttribute('role','alertdialog');w.setAttribute('aria-modal','true');
@@ -437,9 +437,9 @@ function waitSync(ms=12000){return new Promise(res=>{let done=false;const fin=v=
 function welcome(resume){S.auth={mode:resume?'in':'home',busy:false,err:''};drawAuth();if(resume)S.authAfter()}
 function drawAuth(){const a=S.auth;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
  const up=a.mode==='up',inn=a.mode==='in';let body;
- if(a.mode==='home')body=`<div class="hero" style="margin-top:48px"><img class="applogo" src="icon-192.png?v=w13" alt="Logbook" style="width:104px;height:104px;border-radius:24px"></div><h2 style="text-align:center;margin-top:18px">Logbook</h2><p class="muted" style="text-align:center;font-size:17px">Train, eat and track your progress. All in one place.</p>
+ if(a.mode==='home')body=`<div class="hero" style="margin-top:48px"><img class="applogo" src="icon-192.png?v=w14" alt="Logbook" style="width:104px;height:104px;border-radius:24px"></div><h2 style="text-align:center;margin-top:18px">Logbook</h2><p class="muted" style="text-align:center;font-size:17px">Train, eat and track your progress. All in one place.</p>
  <div style="margin-top:auto"></div>`;
- else body=`<div class="hero" style="margin:16px 0 4px"><img class="applogo" src="icon-192.png?v=w13" alt="" style="width:64px;height:64px;border-radius:16px;margin:0"></div><h2>${up?'Create your account':'Welcome back'}</h2><p class="muted">${up?'Back up your logs and sync them across your devices.':'Sign in to load your logs on this device.'}</p>
+ else body=`<div class="hero" style="margin:16px 0 4px"><img class="applogo" src="icon-192.png?v=w14" alt="" style="width:64px;height:64px;border-radius:16px;margin:0"></div><h2>${up?'Create your account':'Welcome back'}</h2><p class="muted">${up?'Back up your logs and sync them across your devices.':'Sign in to load your logs on this device.'}</p>
  <button class="btn ghost block" id="agoogle" style="margin-top:8px">Continue with Google</button><div class="muted" style="text-align:center;margin:14px 0;font-size:13px">or use email</div>
  <label class="f">Email</label><input id="aem" type="email" autocomplete="email" inputmode="email" value="${esc(a.em||'')}">
  <label class="f">Password</label><input id="apw" type="password" autocomplete="${up?'new-password':'current-password'}">
@@ -469,7 +469,7 @@ function drawAuth(){const a=S.auth;let el=$('#onb');if(!el){el=document.createEl
 function onboarding(tourOnly){S.onb={step:tourOnly?5:0,split:['','',''],tourOnly,goal:P().goal,units:P().units,name:P().name||''};drawOnb()}
 function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
  const steps=5+TOUR.length,st=o.step;let body='';
- if(st===0)body=`<div class="hero"><img class="applogo" src="icon-192.png?v=w13" alt="Logbook"></div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and progress in one place. Everything starts empty. Log as you go and your widgets fill in.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
+ if(st===0)body=`<div class="hero"><img class="applogo" src="icon-192.png?v=w14" alt="Logbook"></div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and progress in one place. Everything starts empty. Log as you go and your widgets fill in.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
  else if(st===1)body=`<div class="hero">🎯</div><h2>Your goal</h2><p class="muted">We’ll suggest targets from this. You can change them any time.</p><div class="chips">${['Build muscle','Lose fat','Get stronger','Stay healthy'].map(g=>`<button class="chip ${g===o.goal?'on':''}" data-g="${g}">${g}</button>`).join('')}</div>
  <label class="f" style="margin-top:20px">Units</label><div class="seg">${['kg','lb'].map(u=>`<button class="${u===o.units?'on':''}" data-u="${u}">${u}</button>`).join('')}</div>`;
  else if(st===2){const sug={'Build muscle':[2600,180,300,75],'Lose fat':[1900,170,170,60],'Get stronger':[2700,180,320,80],'Stay healthy':[2200,130,250,70]}[o.goal];o.t=o.t&&o.tg===o.goal?o.t:{kcal:sug[0],p:sug[1],c:sug[2],f:sug[3]};o.tg=o.goal;
