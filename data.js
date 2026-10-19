@@ -5,13 +5,15 @@ const iso=d=>{const x=new Date(d);x.setMinutes(x.getMinutes()-x.getTimezoneOffse
 const dayOff=n=>{const d=new Date();d.setDate(d.getDate()+n);return iso(d)};
 function seed(){ // DEMO DATA ONLY — no real personal information
   const ex=['Bench Press','Squat','Deadlift','Overhead Press','Barbell Row','Pull-up','Romanian Deadlift','Lat Pulldown','Incline DB Press','Leg Press','Bicep Curl','Tricep Pushdown'];
-  const workouts=[];
+  const workouts=[]; // workouts start blank (no auto-seeded sessions)
+  /*
   const plan=[['Push',[['Bench Press',60],['Overhead Press',40],['Tricep Pushdown',25]]],['Pull',[['Barbell Row',55],['Pull-up',0],['Bicep Curl',14]]],['Legs',[['Squat',80],['Romanian Deadlift',70],['Leg Press',140]]]];
   let k=0;
   for(let i=-27;i<0;i++){ if((i+30)%7===0||(i+30)%7===3)continue; const [name,list]=plan[k%3];k++;
     const prog=1+(i+27)*0.006;
     workouts.push({id:'w'+i,date:dayOff(i),name,notes:'',exercises:list.map(([n,w])=>({name:n,sets:[0,1,2].map(j=>({w:Math.round(w*prog/2.5)*2.5,r:8-j,done:true}))}))});
   }
+  */
   const sleep=[],weight=[];
   for(let i=-20;i<0;i++){sleep.push({date:dayOff(i),hours:+(6.4+((i*7)%10)/7).toFixed(1),quality:3+((i*3)%3+3)%3});
     if(i%2===0)weight.push({date:dayOff(i),kg:+(78.6-(i+20)*0.04).toFixed(1)})}
@@ -27,7 +29,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
   return {
     version:1,demo:true,
     profile:{name:'Alex',goal:'Build muscle',units:'kg',theme:'system',targets:{kcal:2400,p:170,c:250,f:75},sleepGoal:8,weekGoal:4,onboarded:false},
-    exerciseLib:ex,templates:plan.map(([n,l])=>({name:n,exercises:l.map(x=>x[0])})),
+    lib:(window.EXLIB||[]).map((e,i)=>({id:'x'+i,...e,builtin:true})),exerciseLib:(window.EXLIB||[]).map(e=>e.name),templates:JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])),split:(window.IMPORTED_SPLIT||[]).slice(),
     workouts,active:null,sleep,weight,
     supplements:{list:['Creatine','Vitamin D'],log:{[dayOff(-1)]:['Creatine','Vitamin D']}},
     foods,food,
@@ -39,7 +41,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
   };
 }
 const LocalBackend={
-  KEY:'lb2:data',SESSION:'lb2:session',
+  KEY:'lb2w:data5',SESSION:'lb2w:session',
   load(){try{const s=localStorage.getItem(this.KEY);if(s)return JSON.parse(s)}catch(e){}const d=seed();this.save(d);return d},
   save(d){localStorage.setItem(this.KEY,JSON.stringify(d))},
   reset(){localStorage.removeItem(this.KEY);return this.load()},
