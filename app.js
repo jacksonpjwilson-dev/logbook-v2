@@ -1,4 +1,4 @@
-const PREVIEW_VER='w7g';
+const PREVIEW_VER='w8';
 (function(){
 'use strict';
 const $=s=>document.querySelector(s);
@@ -42,6 +42,17 @@ const prettyDate=d=>new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'
 const epley=(w,r)=>r>0?w*(1+r/30):0;
 const canEdit=()=>DB.canEdit();
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1800)}
+/* effective-dated goals: D.profile.goalHist=[{from:'YYYY-MM-DD',t:{kcal,p,c,f}}] */
+function goalFor(ds){const h=(P().goalHist||[]).slice().sort((a,b)=>a.from.localeCompare(b.from));let g=null;for(const e of h){if(e.from<=ds)g=e.t;else break}return g||(h[0]&&h[0].t)||P().targets}
+function setGoal(d,from,t){d.profile.goalHist=(d.profile.goalHist||[]).filter(e=>e.from<from);d.profile.goalHist.push({from,t});const td=iso(new Date());const h=d.profile.goalHist.slice().sort((a,b)=>a.from.localeCompare(b.from));let cur=t;for(const e of h)if(e.from<=td)cur=e.t;d.profile.targets=Object.assign({},cur)}
+function goalsSheet(ds){ds=ds||iso(new Date());const g=Object.assign({},goalFor(ds)),auto=!!P().goalAuto,td=iso(new Date());
+ sheet(`<h3>Daily goals</h3><p class="muted">Applies to <b>${ds===td?'today':prettyDate(ds)}</b> and every day after. Earlier days keep the goals they had.</p>
+ <div class="grid2"><div><label class="f">Protein (g)</label><input id="gp" inputmode="numeric" value="${g.p}"></div><div><label class="f">Carbs (g)</label><input id="gc" inputmode="numeric" value="${g.c}"></div><div><label class="f">Fat (g)</label><input id="gf" inputmode="numeric" value="${g.f}"></div><div><label class="f">Calories (kcal)</label><input id="gk" inputmode="numeric" value="${g.kcal}" ${auto?'disabled':''}></div></div>
+ <label class="tgl"><input type="checkbox" id="gauto" ${auto?'checked':''}> Auto-calculate calories from macros (4/4/9)</label><p class="muted" id="gcalc"></p>
+ <button class="btn block" id="gsave" style="margin-top:8px">Save goals</button>`,el=>{const $$=i=>el.querySelector(i),num=i=>Math.max(0,Math.round(+$$(i).value||0));
+  const upd=()=>{const k=num('#gp')*4+num('#gc')*4+num('#gf')*9;$$('#gcalc').textContent=`Macros add up to ${k} kcal`;if($$('#gauto').checked){$$('#gk').value=k;$$('#gk').disabled=true}else $$('#gk').disabled=false};
+  ['#gp','#gc','#gf'].forEach(i=>$$(i).oninput=upd);$$('#gauto').onchange=upd;upd();
+  $$('#gsave').onclick=()=>{const t={kcal:num('#gk'),p:num('#gp'),c:num('#gc'),f:num('#gf')};if(!t.kcal)return toast('Calories required');save(d=>{d.profile.goalAuto=$$('#gauto').checked;setGoal(d,ds,t)},'Goals saved from '+(ds===td?'today':prettyDate(ds)));closeSheet();if(OV)drawOV()}})}
 function save(fn,msg){try{DB.mutate(fn);D=DB.get();if(msg)toast(msg);render()}catch(e){toast('Read-only account — editing is disabled')}}
 function applyTheme(){const dark=TH.mode==='dark'||(TH.mode==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const c=CW[TH.cw]||CW.teal,v=dark?c.Dk:c.L,r=document.documentElement;
  r.dataset.theme=dark?'dark':'light';const mix=(a,b,p)=>`color-mix(in srgb,${a} ${p}%,${b})`;
@@ -52,7 +63,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{appl
 function pantryStatus(p){return p.qty<=0?'out':p.qty<=p.min?'low':'ok'}
 function ring(val,goal,label,size=112){const r=size/2-9,c=2*Math.PI*r,pct=Math.min(1,goal?val/goal:0);
  return `<div class="ring" style="width:${size}px;height:${size}px"><svg width="${size}" height="${size}"><circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="var(--card2)" stroke-width="12" fill="none"/><circle cx="${size/2}" cy="${size/2}" r="${r}" stroke="var(--accent)" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="${c}" stroke-dashoffset="${c*(1-pct)}"/></svg><div class="c"><b>${Math.round(val)}</b><span>${label}</span></div></div>`}
-function macroBars(t){const g=P().targets;return [['Protein','p','var(--p)'],['Carbs','c','var(--c)'],['Fat','f','var(--f)']].map(([n,k,col])=>`<div class="macro"><span>${n}</span><div class="bar"><i style="width:${Math.min(100,t[k]/g[k]*100)}%;background:${col}"></i></div><span class="muted">${Math.round(t[k])}/${g[k]}g</span></div>`).join('')}
+function macroBars(t,g){g=g||P().targets;return [['Protein','p','var(--p)'],['Carbs','c','var(--c)'],['Fat','f','var(--f)']].map(([n,k,col])=>`<div class="macro"><span>${n}</span><div class="bar"><i style="width:${Math.min(100,t[k]/g[k]*100)}%;background:${col}"></i></div><span class="muted">${Math.round(t[k])}/${g[k]}g</span></div>`).join('')}
 function lineChart(pts,{h=150,color='var(--accent)',fmt=v=>v}={}){
  if(pts.length<2)return '<div class="empty">Not enough data yet</div>';
  const W=340,pad=26,ys=pts.map(p=>p.y),mn=Math.min(...ys),mx=Math.max(...ys),rg=(mx-mn)||1;
@@ -64,9 +75,9 @@ function lineChart(pts,{h=150,color='var(--accent)',fmt=v=>v}={}){
  <text x="${pad}" y="${h-2}" font-size="10" fill="var(--muted)">${esc(pts[0].x)}</text><text x="${W-8}" y="${h-2}" font-size="10" text-anchor="end" fill="var(--muted)">${esc(pts[pts.length-1].x)}</text></svg>`}
 function barChart(pts,{h=130,goal=null}={}){
  if(!pts.length)return '<div class="empty">No data</div>';
- const W=340,mx=Math.max(...pts.map(p=>p.y),goal||0)||1,bw=(W-8)/pts.length;
+ const W=340,mx=Math.max(...pts.map(p=>Math.max(p.y,p.g||0)),goal||0)||1,bw=(W-8)/pts.length;
  return `<svg class="chart" viewBox="0 0 ${W} ${h}">${goal?`<line x1="0" x2="${W}" y1="${h-16-goal/mx*(h-26)}" y2="${h-16-goal/mx*(h-26)}" stroke="var(--accent2)" stroke-dasharray="4 4"/>`:''}
- ${pts.map((p,i)=>{const bh=p.y/mx*(h-26);return `<rect x="${4+i*bw+bw*.18}" y="${h-16-bh}" width="${bw*.64}" height="${Math.max(bh,1)}" rx="4" fill="var(--accent)"/><text x="${4+i*bw+bw/2}" y="${h-3}" font-size="9" text-anchor="middle" fill="var(--muted)">${esc(p.x)}</text>`}).join('')}</svg>`}
+ ${pts.map((p,i)=>{const bh=p.y/mx*(h-26);return `<rect x="${4+i*bw+bw*.18}" y="${h-16-bh}" width="${bw*.64}" height="${Math.max(bh,1)}" rx="4" fill="var(--accent)"/>${p.g?`<line x1="${4+i*bw+bw*.08}" x2="${4+i*bw+bw*.92}" y1="${h-16-p.g/mx*(h-26)}" y2="${h-16-p.g/mx*(h-26)}" stroke="var(--accent2)" stroke-width="2.5" stroke-linecap="round"/>`:''}<text x="${4+i*bw+bw/2}" y="${h-3}" font-size="9" text-anchor="middle" fill="var(--muted)">${esc(p.x)}</text>`}).join('')}</svg>`}
 
 /* ---------- sheets ---------- */
 function sheet(html,onMount){const root=$('#sheet-root');root.innerHTML=`<div class="sheet-bg"><div class="sheet" role="dialog"><div class="grab"></div>${html}</div></div>`;
@@ -247,9 +258,9 @@ function vFood(){return `<div class="quick3"><button class="btn scanbtn" data-ed
  (S.foodSeg==='log'?vFoodLog():S.foodSeg==='plan'?vSaved():vArchive())}
 const MEALS=['Breakfast','Lunch','Dinner','Snack'],MLBL=m=>m==='Snack'?'Snacks':m;
 const SM=()=>D.savedMeals||[];
-function vFoodLog(){const day=D.food[S.foodDate]||[],t=totals(day),g=P().targets;
+function vFoodLog(){const day=D.food[S.foodDate]||[],t=totals(day),g=goalFor(S.foodDate);
  return `<div class="card"><div class="row"><button class="icon-btn" data-act="fd" data-n="-1" aria-label="Previous day">‹</button><div class="grow" style="text-align:center;font-weight:650">${S.foodDate===iso(new Date())?'Today':prettyDate(S.foodDate)}</div><button class="icon-btn" data-act="fd" data-n="1" aria-label="Next day">›</button></div>
- <div class="row" style="margin-top:12px">${ring(t.kcal,g.kcal,'kcal',96)}<div class="grow">${macroBars(t)}</div></div></div>
+ <button class="goalbtn" data-act="goals" data-d="${S.foodDate}" aria-label="Edit daily goals"><span class="pencil">✎ Goals</span><div class="row" style="margin-top:12px">${ring(t.kcal,g.kcal,'kcal',96)}<div class="grow">${macroBars(t,g)}</div></div></button></div>
  ${MEALS.map(m=>{const items=day.map((e,i)=>({...e,i})).filter(e=>e.meal===m),mt=totals(items);return `<div class="card mealcard"><h2>${MLBL(m)} <small>${Math.round(mt.kcal)} kcal</small></h2><div class="list">${items.map(e=>{const f=food(e.fid);return `<div class="item"><div class="grow"><div class="t">${esc(f.name)}${e.q!==1?' ×'+e.q:''}</div><div class="s">${Math.round(f.kcal*e.q)} kcal · P${Math.round(f.p*e.q)} C${Math.round(f.c*e.q)} F${Math.round(f.f*e.q)}</div></div><button class="icon-btn" data-edit data-act="rmfood" data-i="${e.i}" aria-label="Remove">✕</button></div>`}).join('')||'<div class="muted">Nothing logged</div>'}</div>
  <div class="mealbtns" data-edit><button class="btn addfood" data-act="addfood" data-meal="${m}">＋ Add food</button><button class="btn ghost scanmini" data-act="scan" data-meal="${m}" aria-label="Scan barcode for ${MLBL(m)}">▥</button></div>
  ${SM().length?`<div class="smchips" data-edit>${SM().map((x,j)=>`<button class="chip" data-act="logsaved" data-j="${j}" data-meal="${m}">⚡ ${esc(x.name)}</button>`).join('')}</div>`:''}${items.length?`<button class="linkbtn" data-edit data-act="savemeal" data-meal="${m}">Save as meal…</button>`:''}</div>`}).join('')}`}
@@ -294,11 +305,11 @@ function vLifts(){const names=[...new Set(D.workouts.flatMap(w=>w.exercises.map(
  <div class="card"><h2>Estimated 1RM <small>Epley</small></h2>${lineChart(hist)}</div>
  <div class="card"><h2>Weekly volume <small>${U()}</small></h2>${barChart(weeks)}</div>`}
 function vBody(){const w=D.weight.slice(-14).map(x=>({x:x.date.slice(5),y:toDisp(x.kg)})),s=D.sleep.slice(-10).map(x=>({x:x.date.slice(8),y:x.hours}));
- const k=[];for(let i=-6;i<=0;i++){const d=dayOff(i);k.push({x:new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'narrow'}),y:Math.round(totals(D.food[d]||[]).kcal)})}
+ const k=[];for(let i=-6;i<=0;i++){const d=dayOff(i);k.push({x:new Date(d+'T12:00').toLocaleDateString(undefined,{weekday:'narrow'}),y:Math.round(totals(D.food[d]||[]).kcal),g:goalFor(d).kcal})}
  const avgS=D.sleep.slice(-7).reduce((a,x)=>a+x.hours,0)/Math.max(1,D.sleep.slice(-7).length);
  return `<div class="card"><h2>Body weight <small>${U()}</small></h2>${lineChart(w,{color:'var(--accent2)'})}</div>
  <div class="card"><h2>Sleep <small>7-day avg ${avgS.toFixed(1)} h</small></h2>${barChart(s,{goal:P().sleepGoal})}</div>
- <div class="card"><h2>Calories, last 7 days <small>goal ${P().targets.kcal}</small></h2>${barChart(k,{goal:P().targets.kcal})}</div>`}
+ <div class="card"><h2>Calories, last 7 days <small>goal per day (tick)</small></h2>${barChart(k)}</div>`}
 function vCal(){const now=new Date();const m=new Date(now.getFullYear(),now.getMonth()+S.calMonth,1);const first=(m.getDay()+6)%7,dim=new Date(m.getFullYear(),m.getMonth()+1,0).getDate();
  const wd=new Set(D.workouts.map(w=>w.date));let cells='';for(let i=0;i<first;i++)cells+='<div class="x"></div>';
  for(let d=1;d<=dim;d++){const ds=iso(new Date(m.getFullYear(),m.getMonth(),d));cells+=`<div class="${wd.has(ds)?'w':''}">${d}</div>`}
@@ -319,7 +330,7 @@ function vMe(){const p=P(),u=DB.currentUser(),t=p.targets;
  <label class="f">Goal</label><select data-p="goal" ${canEdit()?'':'disabled'}>${['Build muscle','Lose fat','Get stronger','Stay healthy'].map(g=>`<option ${g===p.goal?'selected':''}>${g}</option>`).join('')}</select>
  <div class="grid2"><div><label class="f">Units</label><select data-p="units" ${canEdit()?'':'disabled'}><option value="kg" ${p.units==='kg'?'selected':''}>kg</option><option value="lb" ${p.units==='lb'?'selected':''}>lb</option></select></div>
   <div><label class="f">Workouts / week</label><input data-p="weekGoal" inputmode="numeric" value="${p.weekGoal}" ${canEdit()?'':'disabled'}></div><div><label class="f">Sleep goal (h)</label><input data-p="sleepGoal" inputmode="decimal" value="${p.sleepGoal}" ${canEdit()?'':'disabled'}></div></div></div>
- <div class="card"><h2>Daily targets</h2><div class="grid2">${[['kcal','Calories'],['p','Protein (g)'],['c','Carbs (g)'],['f','Fat (g)']].map(([k,n])=>`<div><label class="f">${n}</label><input data-t="${k}" inputmode="numeric" value="${t[k]}" ${canEdit()?'':'disabled'}></div>`).join('')}</div></div>
+ <div class="card"><h2>Daily goals <small>from today on</small></h2><div class="grid2">${[['kcal','Calories',''],['p','Protein','g'],['c','Carbs','g'],['f','Fat','g']].map(([k,n,u])=>`<div class="stat"><b>${t[k]}${u}</b><span>${n}</span></div>`).join('')}</div><button class="btn ghost block" style="margin-top:10px" data-edit data-act="goals">✎ Edit daily goals</button><p class="muted">Changing goals applies from today forward; past days keep the goals they had.</p></div>
  <div class="card"><h2>Data</h2><div class="grid2"><button class="btn ghost sm" data-act="export" data-k="all">Export all (JSON)</button><button class="btn ghost sm" data-act="export" data-k="mealplan">Export meal plan</button></div>
  <div data-edit><label class="btn ghost sm block" style="margin-top:8px">Import backup<input type="file" accept="application/json" id="imp" hidden></label></div>
  <p class="muted">Data lives only in this browser. Everything here is demo data.</p></div>
@@ -356,7 +367,7 @@ function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElem
  el.querySelectorAll('[data-stpl]').forEach(b=>b.onclick=()=>{o.split=SPT[b.dataset.stpl].slice();o.tlb=b.dataset.stpl==='tlb';drawOnb()});
  el.querySelector('#olater')&&(el.querySelector('#olater').onclick=()=>{if(st===3)o.wt='';else o.split=[''];o.split=st===3?o.split:[];o.step++;drawOnb()});
  const grab=()=>{const n=el.querySelector('#oname');if(n)o.name=n.value.trim();const w=el.querySelector('#owt');if(w)o.wt=w.value.trim();el.querySelectorAll('[data-osd]').forEach(i=>o.split[+i.dataset.osd]=i.value.trim());el.querySelectorAll('[data-ot]').forEach(i=>o.t[i.dataset.ot]=+i.value||0)};
- const finish=()=>{grab();if(!o.tourOnly&&canEdit())save(d=>{d.profile.name=o.name;d.profile.goal=o.goal;d.profile.units=o.units;if(o.t)d.profile.targets=o.t;d.profile.onboarded=true;
+ const finish=()=>{grab();if(!o.tourOnly&&canEdit())save(d=>{d.profile.name=o.name;d.profile.goal=o.goal;d.profile.units=o.units;if(o.t){d.profile.targets=o.t;d.profile.goalHist=[{from:'2000-01-01',t:Object.assign({},o.t)}]}d.profile.onboarded=true;
   const wv=parseFloat(o.wt);if(wv>0){const kg=+(o.units==='lb'?wv/2.20462:wv).toFixed(1);d.weight=[{date:iso(new Date()),kg}]}
   if(o.tlb){const have=new Set(d.templates.map(t=>t.name));JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])).forEach(t=>{if(!have.has(t.name))d.templates.push(t)})}
   if(o.split.some(x=>x)){d.split=o.split.map(x=>x||'rest');const have=new Set(d.templates.map(t=>t.name));d.split.forEach(x=>{if(x!=='rest'&&!have.has(x)){have.add(x);d.templates.push({name:x,exercises:[]})}})}});else if(canEdit()&&!P().onboarded)save(d=>d.profile.onboarded=true);el.remove();S.onb=null;render();toast(P().name?`You’re all set, ${P().name}`:'You’re all set')};
@@ -444,7 +455,7 @@ const WT={
  /* FOOD */
  kcal:['Calories left','🔥','food',['S','M','L'],{},{},(sz)=>{const t=todayT(),g=P().targets,left=Math.round(g.kcal-t.kcal);if(sz==='S')return L_('Calories')+`<div class="wcenter">${miniRing(t.kcal,g.kcal,64)}</div>`+big(left,'left',sz);
   return L_('Calories')+`<div class="wrow">${miniRing(t.kcal,g.kcal,sz==='L'?100:66)}<div style="flex:1;min-width:0">${big(left,'kcal left',sz)}<small>${Math.round(t.kcal)} of ${g.kcal} eaten</small>${sz==='M'?macroMini(t):''}</div></div>`+(sz==='L'?macroMini(t)+chartW(series('kcal',7),sz,{kind:'bar',goal:g.kcal}):'')},
-  ()=>{const t=todayT(),g=P().targets;return card('Today',`<div class="row">${ring(t.kcal,g.kcal,'of '+g.kcal+' kcal',120)}<div class="grow"><b style="font-size:30px">${Math.round(g.kcal-t.kcal)}</b><div class="muted">kcal left</div></div></div>`)+card('Last 7 days',barChart(series('kcal',7).map(p=>({x:p.d.slice(8),y:p.y})),{goal:g.kcal}))+`<button class="btn block" data-edit data-act="addfood">＋ Log food</button>`}],
+  ()=>{const t=todayT(),g=P().targets;return card('Today',`<div class="row">${ring(t.kcal,g.kcal,'of '+g.kcal+' kcal',120)}<div class="grow"><b style="font-size:30px">${Math.round(g.kcal-t.kcal)}</b><div class="muted">kcal left</div></div></div>`)+card('Last 7 days',barChart(series('kcal',7).map(p=>({x:p.d.slice(8),y:p.y,g:goalFor(p.d).kcal}))))+`<button class="btn block" data-edit data-act="addfood">＋ Log food</button><button class="btn ghost block" style="margin-top:8px" data-edit data-act="goals">✎ Edit daily goals</button>`}],
  macros:['Macros','🥗','food',['M','L'],{},{},(sz)=>L_('Macros today')+macroMini(todayT()),()=>{const t=todayT();return card('Macros today',macroBars(t))+card('Protein, last 7 days',barChart(series('protein',7).map(p=>({x:p.d.slice(8),y:p.y})),{goal:P().targets.p}))}],
  protein:['Protein goal','🥩','food',['S','M'],{},{},(sz)=>{const t=todayT(),g=P().targets.p;return L_('Protein')+`<div class="wrow">${miniRing(t.p,g,sz==='M'?70:52,'var(--p)')}<div>${big(Math.round(t.p),'/'+g+'g',sz)}${sz==='M'?`<small>${Math.max(0,Math.round(g-t.p))} g to go</small>`:''}</div></div>`},(o,d)=>metricMini('protein',d||'14')],
  water:['Water','💧','food',['S','M'],{},{},(sz)=>{const w=X.water(iso(new Date()));return L_('Water')+big((w/1000).toFixed(1),'/ '+X.waterGoal/1000+' L',sz)+`<div class="glass"><i style="height:${Math.min(100,w/X.waterGoal*100)}%"></i></div>${sz==='M'?'<small>Tap to add a glass</small>':''}`},
@@ -534,7 +545,7 @@ function groceries(){return [];const o=D.pantry.filter(p=>pantryStatus(p)!=='ok'
 function upcoming(n){{const o=[];for(let day=1;o.length<n&&day<60;day++){const ds=dayOff(day),p=plannedOn(ds),t=p&&D.templates.find(x=>x.name===p);if(t)o.push({day:new Date(ds+'T12:00').toLocaleDateString('en-CA',{weekday:'short',day:'numeric'}),t})}if(o.length||D.schedule)return o}if(!D.templates.length)return [];const o=[];let k=D.workouts.length,day=1;while(o.length<n){const d=new Date();d.setDate(d.getDate()+day);if(d.getDay()!==3&&d.getDay()!==0){o.push({day:d.toLocaleDateString('en-CA',{weekday:'short',day:'numeric'}),t:D.templates[k%D.templates.length]});k++}day++}return o}
 function consistency(){const l=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)).slice(-7).map(s=>({d:s.date,b:X.bed(s.date)})),a=avg(l.map(x=>x.b)),sd=Math.round(Math.sqrt(avg(l.map(x=>(x.b-a)**2))));return {sd,score:Math.max(0,Math.round(100-sd*1.5)),list:l.reverse()}}
 function heat(m,n,big){const cells=[];for(let i=-(n-1);i<=0;i++){const d=dayOff(i);let v=0;
- if(m==='workouts')v=D.workouts.some(w=>w.date===d)?1:0;else if(m==='kcal'){const t=D.food[d];v=t&&t.length?Math.max(0,1-Math.abs(totals(t).kcal-P().targets.kcal)/P().targets.kcal*3):0}else{const s=D.sleep.find(x=>x.date===d);v=s?Math.min(1,s.hours/P().sleepGoal)**3:0}
+ if(m==='workouts')v=D.workouts.some(w=>w.date===d)?1:0;else if(m==='kcal'){const t=D.food[d];v=t&&t.length?Math.max(0,1-Math.abs(totals(t).kcal-goalFor(d).kcal)/goalFor(d).targets.kcal*3):0}else{const s=D.sleep.find(x=>x.date===d);v=s?Math.min(1,s.hours/P().sleepGoal)**3:0}
  cells.push(`<i style="--o:${.1+.9*v}" title="${d}">${big?new Date(d+'T12:00').getDate():''}</i>`)}return `<div class="calh ${big?'big':''}">${cells.join('')}</div>`}
 function monthSum(){const now=new Date(),mk=iso(now).slice(0,7),ws=D.workouts.filter(w=>w.date.startsWith(mk)),ks=Object.entries(D.food).filter(([d,l])=>d.startsWith(mk)&&l.length).map(([d,l])=>totals(l).kcal),ss=D.sleep.filter(s=>s.date.startsWith(mk)).map(s=>s.hours),wt=D.weight.filter(s=>s.date.startsWith(mk)).sort((a,b)=>a.date.localeCompare(b.date));
  return {name:now.toLocaleDateString('en-CA',{month:'long'}),w:ws.length,k:Math.round(avg(ks)).toLocaleString(),s:r1(avg(ss)),wt:wt.length>1?(r1(toDisp(wt[wt.length-1].kg-wt[0].kg))>0?'+':'')+r1(toDisp(wt[wt.length-1].kg-wt[0].kg))+' '+U():'—',v:ws.reduce((a,w)=>a+vol(w),0).toLocaleString()+' '+U()}}
@@ -743,6 +754,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#sb'))return;const g=
  case 'rmplan':save(d=>d.mealPlan[ds.m].splice(+ds.i,1));break;
  case 'newsaved':{const n=prompt('Meal name (e.g. Usual breakfast)');if(n&&n.trim()){save(d=>{(d.savedMeals=d.savedMeals||[]).push({name:n.trim(),items:[]})},'Saved meal created');foodSheet('Snack','s'+(SM().length-1))}break}
  case 'savemeal':{const m=ds.meal,items=(D.food[S.foodDate]||[]).filter(e=>e.meal===m);if(!items.length)break;const n=prompt('Name this meal',`My ${MLBL(m).toLowerCase()}`);if(n&&n.trim())save(d=>{(d.savedMeals=d.savedMeals||[]).push({name:n.trim(),items:items.map(e=>({fid:e.fid,q:e.q}))})},'Saved “'+n.trim()+'”');break}
+ case 'goals':if(!canEdit())return toast('Read-only account — editing is disabled');goalsSheet(ds.d);break;
  case 'archlog':{const f=food(ds.fid);logFood(ds.fid,mealNow());break}
  case 'archedit':customFoodSheet(Object.assign({},food(ds.fid)));break;
  case 'archdel':if(confirm('Delete '+food(ds.fid).name+' from your archive?'))save(d=>{d.foods=d.foods.filter(f=>f.id!==ds.fid);(d.savedMeals||[]).forEach(m=>m.items=m.items.filter(e=>e.fid!==ds.fid))},'Deleted from archive');break;
@@ -775,6 +787,7 @@ document.addEventListener('change',e=>{const t=e.target;if(t.dataset&&t.dataset.
  if(t.id==='sname'&&D.active)save(d=>d.active.name=t.value.trim()||'Workout')});
 
 render();
+if(!P().goalHist&&canEdit()){DB.mutate(d=>{d.profile.goalHist=[{from:'2000-01-01',t:Object.assign({},d.profile.targets)}]});D=DB.get()}
 if(!P().onboarded&&canEdit())onboarding(false);
 
 })();
