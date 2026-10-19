@@ -4,14 +4,31 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const {iso,dayOff}=DB;
 let D=DB.init();
-const S={tab:D.active?'train':'today',foodSeg:'log',progSeg:'lifts',foodDate:iso(new Date()),liftEx:'Bench Press',calMonth:0,onb:null};
+const S={tab:'today',foodSeg:'log',progSeg:'lifts',foodDate:iso(new Date()),liftEx:'Bench Press',calMonth:0,onb:null};
 const ICON={
  today:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
  train:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11"/></svg>',
  food:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 11h16a8 8 0 0 1-16 0zM8 7c0-2 2-2 2-4M12 7c0-2 2-2 2-4"/></svg>',
  progress:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M3 20h18M6 16l4-5 3 3 5-7"/></svg>',
  me:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>'};
-const TABS=[['today','Today'],['train','Train'],['food','Food'],['progress','Progress'],['me','Me']];
+const CW={
+0:{n:"Neutral greyscale",fh:"-apple-system,system-ui,sans-serif",fb:"-apple-system,system-ui,sans-serif",pair:"System",L:{bg:"#f2f2f2",card:"#fff",fg:"#111",mut:"#777",line:"#ddd",a:"#333",a2:"#777",a3:"#aaa",on:"#fff"},Dk:{bg:"#111",card:"#1e1e1e",fg:"#eee",mut:"#888",line:"#333",a:"#ddd",a2:"#999",a3:"#666",on:"#111"}},
+1:{n:"Midnight Navy & Gold",fh:"'Playfair Display',Georgia,serif",fb:"'Inter',-apple-system,sans-serif",pair:"Playfair Display + Inter",L:{bg:"#f6f3ea",card:"#fff",fg:"#0f1b33",mut:"#6b7280",line:"#e6dfcc",a:"#0f1b33",a2:"#c9a227",a3:"#8aa0c8",on:"#f6e7b0"},Dk:{bg:"#0a1326",card:"#13203d",fg:"#f3ead2",mut:"#8d97ad",line:"#22325a",a:"#d4af37",a2:"#8aa0c8",a3:"#f3ead2",on:"#0a1326"}},
+2:{n:"Forest & Cream",fh:"'Fraunces',Georgia,serif",fb:"'Source Sans 3',-apple-system,sans-serif",pair:"Fraunces + Source Sans 3",L:{bg:"#f4efe3",card:"#fbf8f0",fg:"#1f3a2b",mut:"#7a7a68",line:"#e2dac6",a:"#2f5d43",a2:"#a3b18a",a3:"#d9a441",on:"#f4efe3"},Dk:{bg:"#13221a",card:"#1c3126",fg:"#efe8d6",mut:"#93a08f",line:"#2c4436",a:"#a3c49a",a2:"#d9a441",a3:"#efe8d6",on:"#13221a"}},
+3:{n:"Sunset Coral",fh:"'Poppins',-apple-system,sans-serif",fb:"'Poppins',-apple-system,sans-serif",pair:"Poppins (600/400)",L:{bg:"#fff5f0",card:"#fff",fg:"#3b1f1a",mut:"#9a7268",line:"#fbd9cc",a:"#ff6b57",a2:"#ffb347",a3:"#c2549c",on:"#fff"},Dk:{bg:"#24120f",card:"#341c17",fg:"#ffe9e1",mut:"#b88a7e",line:"#4a2a22",a:"#ff7a66",a2:"#ffb347",a3:"#e077b6",on:"#24120f"}},
+4:{n:"Mono + Red",fh:"'Helvetica Neue',Helvetica,Arial,sans-serif",fb:"'Helvetica Neue',Helvetica,Arial,sans-serif",pair:"Helvetica Neue / Inter Tight",L:{bg:"#fff",card:"#fff",fg:"#000",mut:"#666",line:"#000",a:"#e10600",a2:"#000",a3:"#999",on:"#fff"},Dk:{bg:"#000",card:"#000",fg:"#fff",mut:"#999",line:"#fff",a:"#ff2a1f",a2:"#fff",a3:"#666",on:"#000"}},
+5:{n:"Arctic",fh:"'Manrope',-apple-system,sans-serif",fb:"'Manrope',-apple-system,sans-serif",pair:"Manrope",L:{bg:"#eef6fb",card:"#fff",fg:"#0d2a3d",mut:"#6c8799",line:"#d4e6f1",a:"#2b8fd6",a2:"#7cc8f0",a3:"#b6dcf2",on:"#fff"},Dk:{bg:"#0a1a26",card:"#11283a",fg:"#e6f4fc",mut:"#7e9db0",line:"#1e3c52",a:"#6cc4f5",a2:"#b6e3fa",a3:"#3a7fae",on:"#0a1a26"}},
+6:{n:"Sand & Terracotta",fh:"'DM Serif Display',Georgia,serif",fb:"'DM Sans',-apple-system,sans-serif",pair:"DM Serif Display + DM Sans",L:{bg:"#f3ebdf",card:"#faf5ec",fg:"#3d2a20",mut:"#93806f",line:"#e3d6c2",a:"#c4643f",a2:"#d9a87e",a3:"#7f8f6a",on:"#fff"},Dk:{bg:"#221812",card:"#33241b",fg:"#f3e6d6",mut:"#a8927e",line:"#46342a",a:"#e07b52",a2:"#d9a87e",a3:"#9fb087",on:"#221812"}},
+7:{n:"Electric Violet",fh:"'Space Grotesk',-apple-system,sans-serif",fb:"'Inter',-apple-system,sans-serif",pair:"Space Grotesk + Inter",L:{bg:"#f5f2ff",card:"#fff",fg:"#1a1033",mut:"#7a6f99",line:"#e4dcff",a:"#7c3aed",a2:"#22d3ee",a3:"#f472b6",on:"#fff"},Dk:{bg:"#0e0820",card:"#1a1236",fg:"#efeaff",mut:"#9a8fc0",line:"#2c2257",a:"#a26bff",a2:"#22d3ee",a3:"#f472b6",on:"#0e0820"}},
+8:{n:"Graphite & Mint",fh:"'IBM Plex Sans',-apple-system,sans-serif",fb:"'IBM Plex Sans',-apple-system,sans-serif",pair:"IBM Plex Sans + Plex Mono numerals",L:{bg:"#eceeee",card:"#fff",fg:"#1f2326",mut:"#6d7579",line:"#d8dcdd",a:"#12b886",a2:"#3a4045",a3:"#9ad9c3",on:"#fff"},Dk:{bg:"#16191b",card:"#22272a",fg:"#e8eceb",mut:"#8a9397",line:"#33393d",a:"#3ee6b0",a2:"#9aa4a8",a3:"#1f7a5e",on:"#16191b"}},
+9:{n:"Aviator",fh:"'Barlow Condensed','Arial Narrow',sans-serif",fb:"'Barlow',-apple-system,sans-serif",pair:"Barlow Condensed + Barlow",L:{bg:"#f2f4f7",card:"#fff",fg:"#0b1f3a",mut:"#5d6b80",line:"#d9dfe7",a:"#ff6a13",a2:"#0b1f3a",a3:"#7f93ad",on:"#fff"},Dk:{bg:"#07142a",card:"#0e2140",fg:"#f4f6fa",mut:"#8796ad",line:"#1d3560",a:"#ff7a26",a2:"#f4f6fa",a3:"#4f6d99",on:"#07142a"}},
+10:{n:"Rose & Charcoal",fh:"'Cormorant Garamond',Georgia,serif",fb:"'Lato',-apple-system,sans-serif",pair:"Cormorant Garamond + Lato",L:{bg:"#f7eeee",card:"#fff",fg:"#2b2b2e",mut:"#8a7f80",line:"#ead8d8",a:"#c0687a",a2:"#2b2b2e",a3:"#e3b3bc",on:"#fff"},Dk:{bg:"#1c1c1f",card:"#2a2a2e",fg:"#f2e6e7",mut:"#9a9093",line:"#3a3a3f",a:"#e48a9c",a2:"#f2e6e7",a3:"#7d4b56",on:"#1c1c1f"}}};
+CW.teal={n:'Logbook Teal',fh:'-apple-system,system-ui,sans-serif',fb:'-apple-system,system-ui,sans-serif',L:{bg:'#f6f7fb',card:'#fff',fg:'#0f172a',mut:'#64748b',line:'#e2e8f0',a:'#0d9488',a2:'#6366f1',a3:'#ec4899',on:'#fff'},Dk:{bg:'#0b0d12',card:'#151922',fg:'#f1f5f9',mut:'#94a3b8',line:'#263041',a:'#2dd4bf',a2:'#818cf8',a3:'#f472b6',on:'#042f2e'}};
+delete CW[0];
+const CW_ORDER=['teal',1,2,3,4,5,6,7,8,9,10].map(String);
+const TH_KEY='lb2w:theme',LY_KEY='lb2w:layout';
+const TH=Object.assign({cw:'teal',mode:'auto'},JSON.parse(localStorage.getItem(TH_KEY)||'{}'));
+const PAGES=[['today','Home'],['train','Training'],['food','Food'],['recovery','Sleep & body'],['progress','History'],['me','Settings']];
 
 /* ---------- helpers ---------- */
 const P=()=>D.profile, U=()=>P().units;
@@ -25,7 +42,11 @@ const epley=(w,r)=>r>0?w*(1+r/30):0;
 const canEdit=()=>DB.canEdit();
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('on'),1800)}
 function save(fn,msg){try{DB.mutate(fn);D=DB.get();if(msg)toast(msg);render()}catch(e){toast('Read-only account — editing is disabled')}}
-function applyTheme(){const t=P().theme;const dark=t==='dark'||(t==='system'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.dataset.theme=dark?'dark':'light'}
+function applyTheme(){const dark=TH.mode==='dark'||(TH.mode==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const c=CW[TH.cw]||CW.teal,v=dark?c.Dk:c.L,r=document.documentElement;
+ r.dataset.theme=dark?'dark':'light';const mix=(a,b,p)=>`color-mix(in srgb,${a} ${p}%,${b})`;
+ const set={'--bg':v.bg,'--card':v.card,'--card2':mix(v.line,v.card,55),'--text':v.fg,'--muted':v.mut,'--line':v.line,'--accent':v.a,'--accent2':v.a2,'--accent3':v.a3,'--on':v.on,'--accentSoft':mix(v.a,v.card,22),'--p':v.a2,'--c':v.a3,'--f':v.a,'--fh':c.fh,'--fb':c.fb};
+ for(const k in set)r.style.setProperty(k,set[k]);document.querySelectorAll('meta[name=theme-color]').forEach(x=>x.setAttribute('content',v.bg))}
+function saveTheme(){localStorage.setItem(TH_KEY,JSON.stringify(TH));applyTheme()}
 matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change',()=>{applyTheme()});
 function pantryStatus(p){return p.qty<=0?'out':p.qty<=p.min?'low':'ok'}
 function ring(val,goal,label,size=112){const r=size/2-9,c=2*Math.PI*r,pct=Math.min(1,goal?val/goal:0);
@@ -91,7 +112,7 @@ function vTrain(){const a=D.active;
 function lastFor(name){const w=[...D.workouts].reverse().find(w=>w.exercises.some(e=>e.name===name));if(!w)return 'First time — set a baseline';
  const e=w.exercises.find(e=>e.name===name);return 'Last: '+e.sets.map(s=>toDisp(s.w)+'×'+s.r).join(', ')}
 function startSession(tname){const t=D.templates.find(x=>x.name===tname);
- save(d=>{d.active={id:'w'+uid(),date:iso(new Date()),start:Date.now(),name:t?t.name:'Workout',exercises:(t?t.exercises:[]).map(n=>newEx(n))}},'Session started');S.tab='train';render()}
+ save(d=>{d.active={id:'w'+uid(),date:iso(new Date()),start:Date.now(),name:t?t.name:'Workout',exercises:(t?t.exercises:[]).map(n=>newEx(n))}},'Session started');goPage('train')}
 function newEx(n){const w=[...D.workouts].reverse().find(w=>w.exercises.some(e=>e.name===n));const prev=w&&w.exercises.find(e=>e.name===n);
  return {name:n,sets:prev?prev.sets.map(s=>({w:s.w,r:s.r,done:false})):[{w:'',r:8,done:false},{w:'',r:8,done:false},{w:'',r:8,done:false}]}}
 let restT=null;
@@ -163,13 +184,16 @@ function vCal(){const now=new Date();const m=new Date(now.getFullYear(),now.getM
 
 /* ---------- ME ---------- */
 function vMe(){const p=P(),u=DB.currentUser(),t=p.targets;
- return `<div class="card"><h2>Account <span class="demo">Demo login</span></h2><div class="list">${D.accounts.map(a=>`<div class="item"><div class="avatar" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">${esc(a.name[0])}</div><div class="grow"><div class="t">${esc(a.name)}</div><div class="s">${a.role==='owner'?'Owner · can edit':'Viewer · read-only'}${a.note?' · '+esc(a.note):''}</div></div>${a.id===u.id?'<span class="pill ok">Signed in</span>':`<button class="btn ghost sm" data-act="signin" data-id="${a.id}">Sign in</button>`}</div>`).join('')}</div>
+ return `<div class="card"><h2>Appearance</h2><div class="seg">${[['light','Light'],['dark','Dark'],['auto','Auto']].map(([k,n])=>`<button class="${TH.mode===k?'on':''}" data-act="thmode" data-v="${k}">${n}</button>`).join('')}</div>
+ <label class="f">Colourway</label><div class="cwgrid">${CW_ORDER.map(k=>{const c=CW[k],dk=document.documentElement.dataset.theme==='dark',v=dk?c.Dk:c.L;return `<button class="cw ${TH.cw===k?'on':''}" data-act="cw" data-v="${k}" style="background:${v.bg};color:${v.fg};font-family:${c.fh}"><span class="sw"><i style="background:${v.a}"></i><i style="background:${v.a2}"></i><i style="background:${v.a3}"></i></span><b>${esc(c.n)}</b></button>`}).join('')}</div>
+ <p class="muted">Saved on this device. Auto follows your iPhone's light/dark setting.</p></div>
+ <div class="card"><h2>Home screen</h2><button class="btn ghost block" data-act="editmode">Edit widgets</button><button class="btn ghost block" style="margin-top:8px" data-act="resetlayout">Reset home screen to default</button></div>
+ <div class="card"><h2>Account <span class="demo">Demo login</span></h2><div class="list">${D.accounts.map(a=>`<div class="item"><div class="avatar" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">${esc(a.name[0])}</div><div class="grow"><div class="t">${esc(a.name)}</div><div class="s">${a.role==='owner'?'Owner · can edit':'Viewer · read-only'}${a.note?' · '+esc(a.note):''}</div></div>${a.id===u.id?'<span class="pill ok">Signed in</span>':`<button class="btn ghost sm" data-act="signin" data-id="${a.id}">Sign in</button>`}</div>`).join('')}</div>
  <p class="muted">Mock sign-in for the preview. In the real app each person signs in with their own account and the owner grants read-only access.</p></div>
  <div class="card"><h2>Profile</h2><label class="f">Name</label><input data-p="name" value="${esc(p.name)}" ${canEdit()?'':'disabled'}>
  <label class="f">Goal</label><select data-p="goal" ${canEdit()?'':'disabled'}>${['Build muscle','Lose fat','Get stronger','Stay healthy'].map(g=>`<option ${g===p.goal?'selected':''}>${g}</option>`).join('')}</select>
  <div class="grid2"><div><label class="f">Units</label><select data-p="units" ${canEdit()?'':'disabled'}><option value="kg" ${p.units==='kg'?'selected':''}>kg</option><option value="lb" ${p.units==='lb'?'selected':''}>lb</option></select></div>
- <div><label class="f">Appearance</label><select data-p="theme" ${canEdit()?'':'disabled'}>${['system','light','dark'].map(x=>`<option ${x===p.theme?'selected':''}>${x}</option>`).join('')}</select></div>
- <div><label class="f">Workouts / week</label><input data-p="weekGoal" inputmode="numeric" value="${p.weekGoal}" ${canEdit()?'':'disabled'}></div><div><label class="f">Sleep goal (h)</label><input data-p="sleepGoal" inputmode="decimal" value="${p.sleepGoal}" ${canEdit()?'':'disabled'}></div></div></div>
+  <div><label class="f">Workouts / week</label><input data-p="weekGoal" inputmode="numeric" value="${p.weekGoal}" ${canEdit()?'':'disabled'}></div><div><label class="f">Sleep goal (h)</label><input data-p="sleepGoal" inputmode="decimal" value="${p.sleepGoal}" ${canEdit()?'':'disabled'}></div></div></div>
  <div class="card"><h2>Daily targets</h2><div class="grid2">${[['kcal','Calories'],['p','Protein (g)'],['c','Carbs (g)'],['f','Fat (g)']].map(([k,n])=>`<div><label class="f">${n}</label><input data-t="${k}" inputmode="numeric" value="${t[k]}" ${canEdit()?'':'disabled'}></div>`).join('')}</div></div>
  <div class="card"><h2>Data</h2><div class="grid2"><button class="btn ghost sm" data-act="export" data-k="all">Export all (JSON)</button><button class="btn ghost sm" data-act="export" data-k="mealplan">Export meal plan</button></div>
  <div data-edit><label class="btn ghost sm block" style="margin-top:8px">Import backup<input type="file" accept="application/json" id="imp" hidden></label></div>
@@ -181,7 +205,7 @@ function exportData(kind){const name=kind==='mealplan'?'logbook-mealplan.json':'
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(obj,null,2)],{type:'application/json'}));a.download=name;a.click();toast('Exported '+name)}
 
 /* ---------- ONBOARDING ---------- */
-const TOUR=[['☀️','Today','Your daily dashboard: calories and macros left, today’s workout, sleep, weight, supplements and coach tips.'],
+const TOUR=[['📱','Home screen','Widgets summarise your day. Tap one to open that section, swipe left and right between sections, and press and hold to add, resize, rearrange or customise widgets.'],
  ['🏋️','Train','Start from a template. Previous weights are filled in, tap ✓ to finish a set and a rest timer starts. Sessions survive closing the app.'],
  ['🥗','Food','Log meals, build a meal plan against your targets, and track pantry stock. Low items land on a shopping list.'],
  ['📈','Progress','Estimated 1RM per lift, weekly volume, body weight, sleep and a training calendar.'],
@@ -206,26 +230,161 @@ function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElem
  el.querySelector('#oskip')&&(el.querySelector('#oskip').onclick=finish)}
 
 /* ---------- RENDER ---------- */
-function render(){D=DB.get();applyTheme();const u=DB.currentUser(),ro=!canEdit();document.body.classList.toggle('readonly',ro);
- const titles={today:new Date().toLocaleDateString(undefined,{weekday:'long'}),train:'Train',food:'Food',progress:'Progress',me:'Settings'};
- const sub={today:`Hi ${esc(P().name)} · ${new Date().toLocaleDateString(undefined,{month:'long',day:'numeric'})}`,train:D.active?'Session in progress':'Workouts & history',food:'Log, plan & pantry',progress:'Trends over time',me:'Profile, targets & sharing'};
- const view={today:vToday,train:vTrain,food:vFood,progress:vProgress,me:vMe}[S.tab]();
- $('#app').innerHTML=`<header class="top"><div style="min-width:0"><div class="sub">${sub[S.tab]}</div><h1>${titles[S.tab]}</h1></div><button class="avatar" data-go="me" aria-label="Account">${esc((ro?u.name:P().name)[0])}</button></header>
- <div class="banner"><span class="demo">Preview</span><span>${ro?`Signed in as <b>${esc(u.name)}</b> · read-only`:'Demo data, saved on this device only'}</span></div>
- <main>${view}</main>
+/* ---------- SLEEP & BODY page ---------- */
+function vRecovery(){const today=iso(new Date()),sl=D.sleep.find(s=>s.date===today),wt=D.weight.find(w=>w.date===today),supps=D.supplements.log[today]||[];
+ const lastS=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)).pop(),lastW=[...D.weight].sort((a,b)=>a.date.localeCompare(b.date)).pop();
+ return `<div class="grid2"><div class="card" style="margin:0 0 12px"><h2>Sleep</h2><b style="font-size:26px">${sl?sl.hours+' h':lastS?lastS.hours+' h':'—'}</b><div class="muted">${sl?'Last night':lastS?prettyDate(lastS.date):'Not logged'}</div><button class="btn ghost sm block" style="margin-top:8px" data-edit data-act="sleep">${sl?'Edit':'Log'}</button></div>
+ <div class="card" style="margin:0 0 12px"><h2>Weight</h2><b style="font-size:26px">${wt?toDisp(wt.kg):lastW?toDisp(lastW.kg):'—'} <small style="font-size:14px">${U()}</small></b><div class="muted">${wt?'Today':lastW?prettyDate(lastW.date):'Not logged'}</div><button class="btn ghost sm block" style="margin-top:8px" data-edit data-act="weight">${wt?'Edit':'Log'}</button></div></div>
+ <div class="card"><h2>Supplements <small>${supps.length}/${D.supplements.list.length}</small></h2><div class="chips">${D.supplements.list.map(s=>`<button class="chip ${supps.includes(s)?'on':''}" data-act="supp" data-s="${esc(s)}" ${canEdit()?'':'disabled'}>${supps.includes(s)?'✓ ':''}${esc(s)}</button>`).join('')}<button class="chip" data-edit data-act="addsupp">＋</button></div></div>
+ ${vBody()}
+ <div class="card"><h2>Coach</h2>${coachTips().map(x=>`<div class="tip">${esc(x)}</div>`).join('')||'<div class="muted">All on track. Nice.</div>'}</div>`}
+
+/* ---------- WIDGETS ---------- */
+const WSTATE={edit:false};
+const lastN=(n,f)=>{const o=[];for(let i=-(n-1);i<=0;i++){const d=dayOff(i);o.push({d,y:f(d)})}return o};
+function series(metric,days){const since=dayOff(-(days-1));
+ if(metric==='weight')return D.weight.filter(w=>w.date>=since).sort((a,b)=>a.date.localeCompare(b.date)).map(w=>({d:w.date,y:toDisp(w.kg)}));
+ if(metric==='sleep')return D.sleep.filter(w=>w.date>=since).sort((a,b)=>a.date.localeCompare(b.date)).map(w=>({d:w.date,y:w.hours}));
+ if(metric==='kcal')return lastN(days,d=>Math.round(totals(D.food[d]||[]).kcal)).filter(p=>p.y>0);
+ if(metric==='protein')return lastN(days,d=>Math.round(totals(D.food[d]||[]).p)).filter(p=>p.y>0);
+ if(metric==='volume')return D.workouts.filter(w=>w.date>=since).sort((a,b)=>a.date.localeCompare(b.date)).map(w=>({d:w.date,y:vol(w)}));
+ return []}
+const METRIC={weight:['Weight',()=>U(),'line'],kcal:['Calories','kcal','bar'],protein:['Protein','g','bar'],sleep:['Sleep','h','bar'],volume:['Workout volume',()=>U(),'bar']};
+function spark(pts,{w=300,h=90,kind='line',goal=null}={}){if(pts.length<2)return '<div class="muted" style="font-size:12px">Not enough data yet</div>';
+ const ys=pts.map(p=>p.y),mx=Math.max(...ys,goal||-Infinity),mn=kind==='bar'?0:Math.min(...ys),rg=(mx-mn)||1,pad=4;
+ const X=i=>pad+i*(w-2*pad)/(pts.length-1),Y=v=>h-pad-(v-mn)/rg*(h-2*pad);
+ let g=goal!=null?`<line x1="0" x2="${w}" y1="${Y(goal)}" y2="${Y(goal)}" stroke="var(--muted)" stroke-dasharray="3 4" stroke-width="1"/>`:'';
+ if(kind==='bar'){const bw=(w-2*pad)/pts.length;return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${g}${pts.map((p,i)=>{const bh=Math.max(2,(p.y-mn)/rg*(h-2*pad));return `<rect x="${pad+i*bw+bw*.15}" y="${h-pad-bh}" width="${bw*.7}" height="${bh}" rx="${Math.min(4,bw*.3)}" fill="var(--accent)" opacity="${i===pts.length-1?1:.55}"/>`}).join('')}</svg>`}
+ const d=pts.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.y).toFixed(1)).join(' ');
+ return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none">${g}<path d="${d} L${X(pts.length-1)} ${h} L${X(0)} ${h}Z" fill="var(--accent)" opacity=".15"/><path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/></svg>`}
+function miniRing(val,goal,sz,col='var(--accent)',sw=null){sw=sw||sz/9;const r=sz/2-sw/2,c=2*Math.PI*r,p=Math.min(1,goal?val/goal:0);
+ return `<svg width="${sz}" height="${sz}" viewBox="0 0 ${sz} ${sz}" class="mring"><circle cx="${sz/2}" cy="${sz/2}" r="${r}" stroke="var(--card2)" stroke-width="${sw}" fill="none"/><circle cx="${sz/2}" cy="${sz/2}" r="${r}" stroke="${col}" stroke-width="${sw}" fill="none" stroke-linecap="round" stroke-dasharray="${c*p} ${c}" transform="rotate(-90 ${sz/2} ${sz/2})"/></svg>`}
+const todayT=()=>totals(D.food[iso(new Date())]||[]);
+const wkCount=()=>D.workouts.filter(w=>(new Date()-new Date(w.date+'T12:00'))/864e5<7).length;
+const nextTpl=()=>D.templates[D.workouts.length%D.templates.length];
+/* type: [name, icon, section, sizes, default opt, options {key:[label,[[val,label]...]]}, render(size,opt)] */
+const WT={
+ fuel:['Fuel','🍽️','food',['S','M','L'],{show:'calories'},{show:['Show',[['calories','Calories left'],['macros','Macros'],['both','Calories + macros']]]},(sz,o)=>{const t=todayT(),g=P().targets,left=Math.round(g.kcal-t.kcal);
+  const mac=`<div class="wmac">${[['P','p','var(--p)'],['C','c','var(--c)'],['F','f','var(--f)']].map(([n,k,col])=>`<div><span>${n}</span><div class="bar"><i style="width:${Math.min(100,t[k]/g[k]*100)}%;background:${col}"></i></div><em>${Math.round(t[k])}/${g[k]}</em></div>`).join('')}</div>`;
+  const cal=`<div class="wrow">${miniRing(t.kcal,g.kcal,sz==='L'?150:sz==='M'?78:54)}<div><b class="wn ${sz==='L'?'xl':''}">${left}</b><small>kcal left</small></div></div>`;
+  if(sz==='S')return o.show==='macros'?`<small class="wl">Protein</small>${miniRing(t.p,g.p,58,'var(--p)')}<b class="wn sm">${Math.round(t.p)}<em>/${g.p}g</em></b>`:`<small class="wl">Fuel</small>${miniRing(t.kcal,g.kcal,58)}<b class="wn sm">${left}<em> left</em></b>`;
+  if(o.show==='macros')return `<small class="wl">Macros today</small>${mac}`;
+  if(o.show==='calories'&&sz==='M')return `<small class="wl">Fuel</small>${cal}`;
+  return `<small class="wl">Fuel</small>${cal}${mac}`}],
+ training:['Training','🏋️','train',['S','M','L'],{show:'next'},{show:['Show',[['next','Next workout'],['last','Last workout'],['week','This week']]]},(sz,o)=>{
+  if(D.active)return `<small class="wl">Training</small><b class="wt">● ${esc(D.active.name)}</b><small>In progress, tap to resume</small>`;
+  const wk=wkCount(),goal=P().weekGoal,dots=`<div class="wdots">${Array.from({length:goal},(_,i)=>`<i class="${i<wk?'on':''}"></i>`).join('')}</div>`;
+  if(o.show==='week')return `<small class="wl">This week</small><b class="wn">${wk}<em>/${goal}</em></b>${dots}${sz==='L'?spark(series('volume',28),{h:110}):''}`;
+  if(o.show==='last'){const w=[...D.workouts].sort((a,b)=>a.date.localeCompare(b.date)).pop();if(!w)return '<small class="wl">Last workout</small><b class="wt">None yet</b>';
+   return `<small class="wl">Last workout</small><b class="wt">${esc(w.name)}</b><small>${prettyDate(w.date)}</small>${sz!=='S'?`<small>${vol(w).toLocaleString()} ${U()} volume</small>`:''}${sz==='L'?`<div class="wlist">${w.exercises.map(e=>`<div>${esc(e.name)}<em>${e.sets.length}×</em></div>`).join('')}</div>`:''}`}
+  const n=nextTpl();return `<small class="wl">Next workout</small><b class="wt">${esc(n.name)}</b>${sz!=='S'?`<small>${esc(n.exercises.join(' · '))}</small>`:''}${sz==='L'?dots:''}`}],
+ history:['History','📈','progress',['S','M','L'],{metric:'weight',days:'14'},{metric:['Graph',Object.entries(METRIC).map(([k,v])=>[k,v[0]])],days:['Range',[['7','7 days'],['14','14 days'],['30','30 days']]]},(sz,o)=>{
+  const [n,u,kind]=METRIC[o.metric]||METRIC.weight,unit=typeof u==='function'?u():u,pts=series(o.metric,+o.days),last=pts.length?pts[pts.length-1].y:null,first=pts.length?pts[0].y:null;
+  const goal=o.metric==='kcal'?P().targets.kcal:o.metric==='protein'?P().targets.p:o.metric==='sleep'?P().sleepGoal:null;
+  const delta=last!=null&&pts.length>1?(Math.round((last-first)*10)/10):null;
+  return `<small class="wl">${n} · ${o.days}d</small><b class="wn ${sz==='S'?'sm':''}">${last!=null?last.toLocaleString():'—'}<em> ${unit}</em></b>${delta!=null&&sz!=='S'?`<small>${delta>0?'+':''}${delta.toLocaleString()} ${unit} over ${o.days} days</small>`:''}<div class="wchart">${spark(pts,{kind,goal,h:sz==='L'?150:70})}</div>`}],
+ sleep:['Sleep','🌙','recovery',['S','M','L'],{show:'last'},{show:['Show',[['last','Last night'],['week','7-day chart']]]},(sz,o)=>{
+  const s=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)),l=s[s.length-1],avg=s.slice(-7).reduce((a,x)=>a+x.hours,0)/Math.max(1,s.slice(-7).length);
+  if(o.show==='week'||sz==='L')return `<small class="wl">Sleep · 7-day avg</small><b class="wn ${sz==='S'?'sm':''}">${avg.toFixed(1)}<em> h</em></b><div class="wchart">${spark(s.slice(-7).map(x=>({y:x.hours})),{kind:'bar',goal:P().sleepGoal,h:sz==='L'?140:60})}</div>`;
+  return `<small class="wl">Sleep</small><b class="wn">${l?l.hours:'—'}<em> h</em></b><small>${l?'★'.repeat(l.quality)+'☆'.repeat(5-l.quality):'Not logged'}</small>${sz==='M'?`<small>7-day avg ${avg.toFixed(1)} h · goal ${P().sleepGoal} h</small>`:''}`}],
+ weight:['Weight','⚖️','recovery',['S','M','L'],{days:'14'},{days:['Trend range',[['7','7 days'],['14','14 days'],['30','30 days']]]},(sz,o)=>{
+  const pts=series('weight',+o.days),l=pts[pts.length-1],d=pts.length>1?Math.round((l.y-pts[0].y)*10)/10:null;
+  return `<small class="wl">Weight</small><b class="wn ${sz==='S'?'sm':''}">${l?l.y:'—'}<em> ${U()}</em></b>${d!=null?`<small>${d>0?'+':''}${d} ${U()} · ${o.days}d</small>`:''}${sz!=='S'?`<div class="wchart">${spark(pts,{h:sz==='L'?150:56})}</div>`:''}`}],
+ supps:['Supplements','💊','recovery',['S','M'],{},{},(sz)=>{const t=D.supplements.log[iso(new Date())]||[];
+  return `<small class="wl">Supplements</small><b class="wn ${sz==='S'?'sm':''}">${t.length}<em>/${D.supplements.list.length}</em></b>${sz!=='S'?`<div class="wchips">${D.supplements.list.map(s=>`<span class="${t.includes(s)?'on':''}">${t.includes(s)?'✓ ':''}${esc(s)}</span>`).join('')}</div>`:'<small>taken today</small>'}`}],
+ pantry:['Pantry','🧺','food:pantry',['S','M','L'],{},{},(sz)=>{const low=D.pantry.filter(p=>pantryStatus(p)!=='ok');
+  return `<small class="wl">Pantry</small><b class="wn ${sz==='S'?'sm':''}">${low.length}<em> low</em></b>${sz==='S'?`<small>${esc(low[0]?.name||'All stocked')}</small>`:`<div class="wlist">${low.slice(0,sz==='L'?8:3).map(p=>`<div>${esc(p.name)}<em class="${pantryStatus(p)}">${pantryStatus(p)==='out'?'Out':'Low'}</em></div>`).join('')||'<div>All stocked</div>'}</div>`}`}],
+ coach:['Coach','💡','recovery',['M','L'],{},{},(sz)=>{const t=coachTips();return `<small class="wl">Coach</small><div class="wtips">${(t.length?t:['All on track. Nice.']).slice(0,sz==='L'?4:2).map(x=>`<p>${esc(x)}</p>`).join('')}</div>`}],
+ streak:['Week streak','🔥','progress',['S','M'],{},{},(sz)=>{const days=lastN(7,d=>D.workouts.some(w=>w.date===d));
+  return `<small class="wl">Last 7 days</small><b class="wn ${sz==='S'?'sm':''}">${days.filter(x=>x.y).length}<em> sessions</em></b><div class="wweek">${days.map(x=>`<i class="${x.y?'on':''}"><span>${new Date(x.d+'T12:00').toLocaleDateString(undefined,{weekday:'narrow'})}</span></i>`).join('')}</div>`}]
+};
+const SZN={S:'Small',M:'Medium',L:'Large'};
+function defaultLayout(){let n=0;const w=(type,size,opt)=>({id:'w'+(++n)+uid(),type,size,opt:Object.assign({},WT[type][4],opt||{})});
+ return [w('fuel','L',{show:'both'}),w('sleep','S'),w('weight','S'),w('training','M'),w('history','M',{metric:'kcal',days:'7'}),w('streak','S'),w('pantry','S'),w('coach','M')]}
+let LAYOUT=(()=>{try{const l=JSON.parse(localStorage.getItem(LY_KEY));if(Array.isArray(l))return l.filter(x=>WT[x.type])}catch(e){}return defaultLayout()})();
+function saveLayout(){localStorage.setItem(LY_KEY,JSON.stringify(LAYOUT))}
+function widgetHTML(w){const T=WT[w.type];let inner;try{inner=T[6](w.size,w.opt||{})}catch(e){inner='<small class="wl">'+T[0]+'</small><small>Unavailable</small>'}
+ return `<div class="w ${w.size}" data-wid="${w.id}" data-sec="${T[2]}" role="button" tabindex="0" aria-label="${T[0]} widget"><div class="wi">${inner}</div>
+ <button class="wx" data-wx aria-label="Remove widget">−</button><button class="wsz" data-wsz aria-label="Change size">${w.size}</button></div>`}
+function vHome(){return `<div class="wgrid" id="wgrid">${LAYOUT.map(widgetHTML).join('')}</div>${LAYOUT.length?'':'<div class="empty">No widgets. Press and hold, or tap Edit, then ＋ to add some.</div>'}<p class="muted hint">Tap a widget to open it · swipe for sections · press and hold to edit</p>`}
+
+/* ---------- PAGER RENDER ---------- */
+const titles=()=>({today:new Date().toLocaleDateString('en-CA',{weekday:'long'}),train:'Training',food:'Food',recovery:'Sleep & body',progress:'History',me:'Settings'});
+const subs=()=>({today:`Hi ${esc(P().name)} · ${new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric'})}`,train:D.active?'Session in progress':'Workouts & templates',food:'Log, plan & pantry',recovery:'Sleep, weight & supplements',progress:'Trends over time',me:'Appearance, profile & sharing'});
+function pageHTML(k){const u=DB.currentUser(),ro=!canEdit();const v={today:vHome,train:vTrain,food:vFood,recovery:vRecovery,progress:vProgress,me:vMe}[k]();
+ const right=k==='today'?(WSTATE.edit?`<div class="hbtns"><button class="pillbtn" data-wadd aria-label="Add widget">＋</button><button class="pillbtn on" data-wdone>Done</button></div>`:`<button class="pillbtn" data-wedit>Edit</button>`):`<button class="avatar" data-go="me" aria-label="Settings">${esc((ro?u.name:P().name)[0])}</button>`;
+ return `<section class="page" data-page="${k}"><div class="pin"><header class="top"><div style="min-width:0"><div class="sub">${subs()[k]}</div><h1>${titles()[k]}</h1></div>${right}</header>
+ ${k==='today'?`<div class="banner"><span class="demo">Preview</span><span>${ro?`Signed in as <b>${esc(u.name)}</b> · read-only`:'Demo data, saved on this device only'}</span></div>`:''}<main>${v}</main></div></section>`}
+function render(){D=DB.get();applyTheme();document.body.classList.toggle('readonly',!canEdit());document.body.classList.toggle('editing',WSTATE.edit);
+ const pager=$('#pager'),sl=pager?pager.scrollLeft:null,tops={};if(pager)pager.querySelectorAll('.page').forEach(p=>tops[p.dataset.page]=p.scrollTop);
+ $('#app').innerHTML=`<div id="pager" class="pager">${PAGES.map(([k])=>pageHTML(k)).join('')}</div>
  ${D.active&&S.tab!=='train'?`<button class="fab-live" data-go="train"><span>● ${esc(D.active.name)} in progress</span><span>Resume ›</span></button>`:''}
- <nav class="tabbar"><div class="in">${TABS.map(([k,n])=>`<button class="${S.tab===k?'on':''}" data-go="${k}" aria-label="${n}">${ICON[k]}<span>${n}</span></button>`).join('')}</div></nav>`;
- if(ro)$('#app').querySelectorAll('main input,main select,main textarea').forEach(i=>{if(i.id!=='liftsel')i.disabled=true});
- tickElapsed()}
+ <nav class="dock" aria-label="Sections"><div class="dname" id="dname">${PAGES.find(p=>p[0]===S.tab)[1]}</div><div class="pdots">${PAGES.map(([k,n])=>`<button class="${S.tab===k?'on':''}" data-go="${k}" aria-label="${n}"><i></i></button>`).join('')}</div></nav>`;
+ const p2=$('#pager');p2.querySelectorAll('.page').forEach(p=>{if(tops[p.dataset.page])p.scrollTop=tops[p.dataset.page]});
+ p2.scrollLeft=sl!=null?sl:PAGES.findIndex(p=>p[0]===S.tab)*p2.clientWidth;
+ if(!canEdit())p2.querySelectorAll('main input,main select,main textarea').forEach(i=>{if(i.id!=='liftsel')i.disabled=true});
+ p2.addEventListener('scroll',onPagerScroll,{passive:true});bindHome();tickElapsed()}
+let scT;function onPagerScroll(){const p=$('#pager'),i=Math.round(p.scrollLeft/p.clientWidth),k=PAGES[Math.max(0,Math.min(PAGES.length-1,i))][0];
+ if(k!==S.tab){S.tab=k;$('#dname').textContent=PAGES[i][1];document.querySelectorAll('.pdots button').forEach((b,j)=>b.classList.toggle('on',j===i));const f=$('.fab-live');if(f)f.style.display=k==='train'?'none':''}}
+function goPage(k){const sec=k.split(':');if(sec[1]){S.foodSeg=sec[1];}k=sec[0];if(WSTATE.edit&&k!=='today')setEdit(false);S.tab=k;if(!$('#pager')||sec[1])render();const p=$('#pager'),i=PAGES.findIndex(x=>x[0]===k);p.scrollTo({left:i*p.clientWidth,behavior:'smooth'});onPagerScroll()}
+addEventListener('resize',()=>{const p=$('#pager');if(p)p.scrollLeft=PAGES.findIndex(x=>x[0]===S.tab)*p.clientWidth});
+
+/* ---------- EDIT MODE ---------- */
+function setEdit(on){WSTATE.edit=on;render()}
+function bindHome(){const g=$('#wgrid');const hp=$('[data-page=today]');if(!hp)return;
+ hp.querySelector('[data-wedit]')?.addEventListener('click',()=>setEdit(true));
+ hp.querySelector('[data-wdone]')?.addEventListener('click',e=>{e.stopPropagation();setEdit(false)});
+ hp.querySelector('[data-wadd]')?.addEventListener('click',e=>{e.stopPropagation();gallery()});
+ if(!g)return;let lp=null,start=null,drag=null;
+ g.addEventListener('contextmenu',e=>e.preventDefault());
+ g.addEventListener('pointerdown',e=>{const w=e.target.closest('.w');if(!w)return;start={x:e.clientX,y:e.clientY,w,id:e.pointerId,t:Date.now()};
+  if(!WSTATE.edit){lp=setTimeout(()=>{lp=null;start=null;navigator.vibrate?.(15);setEdit(true)},480);return}
+  if(e.target.closest('[data-wx],[data-wsz]'))return;});
+ g.addEventListener('pointermove',e=>{if(!start)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;
+  if(!WSTATE.edit){if(Math.hypot(dx,dy)>10){clearTimeout(lp);lp=null;start=null}return}
+  if(!drag&&Math.hypot(dx,dy)>8&&!e.target.closest('[data-wx],[data-wsz]')){drag={w:start.w,id:start.w.dataset.wid};start.w.classList.add('drag');try{g.setPointerCapture(start.id)}catch(_){}}
+  if(drag){e.preventDefault();drag.w.style.transform=`translate(${dx}px,${dy}px) scale(1.05)`;drag.w.style.pointerEvents='none';
+   const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.w');if(over&&over!==drag.w){const from=LAYOUT.findIndex(x=>x.id===drag.id),to=LAYOUT.findIndex(x=>x.id===over.dataset.wid);
+    const r0=drag.w.getBoundingClientRect();const [it]=LAYOUT.splice(from,1);LAYOUT.splice(to,0,it);
+    const els=[...g.children],before=new Map(els.map(el=>[el,el.getBoundingClientRect()]));
+    const ref=to>from?over.nextSibling:over;g.insertBefore(drag.w,ref);
+    els.forEach(el=>{if(el===drag.w)return;const a=before.get(el),b=el.getBoundingClientRect();if(a.left!==b.left||a.top!==b.top){el.animate([{transform:`translate(${a.left-b.left}px,${a.top-b.top}px)`},{transform:'none'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})}});
+    const r1=drag.w.getBoundingClientRect();start.x+=r1.left-r0.left;start.y+=r1.top-r0.top;drag.w.style.transform=`translate(${e.clientX-start.x}px,${e.clientY-start.y}px) scale(1.05)`}}},{passive:false});
+ const end=e=>{clearTimeout(lp);if(drag){WSTATE.dragEnd=Date.now();saveLayout();drag.w.style.transform='';drag.w.style.pointerEvents='';drag.w.classList.remove('drag');drag=null;start=null;return}
+  if(start&&e.type==='pointerup'&&Date.now()-start.t<450){const w=start.w,id=w.dataset.wid;
+   if(WSTATE.edit){if(e.target.closest('[data-wx]')){LAYOUT=LAYOUT.filter(x=>x.id!==id);saveLayout();w.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.3)',opacity:0}],{duration:180}).onfinish=render}
+    else if(e.target.closest('[data-wsz]')){const it=LAYOUT.find(x=>x.id===id),sz=WT[it.type][3];it.size=sz[(sz.indexOf(it.size)+1)%sz.length];saveLayout();render()}
+    else wsettings(id)}
+   else{goPage(w.dataset.sec)}}
+  start=null};
+ g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
+ g.addEventListener('keydown',e=>{const w=e.target.closest('.w');if(w&&(e.key==='Enter'||e.key===' ')){e.preventDefault();WSTATE.edit?wsettings(w.dataset.wid):goPage(w.dataset.sec)}})}
+document.addEventListener('click',e=>{if(Date.now()-(WSTATE.dragEnd||0)<400)return;if(WSTATE.edit&&e.target.closest('.page[data-page=today] main')&&!e.target.closest('.w,.pillbtn'))setEdit(false)});
+function gallery(){sheet(`<h3>Add a widget</h3><p class="muted">Pick a widget and a size. You can change what it shows after adding it.</p><div class="gal">${Object.entries(WT).map(([k,T])=>`<div class="gitem"><div class="gh"><span class="gic">${T[1]}</span><b>${T[0]}</b></div><div class="gprev">${T[3].map(sz=>`<button class="gsz" data-add="${k}" data-sz="${sz}"><div class="w ${sz} mini"><div class="wi">${T[6](sz,T[4])}</div></div><span>${SZN[sz]}</span></button>`).join('')}</div></div>`).join('')}</div>`,el=>{
+ el.addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;LAYOUT.unshift({id:'w'+uid(),type:b.dataset.add,size:b.dataset.sz,opt:Object.assign({},WT[b.dataset.add][4])});saveLayout();closeSheet();render();toast(WT[b.dataset.add][0]+' widget added')})})}
+function wsettings(id){const it=LAYOUT.find(x=>x.id===id);if(!it)return;const T=WT[it.type];it.opt=Object.assign({},T[4],it.opt);
+ const draw=el=>{el.querySelector('#wprev').innerHTML=`<div class="w ${it.size}"><div class="wi">${T[6](it.size,it.opt)}</div></div>`};
+ sheet(`<h3>${T[1]} ${T[0]} widget</h3><div class="wprev" id="wprev"></div>
+ <label class="f">Size</label><div class="seg" data-k="__size">${T[3].map(s=>`<button class="${it.size===s?'on':''}" data-v="${s}">${SZN[s]}</button>`).join('')}</div>
+ ${Object.entries(T[5]).map(([k,[lab,opts]])=>`<label class="f">${lab}</label><div class="seg wrap" data-k="${k}">${opts.map(([v,n])=>`<button class="${it.opt[k]===v?'on':''}" data-v="${v}">${n}</button>`).join('')}</div>`).join('')}
+ <p class="muted">Tapping this widget opens <b>${PAGES.find(p=>p[0]===T[2].split(':')[0])[1]}</b>.</p>
+ <div class="grid2"><button class="btn danger" id="wrm">Remove</button><button class="btn" id="wok">Done</button></div>`,el=>{draw(el);
+  el.addEventListener('click',e=>{const b=e.target.closest('.seg [data-v]');if(b){const k=b.parentNode.dataset.k;if(k==='__size')it.size=b.dataset.v;else it.opt[k]=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));saveLayout();draw(el);render()}});
+  el.querySelector('#wok').onclick=()=>{closeSheet();render()};el.querySelector('#wrm').onclick=()=>{LAYOUT=LAYOUT.filter(x=>x.id!==id);saveLayout();closeSheet();render()}})}
+
 function tickElapsed(){const e=$('#elapsed');if(e&&D.active){const s=Math.floor((Date.now()-D.active.start)/1000);e.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}}
 setInterval(tickElapsed,1000);
 
 /* ---------- EVENTS ---------- */
-document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g){S.tab=g.dataset.go;render();scrollTo(0,0);return}
+document.addEventListener('click',e=>{if(e.target.closest('#wgrid'))return;const g=e.target.closest('[data-go]');if(g){goPage(g.dataset.go);return}
  const sg=e.target.closest('[data-seg]');if(sg){S[sg.dataset.seg]=sg.dataset.v;render();return}
  const b=e.target.closest('[data-act]');if(!b||!$('#app').contains(b))return;const a=b.dataset.act,ds=b.dataset;
- const viewOnly=['openw','fd','cm','signin','export','tour'];if(!canEdit()&&!viewOnly.includes(a))return toast('Read-only account — editing is disabled');
+ const viewOnly=['openw','fd','cm','signin','export','tour','thmode','cw','editmode','resetlayout'];if(!canEdit()&&!viewOnly.includes(a))return toast('Read-only account — editing is disabled');
  switch(a){
+ case 'thmode':TH.mode=ds.v;saveTheme();render();break;
+ case 'cw':TH.cw=ds.v;saveTheme();render();break;
+ case 'editmode':goPage('today');setTimeout(()=>setEdit(true),400);break;
+ case 'resetlayout':if(confirm('Reset home screen widgets?')){LAYOUT=defaultLayout();saveLayout();render();toast('Home screen reset')}break;
  case 'start':startSession(ds.t);break;
  case 'addset':save(d=>{const s=d.active.exercises[ds.ei].sets;const l=s[s.length-1]||{w:'',r:8};s.push({w:l.w,r:l.r,done:false})});break;
  case 'done':save(d=>{const s=d.active.exercises[ds.ei].sets[ds.si];s.done=!s.done;if(s.done)restTimer(90)});break;
@@ -253,7 +412,7 @@ document.addEventListener('click',e=>{const g=e.target.closest('[data-go]');if(g
  case 'weight':{const t=iso(new Date()),cur=D.weight.find(s=>s.date===t);sheet(`<h3>Log body weight</h3><label class="f">Weight (${U()})</label><input id="wv" inputmode="decimal" value="${cur?toDisp(cur.kg):''}"><button class="btn block" style="margin-top:12px" id="ws">Save</button>`,el=>{el.querySelector('#ws').onclick=()=>{const v=+el.querySelector('#wv').value;if(!(v>0))return toast('Enter a weight');save(d=>{d.weight=d.weight.filter(s=>s.date!==t);d.weight.push({date:t,kg:fromDisp(v)})},'Weight saved');closeSheet()}});break}
  case 'supp':save(d=>{const t=iso(new Date()),l=d.supplements.log[t]=d.supplements.log[t]||[];const i=l.indexOf(ds.s);i<0?l.push(ds.s):l.splice(i,1)});break;
  case 'addsupp':{const n=prompt('Supplement name');if(n&&n.trim())save(d=>d.supplements.list.push(n.trim()));break}
- case 'signin':DB.signIn(ds.id);D=DB.get();S.tab='today';render();toast('Signed in as '+DB.currentUser().name);break;
+ case 'signin':DB.signIn(ds.id);D=DB.get();render();goPage('today');toast('Signed in as '+DB.currentUser().name);break;
  case 'export':exportData(ds.k);break;
  case 'tour':onboarding(true);break;
  case 'reset':if(confirm('Reset all demo data?')){D=DB.reset();render();onboarding(false)}break;
@@ -268,5 +427,5 @@ document.addEventListener('change',e=>{const t=e.target;
 
 render();
 if(!P().onboarded&&canEdit())onboarding(false);
-if('serviceWorker' in navigator&&location.protocol!=='file:')navigator.serviceWorker.register('sw.js?v=1').catch(()=>{});
+
 })();
