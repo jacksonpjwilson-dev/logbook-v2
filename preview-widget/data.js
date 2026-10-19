@@ -23,7 +23,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
     workouts,active:null,sleep,weight,
     supplements:{list:[],log:{}},
     foods,food,
-    mealPlan:{Breakfast:[],Lunch:[],Snack:[],Dinner:[]},schedule:{},savedMeals:[],
+    mealSlots:[{id:'m1',name:'Meal 1'},{id:'m2',name:'Meal 2'},{id:'m3',name:'Meal 3'}],schedule:{},savedMeals:[],
     pantry:[],
     accounts:[{id:'owner',name:'You',role:'owner'}]
   };
