@@ -266,3 +266,11 @@ small.why{color:var(--text)!important;opacity:.8}
 .scanbox{position:relative;border-radius:18px;overflow:hidden;background:#000;aspect-ratio:4/3;margin-bottom:8px}
 .scanbox video{width:100%;height:100%;object-fit:cover}
 .scanline{position:absolute;left:12%;right:12%;top:50%;height:2px;background:#ff3b30;box-shadow:0 0 12px #ff3b30}
+
+/* v7 home gesture */
+.ovh .back{white-space:nowrap;font-size:13px;font-weight:500;opacity:.7;width:56px;min-height:36px}
+.ovb{padding-bottom:calc(var(--sab) + 40px)}
+.homebar{height:calc(var(--sab) + 34px);z-index:5;background:linear-gradient(180deg,transparent,color-mix(in srgb,var(--bg) 85%,transparent) 55%)}
+.homebar i{width:140px;height:6px;opacity:.85;box-shadow:0 0 0 1px color-mix(in srgb,var(--bg) 60%,transparent)}
+.ov.dragging{box-shadow:0 20px 60px rgba(0,0,0,.35);user-select:none}
+.ov.dragging .ovb{pointer-events:none}

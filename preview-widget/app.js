@@ -568,7 +568,7 @@ function ovTitle(){if(OV.kind==='app')return APPS[OV.k][0];const it=curWidget();
 function ovBody(){return OV.kind==='app'?APPS[OV.k][1]():miniHTML()}
 function drawOV(){let el=$('#ov');if(!OV){el&&el.remove();return}const keep=el?el.querySelector('.ovb').scrollTop:0;
  if(!el){el=document.createElement('div');el.id='ov';el.className='ov';$('#app').appendChild(el)}
- el.innerHTML=`<div class="ovh"><button class="back" data-close aria-label="Back">‹ Home</button><b>${esc(ovTitle())}</b><span style="width:70px"></span></div><div class="ovb"><div class="pin">${ovBody()}</div></div><div class="homebar" aria-label="Swipe to close"><i></i></div>`;
+ el.innerHTML=`<div class="ovh"><button class="back" data-close aria-label="Back">‹ Home</button><b>${esc(ovTitle())}</b><span style="width:56px"></span></div><div class="ovb"><div class="pin">${ovBody()}</div></div><div class="homebar" role="button" aria-label="Swipe up to go Home"><i></i></div>`;
  el.querySelector('.ovb').scrollTop=keep;if(!canEdit())el.querySelectorAll('input,select,textarea').forEach(i=>{if(i.id!=='liftsel')i.disabled=true});bindOV(el)}
 function rectFT(r){const W=VW(),H=VH(),f=FR();return `translate(${r.left-f.left}px,${r.top-f.top}px) scale(${r.width/W},${r.height/H})`}
 function openOV(state,rect){OV=state;OV.rect=rect;drawOV();const el=$('#ov');if(!rect)rect={left:VW()*.3,top:VH()*.35,width:VW()*.4,height:VH()*.3};
@@ -582,12 +582,18 @@ function bindOV(el){let st=null;
  el.querySelector('[data-close]').onclick=e=>{e.stopPropagation();closeOV()};
  el.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{e.stopPropagation();const v=b.dataset.v;if(b.dataset.x==='rest'){restTimer(+v);return}if(!canEdit())return toast('Read-only account — editing is disabled');if(b.dataset.x==='water'){const d=iso(new Date());WATER[d]=Math.max(0,X.water(d)+ +v);localStorage.setItem(WKEY,JSON.stringify(WATER));drawOV();render();toast('Water updated')}if(b.dataset.x==='qlog'){const h=new Date().getHours(),meal=h<11?'Breakfast':h<15?'Lunch':h<17?'Snack':'Dinner';save(d=>{(d.food[iso(new Date())]=d.food[iso(new Date())]||[]).push({fid:v,meal,q:+b.dataset.q||1})},'Logged to '+meal)}});
  el.querySelectorAll('[data-mdays]').forEach(b=>b.onclick=e=>{e.stopPropagation();OV.days=b.dataset.mdays;drawOV()});
- el.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,input,select,label'))return;const hb=e.target.closest('.homebar,.ovh'),edge=e.clientX<28;if(!hb&&!edge)return;st={x:e.clientX,y:e.clientY,t:Date.now(),mode:edge&&!hb?'back':'down',hb:!!e.target.closest('.homebar')};el.setPointerCapture(e.pointerId)});
- el.addEventListener('pointermove',e=>{if(!st)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;
-  const p=st.mode==='back'?Math.max(0,dx)/VW():Math.abs(st.hb?Math.min(0,dy)*1.4||Math.max(0,dy):Math.max(0,dy))/VH();st.p=p;
-  if(p>0.01){el.style.transition='none';const s=1-p*.45;el.style.transform=st.mode==='back'?`translateX(${dx}px) scale(${s})`:`translateY(${st.hb?dy*.5:dy}px) scale(${s})`;el.style.borderRadius=Math.min(40,p*200)+'px'}});
- const up=()=>{if(!st)return;const p=st.p||0,v=p/Math.max(1,Date.now()-st.t)*1000;st=null;if(p>0.22||v>1.2)closeOV();else{el.style.transition='transform .3s cubic-bezier(.2,.9,.25,1),border-radius .3s';el.style.transform='none';el.style.borderRadius='0'}};
- el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)}
+ // iOS-style home gesture: only from the bottom home-bar zone (~34px); edge-swipe right still goes back
+ el.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,input,select,label,textarea'))return;const fr=FR(),y=e.clientY-fr.top,hb=!!e.target.closest('.homebar')||y>VH()-34,edge=e.clientX-fr.left<20&&!hb;if(!hb&&!edge)return;
+  e.preventDefault();st={x:e.clientX,y:e.clientY,t:Date.now(),mode:hb?'home':'back',hist:[[e.clientY,Date.now()]],p:0};el.classList.add('dragging');try{el.setPointerCapture(e.pointerId)}catch(_){}});
+ el.addEventListener('pointermove',e=>{if(!st)return;const dx=e.clientX-st.x,dy=e.clientY-st.y,W=VW(),H=VH();
+  if(st.mode==='back'){const p=Math.max(0,dx)/W;st.p=p;el.style.transition='none';el.style.transform=`translateX(${Math.max(0,dx)}px) scale(${1-p*.3})`;el.style.borderRadius=Math.min(40,p*200)+'px';return}
+  st.hist.push([e.clientY,Date.now()]);if(st.hist.length>6)st.hist.shift();
+  const up=Math.max(0,-dy),p=up/H,s=Math.max(.35,1-p*1.1),tx=W*(1-s)/2+dx*.35*s,ty=H-up-H*s;st.p=p;
+  el.style.transition='none';el.style.transform=`translate(${tx}px,${ty}px) scale(${s})`;el.style.borderRadius=Math.min(44,8+p*160)+'px'});
+ const end=()=>{if(!st)return;const m=st.mode,p=st.p||0,h=st.hist||[],a=h[0],z=h[h.length-1];const vy=a&&z&&z[1]>a[1]?(a[0]-z[0])/(z[1]-a[1]):0;st=null;el.classList.remove('dragging');
+  if(m==='home'?(p>0.18||(vy>0.6&&p>0.05)):(p>0.3))closeOV();
+  else{el.style.transition='transform .38s cubic-bezier(.2,1.25,.4,1),border-radius .38s';el.style.transform='none';el.style.borderRadius='0'}};
+ el.addEventListener('pointerup',end);el.addEventListener('pointercancel',end)}
 function goPage(k){const [a,seg]=k.split(':');if(seg)S.foodSeg=seg;if(a==='today'){if(OV)closeOV();return}
  if(!APPS[a])return;if(OV){OV={kind:'app',k:a,rect:OV.rect};drawOV();$('#ov .ovb').scrollTop=0;return}
  const ic=document.querySelector(`.dock [data-app="${a}"]`);openOV({kind:'app',k:a},ic?ic.getBoundingClientRect():null)}
