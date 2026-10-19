@@ -299,91 +299,156 @@ const WT={
   return `<small class="wl">Last 7 days</small><b class="wn ${sz==='S'?'sm':''}">${days.filter(x=>x.y).length}<em> sessions</em></b><div class="wweek">${days.map(x=>`<i class="${x.y?'on':''}"><span>${new Date(x.d+'T12:00').toLocaleDateString(undefined,{weekday:'narrow'})}</span></i>`).join('')}</div>`}]
 };
 const SZN={S:'Small',M:'Medium',L:'Large'};
-function defaultLayout(){let n=0;const w=(type,size,opt)=>({id:'w'+(++n)+uid(),type,size,opt:Object.assign({},WT[type][4],opt||{})});
- return [w('fuel','L',{show:'both'}),w('sleep','S'),w('weight','S'),w('training','M'),w('history','M',{metric:'kcal',days:'7'}),w('streak','S'),w('pantry','S'),w('coach','M')]}
-let LAYOUT=(()=>{try{const l=JSON.parse(localStorage.getItem(LY_KEY));if(Array.isArray(l))return l.filter(x=>WT[x.type])}catch(e){}return defaultLayout()})();
-function saveLayout(){localStorage.setItem(LY_KEY,JSON.stringify(LAYOUT))}
-function widgetHTML(w){const T=WT[w.type];let inner;try{inner=T[6](w.size,w.opt||{})}catch(e){inner='<small class="wl">'+T[0]+'</small><small>Unavailable</small>'}
- return `<div class="w ${w.size}" data-wid="${w.id}" data-sec="${T[2]}" role="button" tabindex="0" aria-label="${T[0]} widget"><div class="wi">${inner}</div>
+/* ---------- LAYOUT (pages of widgets) ---------- */
+const nw=(type,size,opt)=>({id:'w'+uid(),type,size,opt:Object.assign({},WT[type][4],opt||{})});
+function defaultLayout(){return [
+ {id:'home',name:'Home',w:[nw('fuel','L',{show:'both'}),nw('sleep','S'),nw('weight','S'),nw('training','M')]},
+ {id:'ptrain',name:'Training',w:[nw('training','M',{show:'next'}),nw('streak','M'),nw('training','S',{show:'week'}),nw('history','S',{metric:'volume',days:'30'}),nw('training','M',{show:'last'})]},
+ {id:'pfood',name:'Food',w:[nw('fuel','M',{show:'macros'}),nw('history','M',{metric:'kcal',days:'7'}),nw('pantry','M'),nw('history','M',{metric:'protein',days:'7'})]},
+ {id:'prec',name:'Sleep & body',w:[nw('sleep','M',{show:'week'}),nw('weight','M',{days:'30'}),nw('supps','M'),nw('coach','M')]},
+ {id:'phist',name:'History',w:[nw('history','L',{metric:'weight',days:'30'}),nw('history','M',{metric:'sleep',days:'14'}),nw('history','M',{metric:'volume',days:'30'})]}]}
+let LAYOUT=(()=>{try{const l=JSON.parse(localStorage.getItem('lb2w:pages'));if(Array.isArray(l)&&l.length)return l.map(p=>({...p,w:p.w.filter(x=>WT[x.type])}))}catch(e){}return defaultLayout()})();
+function saveLayout(){localStorage.setItem('lb2w:pages',JSON.stringify(LAYOUT))}
+const SB={cur:0,rows:4,W:390};
+const probe=(()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;left:0;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';document.documentElement.appendChild(d);return d})();
+function metrics(){const cs=getComputedStyle(probe),sat=parseFloat(cs.paddingTop)||0,sab=parseFloat(cs.paddingBottom)||0,W=Math.min(innerWidth,560),H=innerHeight;
+ const head=58,bottom=104+Math.max(sab,8)+20,avail=H-sat-8-head-bottom,gap=14,cw=(W-32-gap)/2;
+ const rows=Math.max(2,Math.min(4,Math.round((avail+gap)/(cw+gap))));const rh=Math.floor((avail-gap*(rows-1))/rows);Object.assign(SB,{rows,rh,W:innerWidth,avail});return SB}
+function fits(occ,R,sz,r,c){const cells=sz==='S'?[[r,c]]:sz==='M'?(c?null:[[r,0],[r,1]]):(c||r+1>=R?null:[[r,0],[r,1],[r+1,0],[r+1,1]]);if(!cells||cells.some(([y,x])=>y>=R||occ[y][x]))return null;return cells}
+function pack(){const R=SB.rows,out=[];let carry=[],i=0;
+ while(i<LAYOUT.length||carry.length){const p=LAYOUT[i]||{id:'p'+uid(),name:'',w:[]};i++;const items=[...carry,...p.w];carry=[];const occ=Array.from({length:R},()=>[0,0]),placed=[];
+  for(const w of items){let ok=null;for(let r=0;r<R&&!ok;r++)for(let c=0;c<2&&!ok;c++){const cl=fits(occ,R,w.size,r,c);if(cl){cl.forEach(([y,x])=>occ[y][x]=1);ok={w,r,c}}}ok?placed.push(ok):carry.push(w)}
+  out.push({id:p.id,name:p.name,items:placed})}
+ return out}
+function commitPack(){LAYOUT=pack().map(p=>({id:p.id,name:p.name,w:p.items.map(x=>x.w)}));saveLayout()}
+function widgetHTML(w,r,c){const T=WT[w.type];let inner;try{inner=T[6](w.size,w.opt||{})}catch(e){inner='<small class="wl">'+T[0]+'</small><small>Unavailable</small>'}
+ const span=w.size==='S'?'span 1':'1 / span 2';return `<div class="w ${w.size}" data-wid="${w.id}" style="grid-row:${r+1} / span ${w.size==='L'?2:1};grid-column:${w.size==='S'?c+1:span}" role="button" tabindex="0" aria-label="${T[0]} widget"><div class="wi">${inner}</div>
  <button class="wx" data-wx aria-label="Remove widget">−</button><button class="wsz" data-wsz aria-label="Change size">${w.size}</button></div>`}
-function vHome(){return `<div class="wgrid" id="wgrid">${LAYOUT.map(widgetHTML).join('')}</div>${LAYOUT.length?'':'<div class="empty">No widgets. Press and hold, or tap Edit, then ＋ to add some.</div>'}<p class="muted hint">Tap a widget to open it · swipe for sections · press and hold to edit</p>`}
+function pageTitle(p,i){return i===0?`<div class="sub">${new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'})}</div><h1>Hi ${esc(P().name)}</h1>`:`<div class="sub">&nbsp;</div><h1>${esc(p.name||'Page '+(i+1))}</h1>`}
 
-/* ---------- PAGER RENDER ---------- */
-const titles=()=>({today:new Date().toLocaleDateString('en-CA',{weekday:'long'}),train:'Training',food:'Food',recovery:'Sleep & body',progress:'History',me:'Settings'});
-const subs=()=>({today:`Hi ${esc(P().name)} · ${new Date().toLocaleDateString('en-CA',{month:'long',day:'numeric'})}`,train:D.active?'Session in progress':'Workouts & templates',food:'Log, plan & pantry',recovery:'Sleep, weight & supplements',progress:'Trends over time',me:'Appearance, profile & sharing'});
-function pageHTML(k){const u=DB.currentUser(),ro=!canEdit();const v={today:vHome,train:vTrain,food:vFood,recovery:vRecovery,progress:vProgress,me:vMe}[k]();
- const right=k==='today'?(WSTATE.edit?`<div class="hbtns"><button class="pillbtn" data-wadd aria-label="Add widget">＋</button><button class="pillbtn on" data-wdone>Done</button></div>`:`<button class="pillbtn" data-wedit>Edit</button>`):`<button class="avatar" data-go="me" aria-label="Settings">${esc((ro?u.name:P().name)[0])}</button>`;
- return `<section class="page" data-page="${k}"><div class="pin"><header class="top"><div style="min-width:0"><div class="sub">${subs()[k]}</div><h1>${titles()[k]}</h1></div>${right}</header>
- ${k==='today'?`<div class="banner"><span class="demo">Preview</span><span>${ro?`Signed in as <b>${esc(u.name)}</b> · read-only`:'Demo data, saved on this device only'}</span></div>`:''}<main>${v}</main></div></section>`}
-function render(){D=DB.get();applyTheme();document.body.classList.toggle('readonly',!canEdit());document.body.classList.toggle('editing',WSTATE.edit);
- const pager=$('#pager'),sl=pager?pager.scrollLeft:null,tops={};if(pager)pager.querySelectorAll('.page').forEach(p=>tops[p.dataset.page]=p.scrollTop);
- $('#app').innerHTML=`<div id="pager" class="pager">${PAGES.map(([k])=>pageHTML(k)).join('')}</div>
- ${D.active&&S.tab!=='train'?`<button class="fab-live" data-go="train"><span>● ${esc(D.active.name)} in progress</span><span>Resume ›</span></button>`:''}
- <nav class="dock" aria-label="Sections"><div class="dname" id="dname">${PAGES.find(p=>p[0]===S.tab)[1]}</div><div class="pdots">${PAGES.map(([k,n])=>`<button class="${S.tab===k?'on':''}" data-go="${k}" aria-label="${n}"><i></i></button>`).join('')}</div></nav>`;
- const p2=$('#pager');p2.querySelectorAll('.page').forEach(p=>{if(tops[p.dataset.page])p.scrollTop=tops[p.dataset.page]});
- p2.scrollLeft=sl!=null?sl:PAGES.findIndex(p=>p[0]===S.tab)*p2.clientWidth;
- if(!canEdit())p2.querySelectorAll('main input,main select,main textarea').forEach(i=>{if(i.id!=='liftsel')i.disabled=true});
- p2.addEventListener('scroll',onPagerScroll,{passive:true});bindHome();tickElapsed()}
-let scT;function onPagerScroll(){const p=$('#pager'),i=Math.round(p.scrollLeft/p.clientWidth),k=PAGES[Math.max(0,Math.min(PAGES.length-1,i))][0];
- if(k!==S.tab){S.tab=k;$('#dname').textContent=PAGES[i][1];document.querySelectorAll('.pdots button').forEach((b,j)=>b.classList.toggle('on',j===i));const f=$('.fab-live');if(f)f.style.display=k==='train'?'none':''}}
-function goPage(k){const sec=k.split(':');if(sec[1]){S.foodSeg=sec[1];}k=sec[0];if(WSTATE.edit&&k!=='today')setEdit(false);S.tab=k;if(!$('#pager')||sec[1])render();const p=$('#pager'),i=PAGES.findIndex(x=>x[0]===k);p.scrollTo({left:i*p.clientWidth,behavior:'smooth'});onPagerScroll()}
-addEventListener('resize',()=>{const p=$('#pager');if(p)p.scrollLeft=PAGES.findIndex(x=>x[0]===S.tab)*p.clientWidth});
+/* ---------- APPS (dock) ---------- */
+const APPS={train:['Training',vTrain,'linear-gradient(160deg,#ff9f43,#ee5a24)'],food:['Food',vFood,'linear-gradient(160deg,#7bed9f,#20bf6b)'],progress:['History',vProgress,'linear-gradient(160deg,#70a1ff,#1e6fd9)'],recovery:['Sleep & body',vRecovery,'linear-gradient(160deg,#a29bfe,#5f27cd)'],me:['Settings',vMe,'linear-gradient(160deg,#c8ccd2,#7d848e)']};
+const GLYPH={train:ICON.train,food:ICON.food,progress:ICON.progress,recovery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',me:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>'};
+const appIcon=k=>`<span class="aico" style="background:${APPS[k][2]}">${GLYPH[k]}</span>`;
+let OV=null; // {kind:'app',k} | {kind:'mini',id,days}
+const SECOF={fuel:'food',training:'train',history:'progress',sleep:'recovery',weight:'recovery',supps:'recovery',pantry:'food:pantry',coach:'recovery',streak:'progress'};
+function miniHTML(){const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===OV.id);if(!it)return '<div class="empty">Widget removed</div>';const T=WT[it.type],o=it.opt||{},sec=SECOF[it.type],an=APPS[sec.split(':')[0]][0];
+ const rng=(cur)=>`<div class="seg">${['7','14','30','90'].map(d=>`<button class="${cur===d?'on':''}" data-mdays="${d}">${d} d</button>`).join('')}</div>`;
+ let body='';const days=OV.days||o.days||'14';
+ const metricView=(m)=>{const [n,u,kind]=METRIC[m],unit=typeof u==='function'?u():u,pts=series(m,+days);const goal=m==='kcal'?P().targets.kcal:m==='protein'?P().targets.p:m==='sleep'?P().sleepGoal:null;
+  const ys=pts.map(p=>p.y),avg=ys.length?ys.reduce((a,b)=>a+b,0)/ys.length:0;
+  return `${rng(days)}<div class="card"><h2>${n} <small>${unit}</small></h2>${(kind==='bar'?barChart:lineChart)(pts.map(p=>({x:p.d.slice(5),y:p.y})),kind==='bar'?{goal,h:170}:{h:190})}</div>
+  <div class="grid2"><div class="stat"><b>${ys.length?ys[ys.length-1].toLocaleString():'—'}</b><span>Latest</span></div><div class="stat"><b>${ys.length?(Math.round(avg*10)/10).toLocaleString():'—'}</b><span>${days}-day average</span></div></div>
+  <div class="card" style="margin-top:12px"><h2>Entries <small>${pts.length}</small></h2><div class="list">${[...pts].reverse().map(p=>`<div class="item"><div class="grow"><div class="t">${prettyDate(p.d)}</div></div><b>${p.y.toLocaleString()} ${unit}</b></div>`).join('')||'<div class="empty">No entries in this range</div>'}</div></div>`};
+ if(it.type==='history')body=metricView(o.metric||'weight');
+ else if(it.type==='weight')body=metricView('weight')+`<button class="btn block" data-edit data-act="weight" style="margin-top:4px">Log weight</button>`;
+ else if(it.type==='sleep')body=metricView('sleep')+`<button class="btn block" data-edit data-act="sleep" style="margin-top:4px">Log sleep</button>`;
+ else if(it.type==='fuel'){const t=todayT(),g=P().targets,day=D.food[iso(new Date())]||[];body=`<div class="card"><div class="row">${ring(t.kcal,g.kcal,'of '+g.kcal+' kcal',120)}<div class="grow"><b style="font-size:30px">${Math.round(g.kcal-t.kcal)}</b><div class="muted">kcal left today</div></div></div><div style="margin-top:12px">${macroBars(t)}</div></div>
+  <div class="card"><h2>Logged today <small>${day.length} items</small></h2><div class="list">${day.map(e=>{const f=food(e.fid);return `<div class="item"><div class="grow"><div class="t">${esc(f.name)}</div><div class="s">${e.meal} · P${Math.round(f.p*e.q)} C${Math.round(f.c*e.q)} F${Math.round(f.f*e.q)}</div></div><b>${Math.round(f.kcal*e.q)}</b></div>`}).join('')||'<div class="muted">Nothing yet</div>'}</div></div><button class="btn block" data-edit data-act="addfood">＋ Log food</button>`}
+ else if(it.type==='training'||it.type==='streak'){const n=nextTpl(),rec=[...D.workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+  body=`<div class="card"><h2>${D.active?'In progress':'Next up'}</h2><b style="font-size:22px">${esc(D.active?D.active.name:n.name)}</b><div class="muted">${esc((D.active?D.active.exercises.map(e=>e.name):n.exercises).join(' · '))}</div>${D.active?'':`<button class="btn block" style="margin-top:10px" data-edit data-act="start" data-t="${esc(n.name)}">Start ${esc(n.name)}</button>`}</div>
+  <div class="card"><h2>This week <small>${wkCount()}/${P().weekGoal}</small></h2>${T[6]('M',{show:'week'}).replace(/<small class="wl">.*?<\/small>/,'')}</div>
+  <div class="card"><h2>Recent</h2><div class="list">${rec.map(w=>`<button class="item" style="background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left" data-act="openw" data-id="${w.id}"><div class="grow"><div class="t">${esc(w.name)}</div><div class="s">${prettyDate(w.date)}</div></div><span class="pill">${vol(w).toLocaleString()} ${U()}</span></button>`).join('')}</div></div>`}
+ else if(it.type==='supps'){const t=D.supplements.log[iso(new Date())]||[];body=`<div class="card"><h2>Today <small>${t.length}/${D.supplements.list.length}</small></h2><div class="chips">${D.supplements.list.map(s=>`<button class="chip ${t.includes(s)?'on':''}" data-act="supp" data-s="${esc(s)}">${t.includes(s)?'✓ ':''}${esc(s)}</button>`).join('')}</div></div>`}
+ else if(it.type==='pantry'){body=`<div class="card"><h2>Pantry</h2><div class="list">${D.pantry.map(p=>{const st=pantryStatus(p);return `<div class="item"><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${p.qty} ${esc(p.unit)} · min ${p.min}</div></div><span class="pill ${st}">${st==='ok'?'OK':st==='low'?'Low':'Out'}</span></div>`}).join('')}</div></div>`}
+ else if(it.type==='coach'){body=`<div class="card"><h2>Coach</h2>${coachTips().map(x=>`<div class="tip">${esc(x)}</div>`).join('')||'<div class="muted">All on track.</div>'}</div>`}
+ return body+`<button class="btn ghost block openfull" data-go="${sec}">Open ${an} ›</button>`}
+function ovTitle(){if(OV.kind==='app')return APPS[OV.k][0];const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===OV.id);if(!it)return '';const o=it.opt||{};return it.type==='history'?METRIC[o.metric||'weight'][0]:WT[it.type][0]}
+function ovBody(){return OV.kind==='app'?APPS[OV.k][1]():miniHTML()}
+function drawOV(){let el=$('#ov');if(!OV){el&&el.remove();return}const keep=el?el.querySelector('.ovb').scrollTop:0;
+ if(!el){el=document.createElement('div');el.id='ov';el.className='ov';$('#app').appendChild(el)}
+ el.innerHTML=`<div class="ovh"><button class="back" data-close aria-label="Back">‹ Home</button><b>${esc(ovTitle())}</b><span style="width:70px"></span></div><div class="ovb"><div class="pin">${ovBody()}</div></div><div class="homebar" aria-label="Swipe to close"><i></i></div>`;
+ el.querySelector('.ovb').scrollTop=keep;if(!canEdit())el.querySelectorAll('input,select,textarea').forEach(i=>{if(i.id!=='liftsel')i.disabled=true});bindOV(el)}
+function rectFT(r){const W=innerWidth,H=innerHeight;return `translate(${r.left}px,${r.top}px) scale(${r.width/W},${r.height/H})`}
+function openOV(state,rect){OV=state;OV.rect=rect;drawOV();const el=$('#ov');if(!rect)rect={left:innerWidth*.3,top:innerHeight*.35,width:innerWidth*.4,height:innerHeight*.3};
+ el.style.transition='none';el.style.transform=rectFT(rect);el.style.borderRadius='60px';el.style.opacity='.4';el.offsetWidth;
+ el.style.transition='transform .42s cubic-bezier(.2,.9,.25,1),border-radius .42s,opacity .2s';el.style.transform='none';el.style.borderRadius='0';el.style.opacity='1';document.body.classList.add('ovopen')}
+function closeOV(){const el=$('#ov');if(!el){OV=null;return}let r=OV.rect;const src=OV.kind==='mini'?document.querySelector(`.sb [data-wid="${OV.id}"]`):document.querySelector(`.dock [data-app="${OV.k}"]`);if(src)r=src.getBoundingClientRect();
+ if(!r)r={left:innerWidth*.3,top:innerHeight*.35,width:innerWidth*.4,height:innerHeight*.3};
+ el.style.transition='transform .36s cubic-bezier(.3,.7,.3,1),border-radius .36s,opacity .36s';el.style.transform=rectFT(r);el.style.borderRadius='60px';el.style.opacity='0';
+ OV=null;document.body.classList.remove('ovopen');setTimeout(()=>{if(!OV)el.remove()},380);render()}
+function bindOV(el){let st=null;
+ el.querySelector('[data-close]').onclick=e=>{e.stopPropagation();closeOV()};
+ el.querySelectorAll('[data-mdays]').forEach(b=>b.onclick=e=>{e.stopPropagation();OV.days=b.dataset.mdays;drawOV()});
+ el.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,input,select,label'))return;const hb=e.target.closest('.homebar,.ovh'),edge=e.clientX<28;if(!hb&&!edge)return;st={x:e.clientX,y:e.clientY,t:Date.now(),mode:edge&&!hb?'back':'down',hb:!!e.target.closest('.homebar')};el.setPointerCapture(e.pointerId)});
+ el.addEventListener('pointermove',e=>{if(!st)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;
+  const p=st.mode==='back'?Math.max(0,dx)/innerWidth:Math.abs(st.hb?Math.min(0,dy)*1.4||Math.max(0,dy):Math.max(0,dy))/innerHeight;st.p=p;
+  if(p>0.01){el.style.transition='none';const s=1-p*.45;el.style.transform=st.mode==='back'?`translateX(${dx}px) scale(${s})`:`translateY(${st.hb?dy*.5:dy}px) scale(${s})`;el.style.borderRadius=Math.min(40,p*200)+'px'}});
+ const up=()=>{if(!st)return;const p=st.p||0,v=p/Math.max(1,Date.now()-st.t)*1000;st=null;if(p>0.22||v>1.2)closeOV();else{el.style.transition='transform .3s cubic-bezier(.2,.9,.25,1),border-radius .3s';el.style.transform='none';el.style.borderRadius='0'}};
+ el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up)}
+function goPage(k){const [a,seg]=k.split(':');if(seg)S.foodSeg=seg;if(a==='today'){if(OV)closeOV();return}
+ if(!APPS[a])return;if(OV){OV={kind:'app',k:a,rect:OV.rect};drawOV();$('#ov .ovb').scrollTop=0;return}
+ const ic=document.querySelector(`.dock [data-app="${a}"]`);openOV({kind:'app',k:a},ic?ic.getBoundingClientRect():null)}
 
-/* ---------- EDIT MODE ---------- */
-function setEdit(on){WSTATE.edit=on;render()}
-function bindHome(){const g=$('#wgrid');const hp=$('[data-page=today]');if(!hp)return;
- hp.querySelector('[data-wedit]')?.addEventListener('click',()=>setEdit(true));
- hp.querySelector('[data-wdone]')?.addEventListener('click',e=>{e.stopPropagation();setEdit(false)});
- hp.querySelector('[data-wadd]')?.addEventListener('click',e=>{e.stopPropagation();gallery()});
- if(!g)return;let lp=null,start=null,drag=null;
- g.addEventListener('contextmenu',e=>e.preventDefault());
- g.addEventListener('pointerdown',e=>{const w=e.target.closest('.w');if(!w)return;start={x:e.clientX,y:e.clientY,w,id:e.pointerId,t:Date.now()};
-  if(!WSTATE.edit){lp=setTimeout(()=>{lp=null;start=null;navigator.vibrate?.(15);setEdit(true)},480);return}
-  if(e.target.closest('[data-wx],[data-wsz]'))return;});
- g.addEventListener('pointermove',e=>{if(!start)return;const dx=e.clientX-start.x,dy=e.clientY-start.y;
-  if(!WSTATE.edit){if(Math.hypot(dx,dy)>10){clearTimeout(lp);lp=null;start=null}return}
-  if(!drag&&Math.hypot(dx,dy)>8&&!e.target.closest('[data-wx],[data-wsz]')){drag={w:start.w,id:start.w.dataset.wid};start.w.classList.add('drag');try{g.setPointerCapture(start.id)}catch(_){}}
-  if(drag){e.preventDefault();drag.w.style.transform=`translate(${dx}px,${dy}px) scale(1.05)`;drag.w.style.pointerEvents='none';
-   const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.w');if(over&&over!==drag.w){const from=LAYOUT.findIndex(x=>x.id===drag.id),to=LAYOUT.findIndex(x=>x.id===over.dataset.wid);
-    const r0=drag.w.getBoundingClientRect();const [it]=LAYOUT.splice(from,1);LAYOUT.splice(to,0,it);
-    const els=[...g.children],before=new Map(els.map(el=>[el,el.getBoundingClientRect()]));
-    const ref=to>from?over.nextSibling:over;g.insertBefore(drag.w,ref);
-    els.forEach(el=>{if(el===drag.w)return;const a=before.get(el),b=el.getBoundingClientRect();if(a.left!==b.left||a.top!==b.top){el.animate([{transform:`translate(${a.left-b.left}px,${a.top-b.top}px)`},{transform:'none'}],{duration:220,easing:'cubic-bezier(.2,.8,.2,1)'})}});
-    const r1=drag.w.getBoundingClientRect();start.x+=r1.left-r0.left;start.y+=r1.top-r0.top;drag.w.style.transform=`translate(${e.clientX-start.x}px,${e.clientY-start.y}px) scale(1.05)`}}},{passive:false});
- const end=e=>{clearTimeout(lp);if(drag){WSTATE.dragEnd=Date.now();saveLayout();drag.w.style.transform='';drag.w.style.pointerEvents='';drag.w.classList.remove('drag');drag=null;start=null;return}
-  if(start&&e.type==='pointerup'&&Date.now()-start.t<450){const w=start.w,id=w.dataset.wid;
-   if(WSTATE.edit){if(e.target.closest('[data-wx]')){LAYOUT=LAYOUT.filter(x=>x.id!==id);saveLayout();w.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.3)',opacity:0}],{duration:180}).onfinish=render}
-    else if(e.target.closest('[data-wsz]')){const it=LAYOUT.find(x=>x.id===id),sz=WT[it.type][3];it.size=sz[(sz.indexOf(it.size)+1)%sz.length];saveLayout();render()}
-    else wsettings(id)}
-   else{goPage(w.dataset.sec)}}
-  start=null};
- g.addEventListener('pointerup',end);g.addEventListener('pointercancel',end);
- g.addEventListener('keydown',e=>{const w=e.target.closest('.w');if(w&&(e.key==='Enter'||e.key===' ')){e.preventDefault();WSTATE.edit?wsettings(w.dataset.wid):goPage(w.dataset.sec)}})}
-document.addEventListener('click',e=>{if(Date.now()-(WSTATE.dragEnd||0)<400)return;if(WSTATE.edit&&e.target.closest('.page[data-page=today] main')&&!e.target.closest('.w,.pillbtn'))setEdit(false)});
-function gallery(){sheet(`<h3>Add a widget</h3><p class="muted">Pick a widget and a size. You can change what it shows after adding it.</p><div class="gal">${Object.entries(WT).map(([k,T])=>`<div class="gitem"><div class="gh"><span class="gic">${T[1]}</span><b>${T[0]}</b></div><div class="gprev">${T[3].map(sz=>`<button class="gsz" data-add="${k}" data-sz="${sz}"><div class="w ${sz} mini"><div class="wi">${T[6](sz,T[4])}</div></div><span>${SZN[sz]}</span></button>`).join('')}</div></div>`).join('')}</div>`,el=>{
- el.addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;LAYOUT.unshift({id:'w'+uid(),type:b.dataset.add,size:b.dataset.sz,opt:Object.assign({},WT[b.dataset.add][4])});saveLayout();closeSheet();render();toast(WT[b.dataset.add][0]+' widget added')})})}
-function wsettings(id){const it=LAYOUT.find(x=>x.id===id);if(!it)return;const T=WT[it.type];it.opt=Object.assign({},T[4],it.opt);
+/* ---------- SPRINGBOARD RENDER ---------- */
+function render(){D=DB.get();applyTheme();document.body.classList.toggle('readonly',!canEdit());document.body.classList.toggle('editing',WSTATE.edit);metrics();
+ const pages=pack();SB.n=pages.length;SB.cur=Math.min(SB.cur,pages.length-1);
+ const edit=WSTATE.edit?`<div class="etools"><button class="pillbtn" data-pdel ${pages.length<2?'disabled':''}>− Page</button><button class="pillbtn" data-padd>＋ Page</button><button class="pillbtn" data-wadd aria-label="Add widget">＋ Widget</button><button class="pillbtn on" data-wdone>Done</button></div>`:'';
+ $('#app').innerHTML=`<div class="sb" id="sb"><div class="track" id="track" style="transform:translateX(${-SB.cur*SB.W}px)">${pages.map((p,i)=>`<section class="page" data-pi="${i}"><div class="pin2"><header class="top">${WSTATE.edit&&i===SB.cur?edit:`<div style="min-width:0">${pageTitle(p,i)}</div>`}</header>
+ <div class="wgrid" style="grid-template-rows:repeat(${SB.rows},${SB.rh}px)">${p.items.map(x=>widgetHTML(x.w,x.r,x.c)).join('')}</div>${p.items.length?'':`<div class="emptypg">${WSTATE.edit?'Empty page. Tap ＋ Widget to add one, or − Page to remove it.':'Empty page'}</div>`}</div></section>`).join('')}</div></div>
+ ${D.active&&!OV?`<button class="fab-live" data-go="train"><span>● ${esc(D.active.name)} in progress</span><span>Resume ›</span></button>`:''}
+ <div class="dockwrap"><div class="pdots">${pages.map((p,i)=>`<i class="${i===SB.cur?'on':''}"></i>`).join('')}</div><nav class="dock" aria-label="Apps">${['train','food','progress','recovery','me'].map(k=>`<button data-app="${k}" aria-label="${APPS[k][0]}">${appIcon(k)}<span>${APPS[k][0].split(' ')[0]}</span></button>`).join('')}</nav></div>`;
+ if(OV){const el=document.createElement('div');el.id='ov';el.className='ov';$('#app').appendChild(el);el.innerHTML='<div class="ovb"></div>';drawOV()}
+ bindSB();tickElapsed()}
+function setPage(i,anim=true){i=Math.max(0,Math.min(SB.n-1,i));SB.cur=i;const t=$('#track');t.style.transition=anim?'transform .45s cubic-bezier(.2,.9,.25,1)':'none';t.style.transform=`translateX(${-i*SB.W}px)`;
+ document.querySelectorAll('.pdots i').forEach((d,j)=>d.classList.toggle('on',j===i));if(WSTATE.edit)setTimeout(render,460)}
+addEventListener('resize',()=>{clearTimeout(SB.rz);SB.rz=setTimeout(render,120)});
+function setEdit(on){if(on)commitPack();WSTATE.edit=on;render()}
+function bindSB(){const sb=$('#sb'),track=$('#track');let st=null,lp=null,edgeT=null;
+ document.querySelectorAll('.dock [data-app]').forEach(b=>b.onclick=()=>{if(WSTATE.edit)setEdit(false);openOV({kind:'app',k:b.dataset.app},b.querySelector('.aico').getBoundingClientRect())});
+ const q=s=>sb.querySelector(s);q('[data-wdone]')&&(q('[data-wdone]').onclick=()=>setEdit(false));q('[data-wadd]')&&(q('[data-wadd]').onclick=gallery);
+ q('[data-padd]')&&(q('[data-padd]').onclick=()=>{LAYOUT.splice(SB.cur+1,0,{id:'p'+uid(),name:'',w:[]});saveLayout();SB.cur++;render();toast('Page added')});
+ q('[data-pdel]')&&(q('[data-pdel]').onclick=()=>{const p=LAYOUT[SB.cur];if(p.w.length&&!confirm(`Remove this page and its ${p.w.length} widget${p.w.length>1?'s':''}?`))return;LAYOUT.splice(SB.cur,1);saveLayout();SB.cur=Math.max(0,SB.cur-1);render();toast('Page removed')});
+ sb.addEventListener('contextmenu',e=>e.preventDefault());
+ sb.addEventListener('pointerdown',e=>{if(e.target.closest('.etools'))return;const w=e.target.closest('.w');st={x:e.clientX,y:e.clientY,t:Date.now(),w,btn:e.target.closest('[data-wx],[data-wsz]'),mode:null,pid:e.pointerId,hist:[[e.clientX,Date.now()]]};
+  if(!WSTATE.edit)lp=setTimeout(()=>{if(st&&!st.mode){st.mode='lp';navigator.vibrate?.(15);setEdit(true)}},500)});
+ sb.addEventListener('pointermove',e=>{if(!st||st.mode==='lp')return;const dx=e.clientX-st.x,dy=e.clientY-st.y;st.hist.push([e.clientX,Date.now()]);if(st.hist.length>6)st.hist.shift();
+  if(!st.mode&&Math.hypot(dx,dy)>8){clearTimeout(lp);if(WSTATE.edit&&st.w&&!st.btn){st.mode='wdrag';st.w.classList.add('drag');st.ox=0;st.oy=0}else st.mode=Math.abs(dx)>Math.abs(dy)?'pager':'none';try{sb.setPointerCapture(st.pid)}catch(_){}}
+  if(st.mode==='pager'){let off=dx;if((SB.cur===0&&dx>0)||(SB.cur===SB.n-1&&dx<0))off=dx/(1+Math.abs(dx)/(SB.W*.35))*.6;track.style.transition='none';track.style.transform=`translateX(${-SB.cur*SB.W+off}px)`}
+  if(st.mode==='wdrag'){const w=st.w;w.style.transform=`translate(${dx-st.ox}px,${dy-st.oy}px) scale(1.06)`;w.style.pointerEvents='none';
+   const edge=e.clientX<22?-1:e.clientX>innerWidth-22?1:0;
+   if(edge&&!edgeT)edgeT=setTimeout(()=>{edgeT=null;if(!st||st.mode!=='wdrag')return;const id=w.dataset.wid,from=LAYOUT[SB.cur],it=from.w.find(x=>x.id===id),to=SB.cur+edge;if(to<0)return;
+    if(!LAYOUT[to])LAYOUT.push({id:'p'+uid(),name:'',w:[]});from.w=from.w.filter(x=>x!==it);LAYOUT[to].w.push(it);commitPack();st=null;SB.cur=to;render();toast('Moved to page '+(to+1))},550);
+   if(!edge){clearTimeout(edgeT);edgeT=null}
+   const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.w');if(over&&over!==w&&!over.getAnimations().some(a=>!(window.CSSAnimation&&a instanceof CSSAnimation))){const pg=LAYOUT[SB.cur],a=pg.w.findIndex(x=>x.id===w.dataset.wid),b=pg.w.findIndex(x=>x.id===over.dataset.wid);
+    if(a>=0&&b>=0){const r0=w.getBoundingClientRect();const [it]=pg.w.splice(a,1);pg.w.splice(b,0,it);const before=new Map([...w.parentNode.children].map(el=>[el.dataset.wid,el.getBoundingClientRect()]));
+     const p2=pack()[SB.cur];p2.items.forEach(x=>{const el=w.parentNode.querySelector(`[data-wid="${x.w.id}"]`);if(el){el.style.gridRow=`${x.r+1} / span ${x.w.size==='L'?2:1}`;el.style.gridColumn=x.w.size==='S'?String(x.c+1):'1 / span 2'}});
+     [...w.parentNode.children].forEach(el=>{if(el===w)return;const A=before.get(el.dataset.wid),B=el.getBoundingClientRect();if(A&&(A.left!==B.left||A.top!==B.top))el.animate([{transform:`translate(${A.left-B.left}px,${A.top-B.top}px)`},{transform:'none'}],{duration:240,easing:'cubic-bezier(.2,.8,.2,1)'})});
+     const r1=w.getBoundingClientRect();st.ox+=r1.left-r0.left;st.oy+=r1.top-r0.top;w.style.transform=`translate(${dx-st.ox}px,${dy-st.oy}px) scale(1.06)`}}}});
+ const end=e=>{clearTimeout(lp);clearTimeout(edgeT);edgeT=null;if(!st)return;const s=st;st=null;
+  if(s.mode==='pager'){const dx=e.clientX-s.x,h=s.hist,v=h.length>1?(h[h.length-1][0]-h[0][0])/Math.max(1,h[h.length-1][1]-h[0][1]):0;let i=SB.cur;
+   if(dx<-SB.W/2||v<-0.35)i++;else if(dx>SB.W/2||v>0.35)i--;setPage(i);return}
+  if(s.mode==='wdrag'){saveLayout();commitPack();render();return}
+  if(s.mode||e.type!=='pointerup'||Date.now()-s.t>480)return;
+  if(WSTATE.edit){if(s.btn&&s.btn.matches('[data-wx]')){const id=s.w.dataset.wid;LAYOUT.forEach(p=>p.w=p.w.filter(x=>x.id!==id));saveLayout();s.w.animate([{transform:'scale(1)',opacity:1},{transform:'scale(.3)',opacity:0}],{duration:180}).onfinish=()=>{commitPack();render()}}
+   else if(s.btn){const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===s.w.dataset.wid),sz=WT[it.type][3];it.size=sz[(sz.indexOf(it.size)+1)%sz.length];commitPack();render()}
+   else if(s.w)wsettings(s.w.dataset.wid);else if(!e.target.closest('.top'))setEdit(false);return}
+  if(s.w)openOV({kind:'mini',id:s.w.dataset.wid},s.w.getBoundingClientRect())};
+ sb.addEventListener('pointerup',end);sb.addEventListener('pointercancel',end);
+ sb.addEventListener('keydown',e=>{const w=e.target.closest('.w');if(w&&(e.key==='Enter'||e.key===' ')){e.preventDefault();WSTATE.edit?wsettings(w.dataset.wid):openOV({kind:'mini',id:w.dataset.wid},w.getBoundingClientRect())}if(e.key==='ArrowRight')setPage(SB.cur+1);if(e.key==='ArrowLeft')setPage(SB.cur-1)})}
+function gallery(){sheet(`<h3>Add a widget</h3><p class="muted">Added to this page. If it doesn't fit, it moves to the next page, like on iPhone.</p><div class="gal">${Object.entries(WT).map(([k,T])=>`<div class="gitem"><div class="gh"><span class="gic">${T[1]}</span><b>${T[0]}</b></div><div class="gprev">${T[3].map(sz=>`<button class="gsz" data-add="${k}" data-sz="${sz}"><div class="w ${sz} mini"><div class="wi">${T[6](sz,T[4])}</div></div><span>${SZN[sz]}</span></button>`).join('')}</div></div>`).join('')}</div>`,el=>{
+ el.addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;LAYOUT[SB.cur].w.unshift(nw(b.dataset.add,b.dataset.sz));commitPack();closeSheet();render();toast(WT[b.dataset.add][0]+' widget added')})})}
+function wsettings(id){const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===id);if(!it)return;const T=WT[it.type];it.opt=Object.assign({},T[4],it.opt);
  const draw=el=>{el.querySelector('#wprev').innerHTML=`<div class="w ${it.size}"><div class="wi">${T[6](it.size,it.opt)}</div></div>`};
  sheet(`<h3>${T[1]} ${T[0]} widget</h3><div class="wprev" id="wprev"></div>
  <label class="f">Size</label><div class="seg" data-k="__size">${T[3].map(s=>`<button class="${it.size===s?'on':''}" data-v="${s}">${SZN[s]}</button>`).join('')}</div>
  ${Object.entries(T[5]).map(([k,[lab,opts]])=>`<label class="f">${lab}</label><div class="seg wrap" data-k="${k}">${opts.map(([v,n])=>`<button class="${it.opt[k]===v?'on':''}" data-v="${v}">${n}</button>`).join('')}</div>`).join('')}
- <p class="muted">Tapping this widget opens <b>${PAGES.find(p=>p[0]===T[2].split(':')[0])[1]}</b>.</p>
  <div class="grid2"><button class="btn danger" id="wrm">Remove</button><button class="btn" id="wok">Done</button></div>`,el=>{draw(el);
-  el.addEventListener('click',e=>{const b=e.target.closest('.seg [data-v]');if(b){const k=b.parentNode.dataset.k;if(k==='__size')it.size=b.dataset.v;else it.opt[k]=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));saveLayout();draw(el);render()}});
-  el.querySelector('#wok').onclick=()=>{closeSheet();render()};el.querySelector('#wrm').onclick=()=>{LAYOUT=LAYOUT.filter(x=>x.id!==id);saveLayout();closeSheet();render()}})}
+  el.addEventListener('click',e=>{const b=e.target.closest('.seg [data-v]');if(b){const k=b.parentNode.dataset.k;if(k==='__size')it.size=b.dataset.v;else it.opt[k]=b.dataset.v;b.parentNode.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));commitPack();draw(el);render()}});
+  el.querySelector('#wok').onclick=()=>{closeSheet();render()};el.querySelector('#wrm').onclick=()=>{LAYOUT.forEach(p=>p.w=p.w.filter(x=>x.id!==id));commitPack();closeSheet();render()}})}
 
 function tickElapsed(){const e=$('#elapsed');if(e&&D.active){const s=Math.floor((Date.now()-D.active.start)/1000);e.textContent=`${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}}
 setInterval(tickElapsed,1000);
 
 /* ---------- EVENTS ---------- */
-document.addEventListener('click',e=>{if(e.target.closest('#wgrid'))return;const g=e.target.closest('[data-go]');if(g){goPage(g.dataset.go);return}
+document.addEventListener('click',e=>{if(e.target.closest('#sb'))return;const g=e.target.closest('[data-go]');if(g){goPage(g.dataset.go);return}
  const sg=e.target.closest('[data-seg]');if(sg){S[sg.dataset.seg]=sg.dataset.v;render();return}
  const b=e.target.closest('[data-act]');if(!b||!$('#app').contains(b))return;const a=b.dataset.act,ds=b.dataset;
- const viewOnly=['openw','fd','cm','signin','export','tour','thmode','cw','editmode','resetlayout'];if(!canEdit()&&!viewOnly.includes(a))return toast('Read-only account — editing is disabled');
+ const viewOnly=['supp_','openw','fd','cm','signin','export','tour','thmode','cw','editmode','resetlayout'];if(!canEdit()&&!viewOnly.includes(a))return toast('Read-only account — editing is disabled');
  switch(a){
  case 'thmode':TH.mode=ds.v;saveTheme();render();break;
  case 'cw':TH.cw=ds.v;saveTheme();render();break;
- case 'editmode':goPage('today');setTimeout(()=>setEdit(true),400);break;
+ case 'editmode':closeOV();setTimeout(()=>setEdit(true),420);break;
  case 'resetlayout':if(confirm('Reset home screen widgets?')){LAYOUT=defaultLayout();saveLayout();render();toast('Home screen reset')}break;
  case 'start':startSession(ds.t);break;
  case 'addset':save(d=>{const s=d.active.exercises[ds.ei].sets;const l=s[s.length-1]||{w:'',r:8};s.push({w:l.w,r:l.r,done:false})});break;
@@ -412,7 +477,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#wgrid'))return;const
  case 'weight':{const t=iso(new Date()),cur=D.weight.find(s=>s.date===t);sheet(`<h3>Log body weight</h3><label class="f">Weight (${U()})</label><input id="wv" inputmode="decimal" value="${cur?toDisp(cur.kg):''}"><button class="btn block" style="margin-top:12px" id="ws">Save</button>`,el=>{el.querySelector('#ws').onclick=()=>{const v=+el.querySelector('#wv').value;if(!(v>0))return toast('Enter a weight');save(d=>{d.weight=d.weight.filter(s=>s.date!==t);d.weight.push({date:t,kg:fromDisp(v)})},'Weight saved');closeSheet()}});break}
  case 'supp':save(d=>{const t=iso(new Date()),l=d.supplements.log[t]=d.supplements.log[t]||[];const i=l.indexOf(ds.s);i<0?l.push(ds.s):l.splice(i,1)});break;
  case 'addsupp':{const n=prompt('Supplement name');if(n&&n.trim())save(d=>d.supplements.list.push(n.trim()));break}
- case 'signin':DB.signIn(ds.id);D=DB.get();render();goPage('today');toast('Signed in as '+DB.currentUser().name);break;
+ case 'signin':DB.signIn(ds.id);D=DB.get();closeOV();toast('Signed in as '+DB.currentUser().name);break;
  case 'export':exportData(ds.k);break;
  case 'tour':onboarding(true);break;
  case 'reset':if(confirm('Reset all demo data?')){D=DB.reset();render();onboarding(false)}break;
