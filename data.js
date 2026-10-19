@@ -20,7 +20,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
   return {
     version:1,demo:true,
     profile:{name:'Alex',goal:'Build muscle',units:'kg',theme:'system',targets:{kcal:2400,p:170,c:250,f:75},sleepGoal:8,weekGoal:4,onboarded:false},
-    lib:(window.EXLIB||[]).map((e,i)=>({id:'x'+i,...e,builtin:true})),exerciseLib:(window.EXLIB||[]).map(e=>e.name),templates:JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])),split:(window.IMPORTED_SPLIT||[]).slice(),
+    lib:(window.EXLIB||[]).map((e,i)=>({id:'x'+i,...e,builtin:true})),exerciseLib:(window.EXLIB||[]).map(e=>e.name),templates:[],split:['rest','rest','rest','rest','rest','rest','rest'],
     workouts,active:null,sleep,weight,
     supplements:{list:['Creatine','Vitamin D'],log:{}},
     foods,food,
@@ -32,7 +32,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
   };
 }
 const LocalBackend={
-  KEY:'lb2w:data6',SESSION:'lb2w:session',
+  KEY:'lb2w:data7',SESSION:'lb2w:session',
   load(){try{const s=localStorage.getItem(this.KEY);if(s)return JSON.parse(s)}catch(e){}const d=seed();this.save(d);return d},
   save(d){localStorage.setItem(this.KEY,JSON.stringify(d))},
   reset(){localStorage.removeItem(this.KEY);return this.load()},
