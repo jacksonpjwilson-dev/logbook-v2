@@ -1,4 +1,4 @@
-const PREVIEW_VER='w11';
+const PREVIEW_VER='w12';
 /* themed promise-based dialogs: await ui.confirm({title,message,action,destructive}), ui.prompt({...}) -> string|null, ui.alert({...}) */
 const ui=(()=>{const esc_=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  function open({title='',message='',action='OK',cancel='Cancel',destructive,input,value='',placeholder='',noCancel}){return new Promise(res=>{const prev=document.activeElement;const w=document.createElement('div');w.className='uim';w.setAttribute('role','alertdialog');w.setAttribute('aria-modal','true');
@@ -87,7 +87,7 @@ function goalsSheet(ds){ds=ds||iso(new Date());const g=Object.assign({},goalFor(
   const upd=()=>{const k=num('#gp')*4+num('#gc')*4+num('#gf')*9;$$('#gcalc').textContent=`Macros add up to ${k} kcal`;if($$('#gauto').checked){$$('#gk').value=k;$$('#gk').disabled=true}else $$('#gk').disabled=false};
   ['#gp','#gc','#gf'].forEach(i=>$$(i).oninput=upd);$$('#gauto').onchange=upd;upd();
   $$('#gsave').onclick=()=>{const t={kcal:num('#gk'),p:num('#gp'),c:num('#gc'),f:num('#gf')};if(!t.kcal)return toast('Calories required');save(d=>{d.profile.goalAuto=$$('#gauto').checked;setGoal(d,ds,t)},'Goals saved from '+(ds===td?'today':prettyDate(ds)));closeSheet();if(OV)drawOV()}})}
-const authErr=e=>{const c=(e&&e.code)||'';return /wrong-password|invalid-credential|invalid-login/.test(c)?'Email or password is incorrect':/user-not-found/.test(c)?'No account with that email':/email-already/.test(c)?'That email already has an account. Sign in instead.':/weak-password/.test(c)?'Password must be at least 6 characters':/invalid-email/.test(c)?'That email doesn’t look right':/popup-closed|cancelled/.test(c)?'Sign-in cancelled':/network/.test(c)?'No connection':(e&&e.message)||'Sign-in failed'};
+const authErr=e=>{const c=(e&&e.code)||'';return /wrong-password|invalid-credential|invalid-login/.test(c)?'Email or password is incorrect':/user-not-found/.test(c)?'No account with that email':/email-already/.test(c)?'That email already has an account. Sign in instead.':/weak-password/.test(c)?'Password must be at least 6 characters':/invalid-email/.test(c)?'That email doesn’t look right':/popup-closed|cancelled/.test(c)?'Sign-in cancelled':/too-many/.test(c)?'Too many attempts. Wait a minute and try again.':/user-disabled/.test(c)?'This account has been disabled':/network/.test(c)?'No connection. Check your internet and try again.':(e&&e.message)||'Sign-in failed'};
 window.__lbRemote=()=>{try{const w=JSON.parse(localStorage.getItem('lb2w:water')||'{}');Object.keys(WATER).forEach(k=>delete WATER[k]);Object.assign(WATER,w)}catch(e){}D=DB.get();render();if(OV)drawOV()};
 function save(fn,msg){try{DB.mutate(fn);D=DB.get();if(msg)toast(msg);render()}catch(e){toast('Read-only account — editing is disabled')}}
 function applyTheme(){const dark=TH.mode==='dark'||(TH.mode==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const c=CW[TH.cw]||CW.teal,v=dark?c.Dk:c.L,r=document.documentElement;
@@ -425,10 +425,44 @@ const TOUR=[['📱','Home screen','Widgets summarise your day. Tap one to open t
  ['🥗','Food','Log food as you go, meal by meal. Scan barcodes, build your food archive, and save meals you eat often.'],
  ['📈','Progress','Estimated 1RM per lift, weekly volume, body weight, sleep and a training calendar.'],
  ['☁️','Sync','Sign in under Settings with Google or email to back up and sync across your devices. Without signing in, everything stays on this device.']];
+/* w12: first-launch welcome / account step (before onboarding) */
+function waitSync(ms=12000){return new Promise(res=>{let done=false;const fin=v=>{if(!done){done=true;res(v)}};const chk=s=>{if(s.user&&(s.status==='synced'||s.status==='error'))fin(s.status)};SYNC.on(chk);chk(SYNC.state);setTimeout(()=>fin('timeout'),ms)})}
+function welcome(resume){S.auth={mode:resume?'in':'home',busy:false,err:''};drawAuth();if(resume)S.authAfter()}
+function drawAuth(){const a=S.auth;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
+ const up=a.mode==='up',inn=a.mode==='in';let body;
+ if(a.mode==='home')body=`<div class="hero" style="margin-top:48px"><img class="applogo" src="icon-192.png?v=w12" alt="Logbook" style="width:104px;height:104px;border-radius:24px"></div><h2 style="text-align:center;margin-top:18px">Logbook</h2><p class="muted" style="text-align:center;font-size:17px">Train, eat and track your progress. All in one place.</p>
+ <div style="margin-top:auto"></div>`;
+ else body=`<div class="hero" style="margin:16px 0 4px"><img class="applogo" src="icon-192.png?v=w12" alt="" style="width:64px;height:64px;border-radius:16px;margin:0"></div><h2>${up?'Create your account':'Welcome back'}</h2><p class="muted">${up?'Back up your logs and sync them across your devices.':'Sign in to load your logs on this device.'}</p>
+ <button class="btn ghost block" id="agoogle" style="margin-top:8px">Continue with Google</button><div class="muted" style="text-align:center;margin:14px 0;font-size:13px">or use email</div>
+ <label class="f">Email</label><input id="aem" type="email" autocomplete="email" inputmode="email" value="${esc(a.em||'')}">
+ <label class="f">Password</label><input id="apw" type="password" autocomplete="${up?'new-password':'current-password'}">
+ ${up?'<label class="f">Confirm password</label><input id="apw2" type="password" autocomplete="new-password">':''}
+ ${a.err?`<p id="aerr" style="color:var(--red,#e5484d);margin:12px 0 0;font-weight:600">${esc(a.err)}</p>`:''}
+ <button class="btn block" id="ago" style="margin-top:16px">${a.busy?(up?'Creating account…':'Signing in…'):(up?'Sign up':'Sign in')}</button>
+ ${inn?'<button class="btn ghost block sm" id="aforgot" style="margin-top:10px">Forgot password?</button>':''}
+ <p class="muted" style="text-align:center;margin-top:14px">${up?'Already have an account? <a href="#" id="aswap" style="color:inherit;font-weight:700">Sign in</a>':'New here? <a href="#" id="aswap" style="color:inherit;font-weight:700">Create an account</a>'}</p>`;
+ el.innerHTML=`<div style="flex:1;max-width:480px;width:100%;margin:0 auto;display:flex;flex-direction:column">${body}</div><div style="max-width:480px;width:100%;margin:0 auto">${a.mode==='home'?'<button class="btn block" id="aup">Sign up</button><button class="btn ghost block" id="ain" style="margin-top:10px">Sign in</button>':'<button class="btn ghost block" id="aback">Back</button>'}<button class="btn ghost block sm" id="askip" style="margin-top:10px;border:0">Continue without an account</button></div>`;
+ const q=x=>el.querySelector(x),go=m=>{a.mode=m;a.err='';drawAuth()};
+ q('#aup')&&(q('#aup').onclick=()=>go('up'));q('#ain')&&(q('#ain').onclick=()=>go('in'));q('#aback')&&(q('#aback').onclick=()=>go('home'));
+ q('#aswap')&&(q('#aswap').onclick=e=>{e.preventDefault();a.em=q('#aem').value.trim();go(up?'in':'up')});
+ q('#askip').onclick=()=>{S.auth=null;onboarding(false)};
+ const fail=e=>{a.busy=false;a.err=typeof e==='string'?e:authErr(e);a.em=(q('#aem')||{}).value||a.em;drawAuth()};
+ const after=S.authAfter=async()=>{a.busy=true;drawAuth();const r=await waitSync();D=DB.get();
+  if(P().onboarded){el.remove();S.auth=null;render();toast('Welcome back'+(P().name?', '+P().name:'')+'. Your data is loaded.');return}
+  S.auth=null;onboarding(false);const u=SYNC.state.user;if(u&&u.name&&!S.onb.name){S.onb.name=u.name.split(' ')[0];drawOnb()}
+  if(r==='error')toast('Signed in, but sync is paused: '+(SYNC.state.err||'try again later'))};
+ q('#agoogle')&&(q('#agoogle').onclick=()=>{if(a.busy)return;SYNC.google().then(after).catch(fail)});
+ q('#ago')&&(q('#ago').onclick=()=>{if(a.busy)return;const em=q('#aem').value.trim(),pw=q('#apw').value;a.em=em;
+  if(!/^\S+@\S+\.\S+$/.test(em))return fail('Enter a valid email address');if(!pw)return fail('Enter your password');
+  if(up){if(pw.length<6)return fail('Password must be at least 6 characters');if(pw!==q('#apw2').value)return fail('Passwords don’t match')}
+  a.busy=true;a.err='';drawAuth();SYNC.email(em,pw,up).then(after).catch(fail)});
+ q('#aforgot')&&(q('#aforgot').onclick=()=>{const em=q('#aem').value.trim();a.em=em;if(!/^\S+@\S+\.\S+$/.test(em))return fail('Enter your email above, then tap Forgot password');
+  SYNC.reset(em).then(()=>{a.err='';drawAuth();ui.alert({title:'Check your email',message:'If an account exists for '+em+', we’ve sent a link to reset your password.'})}).catch(e=>/user-not-found/.test(e&&e.code||'')?ui.alert({title:'Check your email',message:'If an account exists for '+em+', we’ve sent a link to reset your password.'}):fail(e))});
+}
 function onboarding(tourOnly){S.onb={step:tourOnly?5:0,split:['','',''],tourOnly,goal:P().goal,units:P().units,name:P().name||''};drawOnb()}
 function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
  const steps=5+TOUR.length,st=o.step;let body='';
- if(st===0)body=`<div class="hero"><img class="applogo" src="icon-192.png?v=w11" alt="Logbook"></div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and progress in one place. Everything starts empty. Log as you go and your widgets fill in.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
+ if(st===0)body=`<div class="hero"><img class="applogo" src="icon-192.png?v=w12" alt="Logbook"></div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and progress in one place. Everything starts empty. Log as you go and your widgets fill in.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
  else if(st===1)body=`<div class="hero">🎯</div><h2>Your goal</h2><p class="muted">We’ll suggest targets from this. You can change them any time.</p><div class="chips">${['Build muscle','Lose fat','Get stronger','Stay healthy'].map(g=>`<button class="chip ${g===o.goal?'on':''}" data-g="${g}">${g}</button>`).join('')}</div>
  <label class="f" style="margin-top:20px">Units</label><div class="seg">${['kg','lb'].map(u=>`<button class="${u===o.units?'on':''}" data-u="${u}">${u}</button>`).join('')}</div>`;
  else if(st===2){const sug={'Build muscle':[2600,180,300,75],'Lose fat':[1900,170,170,60],'Get stronger':[2700,180,320,80],'Stay healthy':[2200,130,250,70]}[o.goal];o.t=o.t&&o.tg===o.goal?o.t:{kcal:sug[0],p:sug[1],c:sug[2],f:sug[3]};o.tg=o.goal;
@@ -870,7 +904,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#sb'))return;const g=
  case 'signin':DB.signIn(ds.id);D=DB.get();closeOV();toast('Signed in as '+DB.currentUser().name);break;
  case 'export':exportData(ds.k);break;
  case 'tour':onboarding(true);break;
- case 'reset':ui.confirm({title:'Erase all data?',message:'Everything you’ve logged in this preview on this device will be deleted. This can’t be undone.',action:'Erase'}).then(ok=>{if(ok){D=DB.reset();render();onboarding(false)}});break;
+ case 'reset':ui.confirm({title:'Erase all data?',message:'Everything you’ve logged in this preview on this device will be deleted. This can’t be undone.',action:'Erase'}).then(ok=>{if(ok){D=DB.reset();render();welcome()}});break;
  }});
 document.addEventListener('input',e=>{if(e.target.id==='archq'){S.archQ=e.target.value;if(OV){drawOV();const i=$('#archq');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}return}if(e.target.id==='libq'){S.libQ=e.target.value;const a=$('#libacc');if(a)a.innerHTML=libAccordion(S.libQ)}});
 document.addEventListener('toggle',e=>{const d=e.target;if(d.matches&&d.matches('#libacc details')&&!S.libQ){S.libOpen=S.libOpen||{};S.libOpen[d.dataset.g]=d.open}},true);
@@ -889,7 +923,7 @@ render();
 if(!D.mealSlots&&canEdit()){DB.mutate(d=>migrateMeals(d));D=DB.get()}syncMeals();
 if(D.foods.some(f=>!f.kind)&&canEdit()){DB.mutate(d=>{d.foods=d.foods.map(f=>f.kind?f:normFood(f))});D=DB.get()}
 if(!P().goalHist&&canEdit()){DB.mutate(d=>{d.profile.goalHist=[{from:'2000-01-01',t:Object.assign({},d.profile.targets)}]});D=DB.get()}
-if(!P().onboarded&&canEdit())onboarding(false);
+if(!P().onboarded&&canEdit()){if(window.SYNC)welcome(!!localStorage.getItem('lb2w:signedin'));else onboarding(false)}
 window.SYNC&&SYNC.on(()=>{const c=document.getElementById('acct');if(c){const em=(document.getElementById('semail')||{}).value;const t=document.createElement('div');t.innerHTML=accountCard();c.replaceWith(t.firstElementChild);const e2=document.getElementById('semail');if(e2&&em)e2.value=em}});
 
 })();

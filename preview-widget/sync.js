@@ -56,7 +56,7 @@ function start(){st.status='syncing';emit();sync().then(()=>{if(unsub)unsub();un
 function schedule(){if(!st.user)return;clearTimeout(pushT);pushT=setTimeout(sync,1200)}
 window.SYNC={get state(){return st},on(f){subs.push(f)},
  async google(){await init();const p=new firebase.auth.GoogleAuthProvider();const standalone=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
-  try{if(standalone)await fb.auth.signInWithRedirect(p);else await fb.auth.signInWithPopup(p)}catch(e){if(/popup/.test(e.code||''))await fb.auth.signInWithRedirect(p);else throw e}},
+  try{if(standalone){localStorage.setItem('lb2w:signedin','1');await fb.auth.signInWithRedirect(p)}else await fb.auth.signInWithPopup(p)}catch(e){if(/popup-blocked|operation-not-supported/.test(e.code||'')){localStorage.setItem('lb2w:signedin','1');await fb.auth.signInWithRedirect(p)}else throw e}},
  async email(email,pass,create){await init();return create?fb.auth.createUserWithEmailAndPassword(email,pass):fb.auth.signInWithEmailAndPassword(email,pass)},
  async reset(email){await init();return fb.auth.sendPasswordResetEmail(email)},
  async signOut(){if(fb)await fb.auth.signOut();const m=meta();delete m.uid;saveMeta(m)},
