@@ -1,4 +1,4 @@
-const PREVIEW_VER='w12';
+const PREVIEW_VER='w13';
 /* themed promise-based dialogs: await ui.confirm({title,message,action,destructive}), ui.prompt({...}) -> string|null, ui.alert({...}) */
 const ui=(()=>{const esc_=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  function open({title='',message='',action='OK',cancel='Cancel',destructive,input,value='',placeholder='',noCancel}){return new Promise(res=>{const prev=document.activeElement;const w=document.createElement('div');w.className='uim';w.setAttribute('role','alertdialog');w.setAttribute('aria-modal','true');
@@ -88,7 +88,14 @@ function goalsSheet(ds){ds=ds||iso(new Date());const g=Object.assign({},goalFor(
   ['#gp','#gc','#gf'].forEach(i=>$$(i).oninput=upd);$$('#gauto').onchange=upd;upd();
   $$('#gsave').onclick=()=>{const t={kcal:num('#gk'),p:num('#gp'),c:num('#gc'),f:num('#gf')};if(!t.kcal)return toast('Calories required');save(d=>{d.profile.goalAuto=$$('#gauto').checked;setGoal(d,ds,t)},'Goals saved from '+(ds===td?'today':prettyDate(ds)));closeSheet();if(OV)drawOV()}})}
 const authErr=e=>{const c=(e&&e.code)||'';return /wrong-password|invalid-credential|invalid-login/.test(c)?'Email or password is incorrect':/user-not-found/.test(c)?'No account with that email':/email-already/.test(c)?'That email already has an account. Sign in instead.':/weak-password/.test(c)?'Password must be at least 6 characters':/invalid-email/.test(c)?'That email doesn’t look right':/popup-closed|cancelled/.test(c)?'Sign-in cancelled':/too-many/.test(c)?'Too many attempts. Wait a minute and try again.':/user-disabled/.test(c)?'This account has been disabled':/network/.test(c)?'No connection. Check your internet and try again.':(e&&e.message)||'Sign-in failed'};
-window.__lbRemote=()=>{try{const w=JSON.parse(localStorage.getItem('lb2w:water')||'{}');Object.keys(WATER).forEach(k=>delete WATER[k]);Object.assign(WATER,w)}catch(e){}D=DB.get();render();if(OV)drawOV()};
+window.__lbRemote=()=>{try{const w=JSON.parse(localStorage.getItem('lb2w:water')||'{}');Object.keys(WATER).forEach(k=>delete WATER[k]);Object.assign(WATER,w)}catch(e){}D=DB.get();
+ if(S.onb||S.auth)return;const sheetOpen=document.querySelector('#sheet-root')&&document.querySelector('#sheet-root').children.length;const ae=document.activeElement,typing=ae&&/INPUT|TEXTAREA|SELECT/.test(ae.tagName);
+ if(sheetOpen||typing){window.__lbPendingRemote=true;return}
+ const sc=[...document.querySelectorAll('.ovb,.ov .scroll,[data-scroll]')].map(e=>[e.className,e.scrollTop]),wy=window.scrollY;
+ render();if(OV)drawOV();
+ requestAnimationFrame(()=>{const els=[...document.querySelectorAll('.ovb,.ov .scroll,[data-scroll]')];sc.forEach(([c,t],i)=>{const e=els[i];if(e&&e.className===c)e.scrollTop=t});window.scrollTo(0,wy)});
+ const els=[...document.querySelectorAll('.ovb,.ov .scroll,[data-scroll]')];sc.forEach(([c,t],i)=>{const e=els[i];if(e&&e.className===c)e.scrollTop=t})};
+document.addEventListener('focusout',()=>setTimeout(()=>{if(window.__lbPendingRemote&&!document.querySelector('#sheet-root')?.children.length&&!/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||'')){window.__lbPendingRemote=false;window.__lbRemote()}},300));
 function save(fn,msg){try{DB.mutate(fn);D=DB.get();if(msg)toast(msg);render()}catch(e){toast('Read-only account — editing is disabled')}}
 function applyTheme(){const dark=TH.mode==='dark'||(TH.mode==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);const c=CW[TH.cw]||CW.teal,v=dark?c.Dk:c.L,r=document.documentElement;
  r.dataset.theme=dark?'dark':'light';const mix=(a,b,p)=>`color-mix(in srgb,${a} ${p}%,${b})`;
@@ -118,7 +125,7 @@ function barChart(pts,{h=130,goal=null}={}){
 /* ---------- sheets ---------- */
 function sheet(html,onMount){const root=$('#sheet-root');root.innerHTML=`<div class="sheet-bg"><div class="sheet" role="dialog"><div class="grab"></div>${html}</div></div>`;
  const bg=root.firstChild;bg.addEventListener('click',e=>{if(e.target===bg)closeSheet()});onMount&&onMount(bg.firstChild)}
-function closeSheet(){$('#sheet-root').innerHTML=''}
+function closeSheet(){$('#sheet-root').innerHTML='';if(window.__lbPendingRemote)setTimeout(()=>{if(window.__lbPendingRemote&&!$('#sheet-root').children.length){window.__lbPendingRemote=false;window.__lbRemote()}},350)}
 
 /* ---------- TODAY ---------- */
 function coachTips(){const tips=[],today=iso(new Date()),t=totals(D.food[today]||[]),g=P().targets;
@@ -430,9 +437,9 @@ function waitSync(ms=12000){return new Promise(res=>{let done=false;const fin=v=
 function welcome(resume){S.auth={mode:resume?'in':'home',busy:false,err:''};drawAuth();if(resume)S.authAfter()}
 function drawAuth(){const a=S.auth;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
  const up=a.mode==='up',inn=a.mode==='in';let body;
- if(a.mode==='home')body=`<div class="hero" style="margin-top:48px"><img class="applogo" src="icon-192.png?v=w12" alt="Logbook" style="width:104px;height:104px;border-radius:24px"></div><h2 style="text-align:center;margin-top:18px">Logbook</h2><p class="muted" style="text-align:center;font-size:17px">Train, eat and track your progress. All in one place.</p>
+ if(a.mode==='home')body=`<div class="hero" style="margin-top:48px"><img class="applogo" src="icon-192.png?v=w13" alt="Logbook" style="width:104px;height:104px;border-radius:24px"></div><h2 style="text-align:center;margin-top:18px">Logbook</h2><p class="muted" style="text-align:center;font-size:17px">Train, eat and track your progress. All in one place.</p>
  <div style="margin-top:auto"></div>`;
- else body=`<div class="hero" style="margin:16px 0 4px"><img class="applogo" src="icon-192.png?v=w12" alt="" style="width:64px;height:64px;border-radius:16px;margin:0"></div><h2>${up?'Create your account':'Welcome back'}</h2><p class="muted">${up?'Back up your logs and sync them across your devices.':'Sign in to load your logs on this device.'}</p>
+ else body=`<div class="hero" style="margin:16px 0 4px"><img class="applogo" src="icon-192.png?v=w13" alt="" style="width:64px;height:64px;border-radius:16px;margin:0"></div><h2>${up?'Create your account':'Welcome back'}</h2><p class="muted">${up?'Back up your logs and sync them across your devices.':'Sign in to load your logs on this device.'}</p>
  <button class="btn ghost block" id="agoogle" style="margin-top:8px">Continue with Google</button><div class="muted" style="text-align:center;margin:14px 0;font-size:13px">or use email</div>
  <label class="f">Email</label><input id="aem" type="email" autocomplete="email" inputmode="email" value="${esc(a.em||'')}">
  <label class="f">Password</label><input id="apw" type="password" autocomplete="${up?'new-password':'current-password'}">
@@ -462,7 +469,7 @@ function drawAuth(){const a=S.auth;let el=$('#onb');if(!el){el=document.createEl
 function onboarding(tourOnly){S.onb={step:tourOnly?5:0,split:['','',''],tourOnly,goal:P().goal,units:P().units,name:P().name||''};drawOnb()}
 function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
  const steps=5+TOUR.length,st=o.step;let body='';
- if(st===0)body=`<div class="hero"><img class="applogo" src="icon-192.png?v=w12" alt="Logbook"></div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and progress in one place. Everything starts empty. Log as you go and your widgets fill in.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
+ if(st===0)body=`<div class="hero"><img class="applogo" src="icon-192.png?v=w13" alt="Logbook"></div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and progress in one place. Everything starts empty. Log as you go and your widgets fill in.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
  else if(st===1)body=`<div class="hero">🎯</div><h2>Your goal</h2><p class="muted">We’ll suggest targets from this. You can change them any time.</p><div class="chips">${['Build muscle','Lose fat','Get stronger','Stay healthy'].map(g=>`<button class="chip ${g===o.goal?'on':''}" data-g="${g}">${g}</button>`).join('')}</div>
  <label class="f" style="margin-top:20px">Units</label><div class="seg">${['kg','lb'].map(u=>`<button class="${u===o.units?'on':''}" data-u="${u}">${u}</button>`).join('')}</div>`;
  else if(st===2){const sug={'Build muscle':[2600,180,300,75],'Lose fat':[1900,170,170,60],'Get stronger':[2700,180,320,80],'Stay healthy':[2200,130,250,70]}[o.goal];o.t=o.t&&o.tg===o.goal?o.t:{kcal:sug[0],p:sug[1],c:sug[2],f:sug[3]};o.tg=o.goal;
@@ -930,7 +937,7 @@ window.SYNC&&SYNC.on(()=>{const c=document.getElementById('acct');if(c){const em
 
 /* preview update: own service worker (scope /preview-widget/) + version check */
 (function(){if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js?v='+PREVIEW_VER,{scope:'./'}).then(r=>r.update()).catch(()=>{});
- let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload()})}
+ let reloaded=false;const hadCtl=!!navigator.serviceWorker.controller;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded||!hadCtl)return;reloaded=true;location.reload()})}
  const chk=()=>fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(async j=>{if(!j.v||j.v===PREVIEW_VER||sessionStorage.getItem('lb2w:vr')===j.v)return;sessionStorage.setItem('lb2w:vr',j.v);
   try{const rs=await navigator.serviceWorker?.getRegistrations?.()||[];await Promise.all(rs.filter(r=>r.scope.includes('/preview-widget/')).map(r=>r.update()));const ks=await caches.keys();await Promise.all(ks.filter(k=>k.startsWith('lb2w-preview')).map(k=>caches.delete(k)))}catch(e){}
   location.replace(location.pathname+'?v='+j.v)}).catch(()=>{});
