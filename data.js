@@ -7,8 +7,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
   const ex=['Bench Press','Squat','Deadlift','Overhead Press','Barbell Row','Pull-up','Romanian Deadlift','Lat Pulldown','Incline DB Press','Leg Press','Bicep Curl','Tricep Pushdown'];
   const workouts=[]; // workouts start blank (no auto-seeded sessions)
   const sleep=[],weight=[];
-  for(let i=-20;i<0;i++){sleep.push({date:dayOff(i),hours:+(6.4+((i*7)%10)/7).toFixed(1),quality:3+((i*3)%3+3)%3});
-    if(i%2===0)weight.push({date:dayOff(i),kg:+(78.6-(i+20)*0.04).toFixed(1)})}
+  // no demo sleep or weight
   const foods=[
     {id:'f1',name:'Greek yogurt (1 cup)',kcal:150,p:20,c:9,f:4},{id:'f2',name:'Oats (60 g)',kcal:228,p:8,c:40,f:4},
     {id:'f3',name:'Chicken breast (150 g)',kcal:248,p:46,c:0,f:5},{id:'f4',name:'Rice, cooked (1 cup)',kcal:205,p:4,c:45,f:0},
@@ -18,21 +17,19 @@ function seed(){ // DEMO DATA ONLY — no real personal information
   const food={};
   // food log starts empty (no demo meals logged)
   return {
-    version:1,demo:true,
-    profile:{name:'Alex',goal:'Build muscle',units:'kg',theme:'system',targets:{kcal:2400,p:170,c:250,f:75},sleepGoal:8,weekGoal:4,onboarded:false},
+    version:1,demo:false,
+    profile:{name:'',goal:'Build muscle',units:'kg',theme:'system',targets:{kcal:2400,p:170,c:250,f:75},sleepGoal:8,weekGoal:4,onboarded:false},
     lib:(window.EXLIB||[]).map((e,i)=>({id:'x'+i,...e,builtin:true})),exerciseLib:(window.EXLIB||[]).map(e=>e.name),templates:[],split:[],splitMarks:[],
     workouts,active:null,sleep,weight,
-    supplements:{list:['Creatine','Vitamin D'],log:{}},
+    supplements:{list:[],log:{}},
     foods,food,
-    mealPlan:{Breakfast:[],Lunch:[],Snack:[],Dinner:[]},schedule:{},
-    pantry:[{id:'p1',name:'Eggs',qty:4,unit:'pcs',min:6,fid:'f6'},{id:'p2',name:'Chicken breast',qty:900,unit:'g',min:600,fid:'f3'},
-      {id:'p3',name:'Greek yogurt',qty:0,unit:'cups',min:2,fid:'f1'},{id:'p4',name:'Oats',qty:1200,unit:'g',min:300,fid:'f2'},
-      {id:'p5',name:'Bananas',qty:5,unit:'pcs',min:3,fid:'f5'},{id:'p6',name:'Rice',qty:250,unit:'g',min:500}],
-    accounts:[{id:'owner',name:'Alex (you)',role:'owner'},{id:'sally',name:'Sally',role:'viewer',note:'Meal-plan helper'},{id:'atlas',name:'Atlas',role:'viewer',note:'Optimization bot'}]
+    mealPlan:{Breakfast:[],Lunch:[],Snack:[],Dinner:[]},schedule:{},savedMeals:[],
+    pantry:[],
+    accounts:[{id:'owner',name:'You',role:'owner'}]
   };
 }
 const LocalBackend={
-  KEY:'lb2w:data8',SESSION:'lb2w:session',
+  KEY:'lb2w:data9',SESSION:'lb2w:session',
   load(){try{const s=localStorage.getItem(this.KEY);if(s)return JSON.parse(s)}catch(e){}const d=seed();this.save(d);return d},
   save(d){localStorage.setItem(this.KEY,JSON.stringify(d))},
   reset(){localStorage.removeItem(this.KEY);return this.load()},
