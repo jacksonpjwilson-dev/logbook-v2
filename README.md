@@ -1,3 +1,7 @@
-# Logbook v2 (preview)
-Mobile-first redesign of The Logbook. **Demo data only** — everything is stored in your browser (localStorage) behind a small data layer (`data.js`) that a real backend (e.g. Firebase) can replace later.
-Live: https://jacksonpjwilson-dev.github.io/logbook-v2/
+# Logbook v2
+Mobile-first training, food, sleep and body tracker with a widget home screen.
+
+- Local-first: data is saved in the browser (`data.js` data layer).
+- Optional sign-in (Google or email) syncs data across devices via Firebase (`sync.js`, stored at `logbookV2/{uid}`).
+
+Preview: https://jacksonpjwilson-dev.github.io/logbook-v2/preview-widget/
