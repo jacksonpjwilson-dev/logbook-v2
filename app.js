@@ -242,7 +242,7 @@ function vRecovery(){const today=iso(new Date()),sl=D.sleep.find(s=>s.date===tod
 /* ---------- WIDGETS ---------- */
 const WSTATE={edit:false};
 const lastN=(n,f)=>{const o=[];for(let i=-(n-1);i<=0;i++){const d=dayOff(i);o.push({d,y:f(d)})}return o};
-function series(metric,days){const since=dayOff(-(days-1));
+function seriesOld(metric,days){const since=dayOff(-(days-1));
  if(metric==='weight')return D.weight.filter(w=>w.date>=since).sort((a,b)=>a.date.localeCompare(b.date)).map(w=>({d:w.date,y:toDisp(w.kg)}));
  if(metric==='sleep')return D.sleep.filter(w=>w.date>=since).sort((a,b)=>a.date.localeCompare(b.date)).map(w=>({d:w.date,y:w.hours}));
  if(metric==='kcal')return lastN(days,d=>Math.round(totals(D.food[d]||[]).kcal)).filter(p=>p.y>0);
@@ -263,97 +263,174 @@ const todayT=()=>totals(D.food[iso(new Date())]||[]);
 const wkCount=()=>D.workouts.filter(w=>(new Date()-new Date(w.date+'T12:00'))/864e5<7).length;
 const nextTpl=()=>D.templates[D.workouts.length%D.templates.length];
 /* type: [name, icon, section, sizes, default opt, options {key:[label,[[val,label]...]]}, render(size,opt)] */
+/* ---- demo extras (derived, deterministic; demo only) ---- */
+const hsh=s=>{let h=2166136261;for(const c of String(s)){h^=c.charCodeAt(0);h=Math.imul(h,16777619)}return ((h>>>0)%10000)/10000};
+const hm=m=>{m=((Math.round(m)%1440)+1440)%1440;return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0')};
+const WKEY='lb2w:water';const WATER=JSON.parse(localStorage.getItem(WKEY)||'{}');
+const X={water:d=>d===iso(new Date())?(WATER[d]??1000):(WATER[d]??Math.round(1600+hsh('w'+d)*1200)),waterGoal:2500,
+ steps:d=>Math.round(5200+hsh('s'+d)*7000),hr:d=>Math.round(53+hsh('h'+d)*8),
+ bed:d=>1365+Math.round(hsh('b'+d)*80-20),bedGoal:1365,
+ meas:[[-84,86,104,36.5],[-56,85.2,104.5,36.8],[-28,84.6,105,37],[-1,84,105.4,37.3]].map(([o,w,c,a])=>({d:dayOff(o),waist:w,chest:c,arm:a})),
+ journal:[[-1,'Felt strong on squats. Sleep is helping.'],[-3,'Skipped snack, low energy at the gym.'],[-6,'New bench PR. Deload next week?'],[-10,'Meal prep Sunday made the week easy.'],[-15,'Travel day, kept protein up.']].map(([o,t])=>({d:dayOff(o),t})),
+ fibre:{f1:0,f2:6,f3:0,f4:1,f5:3,f6:0,f7:1,f8:0,f9:5,f10:4},fibreGoal:30,
+ mealTime:{Breakfast:450,Lunch:750,Snack:930,Dinner:1140}};
+const fibreOf=list=>list.reduce((a,e)=>a+(X.fibre[e.fid]??2)*e.q,0);
+const MUSCLE={'Bench Press':'Chest','Incline DB Press':'Chest','Overhead Press':'Shoulders','Tricep Pushdown':'Arms','Bicep Curl':'Arms','Barbell Row':'Back','Pull-up':'Back','Lat Pulldown':'Back','Squat':'Legs','Leg Press':'Legs','Romanian Deadlift':'Legs','Deadlift':'Back'};
+const sortedW=()=>[...D.workouts].sort((a,b)=>a.date.localeCompare(b.date));
+function prs(){const m={};D.workouts.forEach(w=>w.exercises.forEach(e=>e.sets.forEach(s=>{const v=epley(toDisp(+s.w||0),s.r);if(!m[e.name]||v>m[e.name].e1)m[e.name]={e1:Math.round(v),w:toDisp(+s.w||0),r:s.r,d:w.date}})));return Object.entries(m).filter(x=>x[1].e1>0).sort((a,b)=>b[1].e1-a[1].e1)}
+function weekVols(n=8){const o=[];for(let i=n-1;i>=0;i--){const end=new Date();end.setDate(end.getDate()-i*7);const st=new Date(end);st.setDate(st.getDate()-7);const ws=D.workouts.filter(w=>{const d=new Date(w.date+'T12:00');return d>st&&d<=end});o.push({x:i?'W-'+i:'Now',y:ws.reduce((a,w)=>a+vol(w),0),n:ws.length,start:iso(new Date(st.getTime()+864e5))})}return o}
+function muscleSets(days=7){const since=dayOff(-days),m={Chest:0,Back:0,Legs:0,Shoulders:0,Arms:0};D.workouts.filter(w=>w.date>since).forEach(w=>w.exercises.forEach(e=>{const g=MUSCLE[e.name]||'Arms';m[g]+=e.sets.length}));return m}
+function wkStreak(){let n=0;const wv=weekVols(12).reverse();for(const w of wv){if(w.n>=Math.min(P().weekGoal,3))n++;else if(w.x!=='Now')break}return n}
+const avg=a=>a.length?a.reduce((x,y)=>x+y,0)/a.length:0;
+const r1=v=>Math.round(v*10)/10;
+function metricVals(m,from,to){const out=[];for(let i=from;i<=to;i++){const d=dayOff(i);let v=null;
+ if(m==='kcal'){const t=D.food[d];if(t&&t.length)v=totals(t).kcal}else if(m==='protein'){const t=D.food[d];if(t&&t.length)v=totals(t).p}
+ else if(m==='sleep'){const s=D.sleep.find(x=>x.date===d);if(s)v=s.hours}else if(m==='weight'){const s=D.weight.find(x=>x.date===d);if(s)v=toDisp(s.kg)}
+ else if(m==='volume'){const ws=D.workouts.filter(w=>w.date===d);if(ws.length)v=ws.reduce((a,w)=>a+vol(w),0)}else if(m==='steps')v=X.steps(d);else if(m==='water')v=X.water(d)/1000;
+ if(v!=null)out.push({d,y:Math.round(v*10)/10})}return out}
+METRIC.steps=['Steps','steps','bar'];METRIC.water=['Water','L','bar'];
+function series(m,days){return metricVals(m,-(days-1),0)}
+const CATS={train:['Training','train'],food:['Food','food'],body:['Sleep & body','recovery'],hist:['History','progress']};
+const big=(v,u,sz,cls='')=>`<b class="wn ${sz==='S'?'sm':''} ${cls}">${v}${u?`<em> ${u}</em>`:''}</b>`;
+const L_=t=>`<small class="wl">${t}</small>`;
+const chartW=(pts,sz,o={})=>`<div class="wchart">${spark(pts,o)}</div>`;
+const listW=(rows,n)=>`<div class="wlist">${rows.slice(0,n).map(([a,b,c])=>`<div><span>${a}</span><em class="${c||''}">${b}</em></div>`).join('')||'<div>None</div>'}</div>`;
+const nRows=sz=>sz==='L'?7:sz==='M'?2:1;
+const DAYS=[['7','7 days'],['14','14 days'],['30','30 days']];
+/* mini helpers */
+const card=(t,b,sm='')=>`<div class="card"><h2>${t}${sm?` <small>${sm}</small>`:''}</h2>${b}</div>`;
+const stats=a=>`<div class="grid2" style="margin-bottom:12px">${a.map(([v,l])=>`<div class="stat"><b>${v}</b><span>${l}</span></div>`).join('')}</div>`;
+const rows=a=>`<div class="list">${a.map(([t,s,r])=>`<div class="item"><div class="grow"><div class="t">${t}</div>${s?`<div class="s">${s}</div>`:''}</div>${r!=null?`<b>${r}</b>`:''}</div>`).join('')||'<div class="empty">Nothing yet</div>'}</div>`;
+const rng=(cur,list=['7','14','30','90'])=>`<div class="seg">${list.map(d=>`<button class="${String(cur)===d?'on':''}" data-mdays="${d}">${d} d</button>`).join('')}</div>`;
+function metricMini(m,days){const [n,u,kind]=METRIC[m],unit=typeof u==='function'?u():u,pts=series(m,+days),ys=pts.map(p=>p.y);const goal=m==='kcal'?P().targets.kcal:m==='protein'?P().targets.p:m==='sleep'?P().sleepGoal:m==='water'?2.5:null;
+ return rng(days)+card(n,(kind==='bar'?barChart:lineChart)(pts.map(p=>({x:p.d.slice(5),y:p.y})),kind==='bar'?{goal,h:170}:{h:190}),unit)+stats([[ys.length?ys[ys.length-1].toLocaleString():'—','Latest'],[ys.length?r1(avg(ys)).toLocaleString():'—',days+'-day average']])+card('Entries',rows([...pts].reverse().map(p=>[prettyDate(p.d),'',p.y.toLocaleString()+' '+unit])),pts.length)}
+/* registry: [name, icon, cat, sizes, defaults, options, render(sz,o), mini(o,days)] */
 const WT={
- fuel:['Fuel','🍽️','food',['S','M','L'],{show:'calories'},{show:['Show',[['calories','Calories left'],['macros','Macros'],['both','Calories + macros']]]},(sz,o)=>{const t=todayT(),g=P().targets,left=Math.round(g.kcal-t.kcal);
-  const mac=`<div class="wmac">${[['P','p','var(--p)'],['C','c','var(--c)'],['F','f','var(--f)']].map(([n,k,col])=>`<div><span>${n}</span><div class="bar"><i style="width:${Math.min(100,t[k]/g[k]*100)}%;background:${col}"></i></div><em>${Math.round(t[k])}/${g[k]}</em></div>`).join('')}</div>`;
-  const cal=`<div class="wrow">${miniRing(t.kcal,g.kcal,sz==='L'?150:sz==='M'?78:54)}<div><b class="wn ${sz==='L'?'xl':''}">${left}</b><small>kcal left</small></div></div>`;
-  if(sz==='S')return o.show==='macros'?`<small class="wl">Protein</small>${miniRing(t.p,g.p,58,'var(--p)')}<b class="wn sm">${Math.round(t.p)}<em>/${g.p}g</em></b>`:`<small class="wl">Fuel</small>${miniRing(t.kcal,g.kcal,58)}<b class="wn sm">${left}<em> left</em></b>`;
-  if(o.show==='macros')return `<small class="wl">Macros today</small>${mac}`;
-  if(o.show==='calories'&&sz==='M')return `<small class="wl">Fuel</small>${cal}`;
-  return `<small class="wl">Fuel</small>${cal}${mac}`}],
- training:['Training','🏋️','train',['S','M','L'],{show:'next'},{show:['Show',[['next','Next workout'],['last','Last workout'],['week','This week']]]},(sz,o)=>{
-  if(D.active)return `<small class="wl">Training</small><b class="wt">● ${esc(D.active.name)}</b><small>In progress, tap to resume</small>`;
-  const wk=wkCount(),goal=P().weekGoal,dots=`<div class="wdots">${Array.from({length:goal},(_,i)=>`<i class="${i<wk?'on':''}"></i>`).join('')}</div>`;
-  if(o.show==='week')return `<small class="wl">This week</small><b class="wn">${wk}<em>/${goal}</em></b>${dots}${sz==='L'?spark(series('volume',28),{h:110}):''}`;
-  if(o.show==='last'){const w=[...D.workouts].sort((a,b)=>a.date.localeCompare(b.date)).pop();if(!w)return '<small class="wl">Last workout</small><b class="wt">None yet</b>';
-   return `<small class="wl">Last workout</small><b class="wt">${esc(w.name)}</b><small>${prettyDate(w.date)}</small>${sz!=='S'?`<small>${vol(w).toLocaleString()} ${U()} volume</small>`:''}${sz==='L'?`<div class="wlist">${w.exercises.map(e=>`<div>${esc(e.name)}<em>${e.sets.length}×</em></div>`).join('')}</div>`:''}`}
-  const n=nextTpl();return `<small class="wl">Next workout</small><b class="wt">${esc(n.name)}</b>${sz!=='S'?`<small>${esc(n.exercises.join(' · '))}</small>`:''}${sz==='L'?dots:''}`}],
- history:['History','📈','progress',['S','M','L'],{metric:'weight',days:'14'},{metric:['Graph',Object.entries(METRIC).map(([k,v])=>[k,v[0]])],days:['Range',[['7','7 days'],['14','14 days'],['30','30 days']]]},(sz,o)=>{
-  const [n,u,kind]=METRIC[o.metric]||METRIC.weight,unit=typeof u==='function'?u():u,pts=series(o.metric,+o.days),last=pts.length?pts[pts.length-1].y:null,first=pts.length?pts[0].y:null;
-  const goal=o.metric==='kcal'?P().targets.kcal:o.metric==='protein'?P().targets.p:o.metric==='sleep'?P().sleepGoal:null;
-  const delta=last!=null&&pts.length>1?(Math.round((last-first)*10)/10):null;
-  return `<small class="wl">${n} · ${o.days}d</small><b class="wn ${sz==='S'?'sm':''}">${last!=null?last.toLocaleString():'—'}<em> ${unit}</em></b>${delta!=null&&sz!=='S'?`<small>${delta>0?'+':''}${delta.toLocaleString()} ${unit} over ${o.days} days</small>`:''}<div class="wchart">${spark(pts,{kind,goal,h:sz==='L'?150:70})}</div>`}],
- sleep:['Sleep','🌙','recovery',['S','M','L'],{show:'last'},{show:['Show',[['last','Last night'],['week','7-day chart']]]},(sz,o)=>{
-  const s=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)),l=s[s.length-1],avg=s.slice(-7).reduce((a,x)=>a+x.hours,0)/Math.max(1,s.slice(-7).length);
-  if(o.show==='week'||sz==='L')return `<small class="wl">Sleep · 7-day avg</small><b class="wn ${sz==='S'?'sm':''}">${avg.toFixed(1)}<em> h</em></b><div class="wchart">${spark(s.slice(-7).map(x=>({y:x.hours})),{kind:'bar',goal:P().sleepGoal,h:sz==='L'?140:60})}</div>`;
-  return `<small class="wl">Sleep</small><b class="wn">${l?l.hours:'—'}<em> h</em></b><small>${l?'★'.repeat(l.quality)+'☆'.repeat(5-l.quality):'Not logged'}</small>${sz==='M'?`<small>7-day avg ${avg.toFixed(1)} h · goal ${P().sleepGoal} h</small>`:''}`}],
- weight:['Weight','⚖️','recovery',['S','M','L'],{days:'14'},{days:['Trend range',[['7','7 days'],['14','14 days'],['30','30 days']]]},(sz,o)=>{
-  const pts=series('weight',+o.days),l=pts[pts.length-1],d=pts.length>1?Math.round((l.y-pts[0].y)*10)/10:null;
-  return `<small class="wl">Weight</small><b class="wn ${sz==='S'?'sm':''}">${l?l.y:'—'}<em> ${U()}</em></b>${d!=null?`<small>${d>0?'+':''}${d} ${U()} · ${o.days}d</small>`:''}${sz!=='S'?`<div class="wchart">${spark(pts,{h:sz==='L'?150:56})}</div>`:''}`}],
- supps:['Supplements','💊','recovery',['S','M'],{},{},(sz)=>{const t=D.supplements.log[iso(new Date())]||[];
-  return `<small class="wl">Supplements</small><b class="wn ${sz==='S'?'sm':''}">${t.length}<em>/${D.supplements.list.length}</em></b>${sz!=='S'?`<div class="wchips">${D.supplements.list.map(s=>`<span class="${t.includes(s)?'on':''}">${t.includes(s)?'✓ ':''}${esc(s)}</span>`).join('')}</div>`:'<small>taken today</small>'}`}],
- pantry:['Pantry','🧺','food:pantry',['S','M','L'],{},{},(sz)=>{const low=D.pantry.filter(p=>pantryStatus(p)!=='ok');
-  return `<small class="wl">Pantry</small><b class="wn ${sz==='S'?'sm':''}">${low.length}<em> low</em></b>${sz==='S'?`<small>${esc(low[0]?.name||'All stocked')}</small>`:`<div class="wlist">${low.slice(0,sz==='L'?8:3).map(p=>`<div>${esc(p.name)}<em class="${pantryStatus(p)}">${pantryStatus(p)==='out'?'Out':'Low'}</em></div>`).join('')||'<div>All stocked</div>'}</div>`}`}],
- coach:['Coach','💡','recovery',['M','L'],{},{},(sz)=>{const t=coachTips();return `<small class="wl">Coach</small><div class="wtips">${(t.length?t:['All on track. Nice.']).slice(0,sz==='L'?4:2).map(x=>`<p>${esc(x)}</p>`).join('')}</div>`}],
- streak:['Week streak','🔥','progress',['S','M'],{},{},(sz)=>{const days=lastN(7,d=>D.workouts.some(w=>w.date===d));
-  return `<small class="wl">Last 7 days</small><b class="wn ${sz==='S'?'sm':''}">${days.filter(x=>x.y).length}<em> sessions</em></b><div class="wweek">${days.map(x=>`<i class="${x.y?'on':''}"><span>${new Date(x.d+'T12:00').toLocaleDateString(undefined,{weekday:'narrow'})}</span></i>`).join('')}</div>`}]
+ /* FOOD */
+ kcal:['Calories left','🔥','food',['S','M','L'],{},{},(sz)=>{const t=todayT(),g=P().targets;return L_('Calories')+`<div class="wrow">${miniRing(t.kcal,g.kcal,sz==='L'?150:sz==='M'?80:56)}<div>${big(Math.round(g.kcal-t.kcal),'',sz,sz==='L'?'xl':'')}<small>kcal left</small></div></div>${sz==='L'?`<small>${Math.round(t.kcal)} eaten of ${g.kcal}</small>`+macroMini(t):''}`},
+  ()=>{const t=todayT(),g=P().targets;return card('Today',`<div class="row">${ring(t.kcal,g.kcal,'of '+g.kcal+' kcal',120)}<div class="grow"><b style="font-size:30px">${Math.round(g.kcal-t.kcal)}</b><div class="muted">kcal left</div></div></div>`)+card('Last 7 days',barChart(series('kcal',7).map(p=>({x:p.d.slice(8),y:p.y})),{goal:g.kcal}))+`<button class="btn block" data-edit data-act="addfood">＋ Log food</button>`}],
+ macros:['Macros','🥗','food',['M','L'],{},{},(sz)=>L_('Macros today')+macroMini(todayT()),()=>{const t=todayT();return card('Macros today',macroBars(t))+card('Protein, last 7 days',barChart(series('protein',7).map(p=>({x:p.d.slice(8),y:p.y})),{goal:P().targets.p}))}],
+ protein:['Protein goal','🥩','food',['S','M'],{},{},(sz)=>{const t=todayT(),g=P().targets.p;return L_('Protein')+`<div class="wrow">${miniRing(t.p,g,sz==='M'?70:52,'var(--p)')}<div>${big(Math.round(t.p),'/'+g+'g',sz)}${sz==='M'?`<small>${Math.max(0,Math.round(g-t.p))} g to go</small>`:''}</div></div>`},(o,d)=>metricMini('protein',d||'14')],
+ water:['Water','💧','food',['S','M'],{},{},(sz)=>{const w=X.water(iso(new Date()));return L_('Water')+big((w/1000).toFixed(1),'/ '+X.waterGoal/1000+' L',sz)+`<div class="wdots">${Array.from({length:10},(_,i)=>`<i class="${i<w/250?'on':''}"></i>`).join('')}</div>${sz==='M'?'<small>Tap to add a glass</small>':''}`},
+  (o,d)=>`<div class="card"><h2>Today <small>${(X.water(iso(new Date()))/1000).toFixed(2)} L</small></h2><div class="grid3"><button class="btn" data-x="water" data-v="250">＋250 ml</button><button class="btn" data-x="water" data-v="500">＋500 ml</button><button class="btn ghost" data-x="water" data-v="-250">−250</button></div></div>`+metricMini('water',d||'7')],
+ meals:['Today’s meals','🍽️','food',['M','L'],{},{},(sz)=>{const day=D.food[iso(new Date())]||[];return L_('Meals today')+listW(MEALS.map(m=>{const t=totals(day.filter(e=>e.meal===m));return [m,t.kcal?Math.round(t.kcal)+' kcal':'—']}),sz==='L'?4:3)},
+  ()=>{const day=D.food[iso(new Date())]||[];return MEALS.map(m=>card(m,rows(day.filter(e=>e.meal===m).map(e=>{const f=food(e.fid);return [esc(f.name),`P${Math.round(f.p*e.q)} C${Math.round(f.c*e.q)} F${Math.round(f.f*e.q)}`,Math.round(f.kcal*e.q)]})))).join('')+`<button class="btn block" data-edit data-act="addfood">＋ Log food</button>`}],
+ favs:['Quick log','⭐','food',['M','L'],{},{},(sz)=>{const f=favs().slice(0,sz==='L'?6:3);return L_('Quick log')+`<div class="wchips">${f.map(x=>`<span>＋ ${esc(x.name.split(' (')[0])}</span>`).join('')}</div>`},
+  ()=>card('Favourites',`<div class="list">${favs().map(f=>`<div class="item"><div class="grow"><div class="t">${esc(f.name)}</div><div class="s">${f.kcal} kcal · P${f.p}</div></div><button class="btn sm" data-edit data-x="qlog" data-v="${f.id}">＋ Log</button></div>`).join('')}</div>`,'most logged')],
+ pantry:['Pantry low stock','🧺','food',['S','M','L'],{},{},(sz)=>{const low=D.pantry.filter(p=>pantryStatus(p)!=='ok');return L_('Pantry')+big(low.length,'low',sz)+(sz==='S'?`<small>${esc(low[0]?.name||'All stocked')}</small>`:listW(low.map(p=>[esc(p.name),pantryStatus(p)==='out'?'Out':'Low',pantryStatus(p)]),nRows(sz)+1))},
+  ()=>card('Pantry',rows(D.pantry.map(p=>[esc(p.name),`${p.qty} ${esc(p.unit)} · min ${p.min}`,pantryStatus(p)==='ok'?'OK':pantryStatus(p)==='low'?'Low':'Out'])))],
+ timing:['Meal timing','⏱️','food',['S','M'],{},{},(sz)=>{const day=D.food[iso(new Date())]||[],done=MEALS.filter(m=>day.some(e=>e.meal===m)),nx=MEALS.find(m=>!done.includes(m));return L_('Next meal')+big(nx?hm(X.mealTime[nx]):'Done','',sz)+`<small>${nx||'All meals logged'}</small>${sz==='M'?`<div class="wweek">${MEALS.map(m=>`<i class="${done.includes(m)?'on':''}"><span>${hm(X.mealTime[m])}</span></i>`).join('')}</div>`:''}`},
+  ()=>{const day=D.food[iso(new Date())]||[];return card('Meal schedule',rows(MEALS.map(m=>{const t=totals(day.filter(e=>e.meal===m));return [m,hm(X.mealTime[m]),t.kcal?Math.round(t.kcal)+' kcal':'—']})))+'<p class="muted">Times are your planned meal times (24-hour).</p>'}],
+ fibre:['Fibre','🌾','food',['S','M'],{},{},(sz)=>{const f=fibreOf(D.food[iso(new Date())]||[]);return L_('Fibre')+`<div class="wrow">${miniRing(f,X.fibreGoal,sz==='M'?70:52,'var(--c)')}<div>${big(Math.round(f),'/'+X.fibreGoal+'g',sz)}</div></div>`},
+  ()=>{const pts=lastN(7,d=>fibreOf(D.food[d]||[]));return card('Fibre, last 7 days',barChart(pts.map(p=>({x:p.d.slice(8),y:p.y})),{goal:X.fibreGoal}))+card('Top sources',rows(D.foods.filter(f=>X.fibre[f.id]).sort((a,b)=>X.fibre[b.id]-X.fibre[a.id]).map(f=>[esc(f.name),'',X.fibre[f.id]+' g'])))}],
+ kcalavg:['Weekly calories','📊','food',['S','M','L'],{},{},(sz)=>{const p=series('kcal',7),a=Math.round(avg(p.map(x=>x.y)));return L_('7-day avg')+big(a.toLocaleString(),'kcal',sz)+(sz!=='S'?chartW(p,sz,{kind:'bar',goal:P().targets.kcal}):`<small>goal ${P().targets.kcal}</small>`)},(o,d)=>metricMini('kcal',d||'7')],
+ grocery:['Grocery list','🛒','food',['S','M','L'],{},{},(sz)=>{const g=groceries();return L_('Grocery list')+big(g.length,'items',sz)+(sz==='S'?'':listW(g.map(x=>[esc(x.n),x.why]),nRows(sz)+1))},()=>card('To buy',rows(groceries().map(x=>[esc(x.n),x.why])))+'<p class="muted">Built from low pantry stock and meal-plan foods you don’t have.</p>'],
+ /* TRAINING */
+ next:['Next workout','🏋️','train',['S','M','L'],{},{},(sz)=>{if(D.active)return L_('In progress')+`<b class="wt">● ${esc(D.active.name)}</b><small>Tap to resume</small>`;const n=nextTpl();return L_('Next workout')+`<b class="wt">${esc(n.name)}</b>${sz!=='S'?`<small>${esc(n.exercises.join(' · '))}</small>`:''}${sz==='L'?listW(n.exercises.map(e=>[esc(e),esc(lastFor(e).replace('Last: ',''))]),5):''}`},
+  ()=>{const n=nextTpl();return card(D.active?'In progress':'Next up',`<b style="font-size:22px">${esc(D.active?D.active.name:n.name)}</b>`+rows((D.active?D.active.exercises.map(e=>e.name):n.exercises).map(e=>[esc(e),esc(lastFor(e))])))+(D.active?'':`<button class="btn block" data-edit data-act="start" data-t="${esc(n.name)}">Start ${esc(n.name)}</button>`)}],
+ week:['This week','📅','train',['S','M'],{},{},(sz)=>{const wk=wkCount(),g=P().weekGoal;return L_('This week')+big(wk,'/'+g,sz)+`<div class="wdots">${Array.from({length:g},(_,i)=>`<i class="${i<wk?'on':''}"></i>`).join('')}</div>`+(sz==='M'?`<small>${Math.max(0,g-wk)} to go · last 7 days</small>`:'')},
+  ()=>{const ws=sortedW().filter(w=>(new Date()-new Date(w.date+'T12:00'))/864e5<7);return stats([[wkCount()+'/'+P().weekGoal,'Sessions'],[ws.reduce((a,w)=>a+vol(w),0).toLocaleString()+' '+U(),'Volume']])+card('Sessions',rows(ws.map(w=>[esc(w.name),prettyDate(w.date),vol(w).toLocaleString()])))}],
+ last:['Last workout','✅','train',['S','M','L'],{},{},(sz)=>{const w=sortedW().pop();if(!w)return L_('Last workout')+'<b class="wt">None yet</b>';return L_('Last workout')+`<b class="wt">${esc(w.name)}</b><small>${prettyDate(w.date)}${sz!=='S'?' · '+vol(w).toLocaleString()+' '+U():''}</small>${sz==='L'?listW(w.exercises.map(e=>[esc(e.name),e.sets.map(s=>toDisp(s.w)+'×'+s.r).join(' ')]),6):''}`},
+  ()=>{const w=sortedW().pop();return w?card(esc(w.name),rows(w.exercises.map(e=>[esc(e.name),e.sets.map(s=>toDisp(s.w)+' × '+s.r).join(' · ')])),prettyDate(w.date))+stats([[vol(w).toLocaleString()+' '+U(),'Volume'],[w.exercises.reduce((a,e)=>a+e.sets.length,0),'Sets']]):''}],
+ prs:['Personal records','🏆','train',['S','M','L'],{},{},(sz)=>{const p=prs();return L_('Best lifts')+(sz==='S'?big(p[0]?p[0][1].e1:'—',U(),sz)+`<small>${esc(p[0]?.[0]||'')} e1RM</small>`:listW(p.map(([n,v])=>[esc(n),v.e1+' '+U()]),nRows(sz)+1))},
+  ()=>card('Estimated 1RM (Epley)',rows(prs().map(([n,v])=>[esc(n),`${v.w} ${U()} × ${v.r} · ${prettyDate(v.d)}`,v.e1+' '+U()])))],
+ volume:['Volume trend','📈','train',['M','L'],{},{},(sz)=>{const w=weekVols(sz==='L'?8:6);return L_('Weekly volume')+big(w[w.length-1].y.toLocaleString(),U(),sz)+chartW(w,sz,{kind:'bar'})},()=>{const w=weekVols(8);return card('Weekly volume',barChart(w),U())+rows([...w].reverse().map(x=>['Week of '+prettyDate(x.start),x.n+' sessions',x.y.toLocaleString()]))}],
+ streak:['Streak','⚡','train',['S','M'],{},{},(sz)=>{const s=wkStreak(),days=lastN(7,d=>D.workouts.some(w=>w.date===d));return L_('Streak')+big(s,s===1?'week':'weeks',sz)+(sz==='M'?`<div class="wweek">${days.map(x=>`<i class="${x.y?'on':''}"><span>${new Date(x.d+'T12:00').toLocaleDateString('en-CA',{weekday:'narrow'})}</span></i>`).join('')}</div>`:'<small>hitting your goal</small>')},
+  ()=>card('Weekly streak',`<b style="font-size:30px">${wkStreak()} weeks</b><p class="muted">Weeks in a row with at least ${Math.min(P().weekGoal,3)} sessions.</p>`)+card('Last 8 weeks',rows(weekVols(8).reverse().map(x=>['Week of '+prettyDate(x.start),'',x.n+' sessions'])))],
+ muscles:['Muscle groups','💪','train',['M','L'],{},{},(sz)=>{const m=muscleSets(7),mx=Math.max(...Object.values(m),1);return L_('Sets, last 7 days')+`<div class="heat">${Object.entries(m).map(([k,v])=>`<div style="--o:${.12+.88*v/mx}"><b>${v}</b><span>${k}</span></div>`).join('')}</div>`},
+  ()=>{const m=muscleSets(7),m2=muscleSets(28);return card('Sets per muscle group',rows(Object.keys(m).map(k=>[k,'28 days: '+m2[k]+' sets',m[k]+' this week'])))+'<p class="muted">Aim for roughly 10–20 hard sets per muscle group per week.</p>'}],
+ rest:['Rest timer','⏲️','train',['S','M'],{},{},(sz)=>L_('Rest timer')+big('1:30','',sz)+`<small>${sz==='M'?'Open for 1:00 · 1:30 · 2:00 · 3:00':'Quick start'}</small>`,
+  ()=>card('Start a rest timer',`<div class="grid2">${[60,90,120,180].map(s=>`<button class="btn" data-x="rest" data-v="${s}">${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}</button>`).join('')}</div>`)+'<p class="muted">The countdown shows at the bottom of the screen and vibrates when done.</p>'],
+ plan:['Upcoming plan','🗓️','train',['M','L'],{},{},(sz)=>L_('Coming up')+listW(upcoming(sz==='L'?6:3).map(x=>[x.day,esc(x.t.name)]),sz==='L'?6:3),()=>card('Next sessions',rows(upcoming(7).map(x=>[esc(x.t.name),x.day,x.t.exercises.length+' ex.'])))+'<p class="muted">Rotates through your templates on your usual training days.</p>'],
+ /* SLEEP & BODY */
+ sleeplast:['Last night','🌙','body',['S','M'],{},{},(sz)=>{const s=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)).pop();if(!s)return L_('Sleep')+'<b class="wt">—</b>';const b=X.bed(s.date);return L_('Last night')+big(s.hours,'h',sz)+`<small>${'★'.repeat(s.quality)}${'☆'.repeat(5-s.quality)}</small>${sz==='M'?`<small>${hm(b)} → ${hm(b+s.hours*60)}</small>`:''}`},
+  ()=>{const s=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)).pop();return s?stats([[s.hours+' h','Slept'],['★'.repeat(s.quality),'Quality'],[hm(X.bed(s.date)),'Bedtime'],[hm(X.bed(s.date)+s.hours*60),'Wake']])+`<button class="btn block" data-edit data-act="sleep">Log tonight</button>`:''}],
+ sleep7:['Sleep chart','📉','body',['M','L'],{days:'7'},{days:['Range',DAYS]},(sz,o)=>{const p=series('sleep',+o.days);return L_('Sleep · '+o.days+'d')+big(r1(avg(p.map(x=>x.y))),'h avg',sz)+chartW(p,sz,{kind:'bar',goal:P().sleepGoal})},(o,d)=>metricMini('sleep',d||o.days)],
+ consist:['Sleep consistency','🎯','body',['S','M'],{},{},(sz)=>{const c=consistency();return L_('Consistency')+big(c.score,'%',sz)+`<small>bedtime ±${c.sd} min</small>`},()=>{const c=consistency();return stats([[c.score+'%','Score'],['±'+c.sd+' min','Bedtime spread']])+card('Bedtimes, last 7 nights',rows(c.list.map(x=>[prettyDate(x.d),'',hm(x.b)])))}],
+ weight:['Weight','⚖️','body',['S','M'],{},{},(sz)=>{const p=series('weight',30),l=p[p.length-1];return L_('Weight')+big(l?l.y:'—',U(),sz)+(sz==='M'&&l?`<small>${prettyDate(l.d)}</small>`:'')},(o,d)=>metricMini('weight',d||'30')+`<button class="btn block" data-edit data-act="weight">Log weight</button>`],
+ wtrend:['Weight trend','📉','body',['M','L'],{days:'30'},{days:['Range',DAYS]},(sz,o)=>{const p=series('weight',+o.days),dl=p.length>1?r1(p[p.length-1].y-p[0].y):0;return L_('Weight · '+o.days+'d')+big((dl>0?'+':'')+dl,U(),sz)+chartW(p,sz)},(o,d)=>metricMini('weight',d||o.days)],
+ measure:['Measurements','📏','body',['S','M','L'],{},{},(sz)=>{const m=X.meas,l=m[m.length-1],f=m[0];return L_('Waist')+big(l.waist,'cm',sz)+`<small>${r1(l.waist-f.waist)} cm in 12 weeks</small>`+(sz!=='S'?listW([['Chest',l.chest+' cm'],['Arm',l.arm+' cm']],2):'')},
+  ()=>card('Measurements',lineChart(X.meas.map(m=>({x:m.d.slice(5),y:m.waist})),{h:150}),'waist, cm')+card('History',rows([...X.meas].reverse().map(m=>[prettyDate(m.d),`Chest ${m.chest} · Arm ${m.arm}`,m.waist+' cm'])))+'<p class="muted">Demo measurements.</p>'],
+ supps:['Supplements','💊','body',['S','M'],{},{},(sz)=>{const t=D.supplements.log[iso(new Date())]||[];return L_('Supplements')+big(t.length,'/'+D.supplements.list.length,sz)+(sz==='M'?`<div class="wchips">${D.supplements.list.map(s=>`<span class="${t.includes(s)?'on':''}">${t.includes(s)?'✓ ':''}${esc(s)}</span>`).join('')}</div>`:'<small>taken today</small>')},
+  ()=>{const t=D.supplements.log[iso(new Date())]||[];return card('Today',`<div class="chips">${D.supplements.list.map(s=>`<button class="chip ${t.includes(s)?'on':''}" data-act="supp" data-s="${esc(s)}">${t.includes(s)?'✓ ':''}${esc(s)}</button>`).join('')}</div>`)}],
+ vitals:['Steps & resting HR','❤️','body',['S','M','L'],{show:'both'},{show:['Show',[['both','Both'],['steps','Steps'],['hr','Resting HR']]]},(sz,o)=>{const d=iso(new Date()),st=X.steps(d),hr=X.hr(d);
+  if(sz==='S'||o.show!=='both')return o.show==='hr'?L_('Resting HR')+big(hr,'bpm',sz):L_('Steps')+big(st.toLocaleString(),'',sz)+(sz!=='S'?chartW(series('steps',7),sz,{kind:'bar'}):'');return L_('Today')+`<div class="wrow"><div>${big(st.toLocaleString(),'steps',sz)}</div><div>${big(hr,'bpm',sz)}</div></div>`+chartW(series('steps',7),sz,{kind:'bar',goal:10000})},
+  (o,d)=>stats([[X.steps(iso(new Date())).toLocaleString(),'Steps today'],[X.hr(iso(new Date()))+' bpm','Resting HR']])+metricMini('steps',d||'7')+'<p class="muted">Demo values. The real app could read these from Apple Health.</p>'],
+ bedtime:['Bedtime target','🛏️','body',['S','M'],{},{},(sz)=>{const now=new Date(),m=now.getHours()*60+now.getMinutes(),left=(X.bedGoal-m+1440)%1440;return L_('Bedtime')+big(hm(X.bedGoal),'',sz)+`<small>in ${Math.floor(left/60)} h ${left%60} min</small>`+(sz==='M'?`<small>Wake ${hm(X.bedGoal+P().sleepGoal*60)} for ${P().sleepGoal} h</small>`:'')},
+  ()=>stats([[hm(X.bedGoal),'Target bedtime'],[hm(X.bedGoal+P().sleepGoal*60),'Wake for '+P().sleepGoal+' h']])+card('Wind down',rows([['Screens off',hm(X.bedGoal-30)],['Last caffeine',hm(X.bedGoal-480)],['Last big meal',hm(X.bedGoal-180)]]))],
+ /* HISTORY */
+ graph:['Graph','📈','hist',['S','M','L'],{metric:'weight',days:'14'},{metric:['Graph',Object.entries(METRIC).map(([k,v])=>[k,v[0]])],days:['Range',DAYS]},(sz,o)=>{const [n,u,kind]=METRIC[o.metric]||METRIC.weight,unit=typeof u==='function'?u():u,p=series(o.metric,+o.days),l=p[p.length-1];return L_(n+' · '+o.days+'d')+big(l?l.y.toLocaleString():'—',unit,sz)+chartW(p,sz,{kind})},(o,d)=>metricMini(o.metric,d||o.days)],
+ calheat:['Calendar heatmap','🟩','hist',['M','L'],{metric:'workouts'},{metric:['Shows',[['workouts','Workouts'],['kcal','Calories on target'],['sleep','Sleep goal hit']]]},(sz,o)=>L_({workouts:'Workouts',kcal:'Calories on target',sleep:'Sleep goal'}[o.metric]+' · 28d')+heat(o.metric,sz==='L'?35:28),(o)=>card('Last 35 days',heat(o.metric,35,true))],
+ month:['Month summary','🗒️','hist',['M','L'],{},{},(sz)=>{const m=monthSum();return L_(m.name)+listW([['Workouts',m.w],['Avg calories',m.k],['Avg sleep',m.s+' h'],['Weight',m.wt],['Volume',m.v]],sz==='L'?5:3)},()=>{const m=monthSum();return stats([[m.w,'Workouts'],[m.k,'Avg kcal'],[m.s+' h','Avg sleep'],[m.wt,'Weight change']])+card('Volume',`<b>${m.v}</b>`)}],
+ bestweek:['Best week','🥇','hist',['S','M'],{},{},(sz)=>{const b=weekVols(8).reduce((a,x)=>x.y>a.y?x:a);return L_('Best week')+big(b.y.toLocaleString(),U(),sz)+`<small>${prettyDate(b.start)} · ${b.n} sessions</small>`},()=>{const w=weekVols(8),b=w.reduce((a,x)=>x.y>a.y?x:a);return card('Top week',`<b style="font-size:26px">${b.y.toLocaleString()} ${U()}</b><div class="muted">Week of ${prettyDate(b.start)} · ${b.n} sessions</div>`)+card('Last 8 weeks',barChart(w))}],
+ compare:['Compare','⚖︎','hist',['S','M'],{metric:'kcal'},{metric:['Metric',Object.entries(METRIC).map(([k,v])=>[k,v[0]])]},(sz,o)=>{const c=cmp(o.metric);return L_(METRIC[o.metric][0]+' vs prev')+big((c.pct>0?'+':'')+c.pct,'%',sz)+`<small>${c.a} vs ${c.b} avg</small>`+(sz==='M'?'<small>Last 14 days vs the 14 before</small>':'')},
+  (o)=>{const c=cmp(o.metric);return stats([[c.a,'Last 14 days avg'],[c.b,'Previous 14 days avg']])+card('Change',`<b style="font-size:28px">${c.pct>0?'+':''}${c.pct}%</b>`)+'<p class="muted">Comparison uses 14-day windows because the demo data covers about a month.</p>'}],
+ milestones:['Milestones','🎉','hist',['M','L'],{},{},(sz)=>L_('Milestones')+listW(milestones().map(m=>[m.t,m.d]),nRows(sz)+1),()=>card('Achievements',rows(milestones().map(m=>[m.t,m.s,m.d])))],
+ journal:['Journal','📓','hist',['M','L'],{},{},(sz)=>L_('Journal')+`<div class="wtips">${X.journal.slice(0,sz==='L'?4:1).map(j=>`<p><b>${prettyDate(j.d)}</b> ${esc(j.t)}</p>`).join('')}</div>`,()=>card('Entries',rows(X.journal.map(j=>[esc(j.t),prettyDate(j.d)])))+'<p class="muted">Demo journal entries.</p>'],
+ totals:['All-time totals','🧮','hist',['S','M'],{},{},(sz)=>{const t=allTotals();return L_('All time')+big(t.s,'sessions',sz)+(sz==='M'?`<small>${t.v} ${U()} lifted · ${t.m} meals · ${t.n} nights</small>`:'')},()=>{const t=allTotals();return stats([[t.s,'Sessions'],[t.v+' '+U(),'Volume'],[t.m,'Meals logged'],[t.n,'Nights logged']])}]
 };
+function macroMini(t){const g=P().targets;return `<div class="wmac">${[['P','p','var(--p)'],['C','c','var(--c)'],['F','f','var(--f)']].map(([n,k,col])=>`<div><span>${n}</span><div class="bar"><i style="width:${Math.min(100,t[k]/g[k]*100)}%;background:${col}"></i></div><em>${Math.round(t[k])}/${g[k]}</em></div>`).join('')}</div>`}
+function favs(){const c={};Object.values(D.food).flat().forEach(e=>c[e.fid]=(c[e.fid]||0)+1);return D.foods.filter(f=>c[f.id]).sort((a,b)=>c[b.id]-c[a.id])}
+function groceries(){const o=D.pantry.filter(p=>pantryStatus(p)!=='ok').map(p=>({n:p.name,why:pantryStatus(p)==='out'?'Out':'Low'}));const have=new Set(D.pantry.map(p=>p.fid).filter(Boolean));
+ MEALS.forEach(m=>(D.mealPlan[m]||[]).forEach(e=>{if(!have.has(e.fid)){have.add(e.fid);o.push({n:food(e.fid).name,why:'Meal plan'})}}));return o}
+function upcoming(n){const o=[];let k=D.workouts.length,day=1;while(o.length<n){const d=new Date();d.setDate(d.getDate()+day);if(d.getDay()!==3&&d.getDay()!==0){o.push({day:d.toLocaleDateString('en-CA',{weekday:'short',day:'numeric'}),t:D.templates[k%D.templates.length]});k++}day++}return o}
+function consistency(){const l=[...D.sleep].sort((a,b)=>a.date.localeCompare(b.date)).slice(-7).map(s=>({d:s.date,b:X.bed(s.date)})),a=avg(l.map(x=>x.b)),sd=Math.round(Math.sqrt(avg(l.map(x=>(x.b-a)**2))));return {sd,score:Math.max(0,Math.round(100-sd*1.5)),list:l.reverse()}}
+function heat(m,n,big){const cells=[];for(let i=-(n-1);i<=0;i++){const d=dayOff(i);let v=0;
+ if(m==='workouts')v=D.workouts.some(w=>w.date===d)?1:0;else if(m==='kcal'){const t=D.food[d];v=t&&t.length?Math.max(0,1-Math.abs(totals(t).kcal-P().targets.kcal)/P().targets.kcal*3):0}else{const s=D.sleep.find(x=>x.date===d);v=s?Math.min(1,s.hours/P().sleepGoal)**3:0}
+ cells.push(`<i style="--o:${.1+.9*v}" title="${d}">${big?new Date(d+'T12:00').getDate():''}</i>`)}return `<div class="calh ${big?'big':''}">${cells.join('')}</div>`}
+function monthSum(){const now=new Date(),mk=iso(now).slice(0,7),ws=D.workouts.filter(w=>w.date.startsWith(mk)),ks=Object.entries(D.food).filter(([d,l])=>d.startsWith(mk)&&l.length).map(([d,l])=>totals(l).kcal),ss=D.sleep.filter(s=>s.date.startsWith(mk)).map(s=>s.hours),wt=D.weight.filter(s=>s.date.startsWith(mk)).sort((a,b)=>a.date.localeCompare(b.date));
+ return {name:now.toLocaleDateString('en-CA',{month:'long'}),w:ws.length,k:Math.round(avg(ks)).toLocaleString(),s:r1(avg(ss)),wt:wt.length>1?(r1(toDisp(wt[wt.length-1].kg-wt[0].kg))>0?'+':'')+r1(toDisp(wt[wt.length-1].kg-wt[0].kg))+' '+U():'—',v:ws.reduce((a,w)=>a+vol(w),0).toLocaleString()+' '+U()}}
+function cmp(m){const a=avg(metricVals(m,-13,0).map(x=>x.y)),b=avg(metricVals(m,-27,-14).map(x=>x.y));return {a:r1(a).toLocaleString(),b:b?r1(b).toLocaleString():'—',pct:b?Math.round((a-b)/b*100):0}}
+function milestones(){const o=[],n=D.workouts.length;[5,10,25,50,100].forEach(k=>{if(n>=k){const w=sortedW()[k-1];o.push({t:k+' workouts logged',s:'Consistency',d:prettyDate(w.date)})}});
+ prs().slice(0,3).forEach(([e,v])=>o.push({t:`${e} PR · ${v.e1} ${U()}`,s:'Estimated 1RM',d:prettyDate(v.d)}));const w=[...D.weight].sort((a,b)=>a.date.localeCompare(b.date));if(w.length>1&&w[0].kg-w[w.length-1].kg>=0.5)o.push({t:`Down ${r1(toDisp(w[0].kg-w[w.length-1].kg))} ${U()}`,s:'Body weight',d:prettyDate(w[w.length-1].date)});
+ return o.sort((a,b)=>b.d.localeCompare(a.d))}
+function allTotals(){return {s:D.workouts.length,v:D.workouts.reduce((a,w)=>a+vol(w),0).toLocaleString(),m:Object.values(D.food).flat().length,n:D.sleep.length}}
 const SZN={S:'Small',M:'Medium',L:'Large'};
-/* ---------- LAYOUT (pages of widgets) ---------- */
+
+/* ---------- LAYOUT (section-scoped pages) ---------- */
 const nw=(type,size,opt)=>({id:'w'+uid(),type,size,opt:Object.assign({},WT[type][4],opt||{})});
-function defaultLayout(){return [
- {id:'home',name:'Home',w:[nw('fuel','L',{show:'both'}),nw('sleep','S'),nw('weight','S'),nw('training','M')]},
- {id:'ptrain',name:'Training',w:[nw('training','M',{show:'next'}),nw('streak','M'),nw('training','S',{show:'week'}),nw('history','S',{metric:'volume',days:'30'}),nw('training','M',{show:'last'})]},
- {id:'pfood',name:'Food',w:[nw('fuel','M',{show:'macros'}),nw('history','M',{metric:'kcal',days:'7'}),nw('pantry','M'),nw('history','M',{metric:'protein',days:'7'})]},
- {id:'prec',name:'Sleep & body',w:[nw('sleep','M',{show:'week'}),nw('weight','M',{days:'30'}),nw('supps','M'),nw('coach','M')]},
- {id:'phist',name:'History',w:[nw('history','L',{metric:'weight',days:'30'}),nw('history','M',{metric:'sleep',days:'14'}),nw('history','M',{metric:'volume',days:'30'})]}]}
-let LAYOUT=(()=>{try{const l=JSON.parse(localStorage.getItem('lb2w:pages'));if(Array.isArray(l)&&l.length)return l.map(p=>({...p,w:p.w.filter(x=>WT[x.type])}))}catch(e){}return defaultLayout()})();
-function saveLayout(){localStorage.setItem('lb2w:pages',JSON.stringify(LAYOUT))}
+const PCAT={home:'Home',train:'Training',food:'Food',body:'Sleep & body',hist:'History',other:'Other'};
+const mixed=c=>c==='home'||c==='other';
+function defaultLayout(){const P_=(cat,w)=>({id:'p'+uid(),cat,name:PCAT[cat],w});return [
+ P_('home',[nw('kcal','L'),nw('sleeplast','S'),nw('weight','S'),nw('next','M')]),
+ P_('train',[nw('next','M'),nw('week','S'),nw('streak','S'),nw('volume','M'),nw('prs','M')]),
+ P_('food',[nw('macros','M'),nw('water','S'),nw('protein','S'),nw('meals','M'),nw('favs','M')]),
+ P_('body',[nw('sleeplast','S'),nw('weight','S'),nw('sleep7','M'),nw('vitals','M'),nw('supps','M')]),
+ P_('hist',[nw('graph','L',{metric:'weight',days:'30'}),nw('calheat','M'),nw('month','M')]),
+ P_('other',[nw('journal','M'),nw('rest','S'),nw('pantry','S')])]}
+function sanitize(l){const other=l.find(p=>p.cat==='other')||(l.push({id:'p'+uid(),cat:'other',name:'Other',w:[]}),l[l.length-1]);
+ l.forEach(p=>{if(!PCAT[p.cat])p.cat='other';p.w=p.w.filter(x=>WT[x.type]);if(!mixed(p.cat)){const bad=p.w.filter(x=>WT[x.type][2]!==p.cat);if(bad.length){p.w=p.w.filter(x=>!bad.includes(x));other.w.push(...bad)}}});
+ const oi=l.indexOf(other);l.splice(oi,1);l.push(other);return l}
+let LAYOUT=(()=>{try{const l=JSON.parse(localStorage.getItem('lb2w:pages3'));if(Array.isArray(l)&&l.length)return sanitize(l)}catch(e){}return defaultLayout()})();
+function saveLayout(){localStorage.setItem('lb2w:pages3',JSON.stringify(LAYOUT))}
 const SB={cur:0,rows:4,W:390};
 const probe=(()=>{const d=document.createElement('div');d.style.cssText='position:fixed;top:0;left:0;visibility:hidden;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)';document.documentElement.appendChild(d);return d})();
 function metrics(){const cs=getComputedStyle(probe),sat=parseFloat(cs.paddingTop)||0,sab=parseFloat(cs.paddingBottom)||0,W=Math.min(innerWidth,560),H=innerHeight;
  const head=58,bottom=104+Math.max(sab,8)+20,avail=H-sat-8-head-bottom,gap=14,cw=(W-32-gap)/2;
  const rows=Math.max(2,Math.min(4,Math.round((avail+gap)/(cw+gap))));const rh=Math.floor((avail-gap*(rows-1))/rows);Object.assign(SB,{rows,rh,W:innerWidth,avail});return SB}
 function fits(occ,R,sz,r,c){const cells=sz==='S'?[[r,c]]:sz==='M'?(c?null:[[r,0],[r,1]]):(c||r+1>=R?null:[[r,0],[r,1],[r+1,0],[r+1,1]]);if(!cells||cells.some(([y,x])=>y>=R||occ[y][x]))return null;return cells}
-function pack(){const R=SB.rows,out=[];let carry=[],i=0;
- while(i<LAYOUT.length||carry.length){const p=LAYOUT[i]||{id:'p'+uid(),name:'',w:[]};i++;const items=[...carry,...p.w];carry=[];const occ=Array.from({length:R},()=>[0,0]),placed=[];
-  for(const w of items){let ok=null;for(let r=0;r<R&&!ok;r++)for(let c=0;c<2&&!ok;c++){const cl=fits(occ,R,w.size,r,c);if(cl){cl.forEach(([y,x])=>occ[y][x]=1);ok={w,r,c}}}ok?placed.push(ok):carry.push(w)}
-  out.push({id:p.id,name:p.name,items:placed})}
- return out}
-function commitPack(){LAYOUT=pack().map(p=>({id:p.id,name:p.name,w:p.items.map(x=>x.w)}));saveLayout()}
-function widgetHTML(w,r,c){const T=WT[w.type];let inner;try{inner=T[6](w.size,w.opt||{})}catch(e){inner='<small class="wl">'+T[0]+'</small><small>Unavailable</small>'}
- const span=w.size==='S'?'span 1':'1 / span 2';return `<div class="w ${w.size}" data-wid="${w.id}" style="grid-row:${r+1} / span ${w.size==='L'?2:1};grid-column:${w.size==='S'?c+1:span}" role="button" tabindex="0" aria-label="${T[0]} widget"><div class="wi">${inner}</div>
+function placeAll(items){const R=SB.rows,occ=Array.from({length:R},()=>[0,0]),placed=[],rest=[];
+ for(const w of items){let ok=null;for(let r=0;r<R&&!ok;r++)for(let c=0;c<2&&!ok;c++){const cl=fits(occ,R,w.size,r,c);if(cl){cl.forEach(([y,x])=>occ[y][x]=1);ok={w,r,c}}}ok?placed.push(ok):rest.push(w)}return [placed,rest]}
+const baseName=c=>PCAT[c];
+function pack(){const out=[];for(const p of LAYOUT){let items=p.w,first=true;
+  do{const [placed,rest]=placeAll(items);out.push({id:first?p.id:p.id+'x'+out.length,cat:p.cat,name:p.name,items:placed});items=rest;first=false}while(items.length)}
+ const cnt={};out.forEach(p=>{cnt[p.cat]=(cnt[p.cat]||0)+1;p.name=cnt[p.cat]>1?baseName(p.cat)+' '+cnt[p.cat]:baseName(p.cat)});return out}
+function commitPack(){LAYOUT=pack().map(p=>({id:p.id,cat:p.cat,name:p.name,w:p.items.map(x=>x.w)}));saveLayout()}
+function widgetHTML(w,r,c){const T=WT[w.type];let inner;try{inner=T[6](w.size,w.opt||{})}catch(e){console.warn(e);inner='<small class="wl">'+T[0]+'</small><small>Unavailable</small>'}
+ return `<div class="w ${w.size}" data-type="${w.type}" data-c="${T[2]}" data-wid="${w.id}" style="grid-row:${r+1} / span ${w.size==='L'?2:1};grid-column:${w.size==='S'?c+1:'1 / span 2'}" role="button" tabindex="0" aria-label="${T[0]} widget"><div class="wi">${inner}</div>
  <button class="wx" data-wx aria-label="Remove widget">−</button><button class="wsz" data-wsz aria-label="Change size">${w.size}</button></div>`}
-function pageTitle(p,i){return i===0?`<div class="sub">${new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'})}</div><h1>Hi ${esc(P().name)}</h1>`:`<div class="sub">&nbsp;</div><h1>${esc(p.name||'Page '+(i+1))}</h1>`}
+function pageTitle(p,i){return p.cat==='home'&&p.name==='Home'?`<div class="sub">${new Date().toLocaleDateString('en-CA',{weekday:'long',month:'long',day:'numeric'})}</div><h1>Hi ${esc(P().name)}</h1>`:`<div class="sub">${mixed(p.cat)?'Any widgets':'Section'}</div><h1>${esc(p.name)}</h1>`}
 
 /* ---------- APPS (dock) ---------- */
 const APPS={train:['Training',vTrain,'linear-gradient(160deg,#ff9f43,#ee5a24)'],food:['Food',vFood,'linear-gradient(160deg,#7bed9f,#20bf6b)'],progress:['History',vProgress,'linear-gradient(160deg,#70a1ff,#1e6fd9)'],recovery:['Sleep & body',vRecovery,'linear-gradient(160deg,#a29bfe,#5f27cd)'],me:['Settings',vMe,'linear-gradient(160deg,#c8ccd2,#7d848e)']};
 const GLYPH={train:ICON.train,food:ICON.food,progress:ICON.progress,recovery:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg>',me:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>'};
 const appIcon=k=>`<span class="aico" style="background:${APPS[k][2]}">${GLYPH[k]}</span>`;
 let OV=null; // {kind:'app',k} | {kind:'mini',id,days}
-const SECOF={fuel:'food',training:'train',history:'progress',sleep:'recovery',weight:'recovery',supps:'recovery',pantry:'food:pantry',coach:'recovery',streak:'progress'};
-function miniHTML(){const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===OV.id);if(!it)return '<div class="empty">Widget removed</div>';const T=WT[it.type],o=it.opt||{},sec=SECOF[it.type],an=APPS[sec.split(':')[0]][0];
- const rng=(cur)=>`<div class="seg">${['7','14','30','90'].map(d=>`<button class="${cur===d?'on':''}" data-mdays="${d}">${d} d</button>`).join('')}</div>`;
- let body='';const days=OV.days||o.days||'14';
- const metricView=(m)=>{const [n,u,kind]=METRIC[m],unit=typeof u==='function'?u():u,pts=series(m,+days);const goal=m==='kcal'?P().targets.kcal:m==='protein'?P().targets.p:m==='sleep'?P().sleepGoal:null;
-  const ys=pts.map(p=>p.y),avg=ys.length?ys.reduce((a,b)=>a+b,0)/ys.length:0;
-  return `${rng(days)}<div class="card"><h2>${n} <small>${unit}</small></h2>${(kind==='bar'?barChart:lineChart)(pts.map(p=>({x:p.d.slice(5),y:p.y})),kind==='bar'?{goal,h:170}:{h:190})}</div>
-  <div class="grid2"><div class="stat"><b>${ys.length?ys[ys.length-1].toLocaleString():'—'}</b><span>Latest</span></div><div class="stat"><b>${ys.length?(Math.round(avg*10)/10).toLocaleString():'—'}</b><span>${days}-day average</span></div></div>
-  <div class="card" style="margin-top:12px"><h2>Entries <small>${pts.length}</small></h2><div class="list">${[...pts].reverse().map(p=>`<div class="item"><div class="grow"><div class="t">${prettyDate(p.d)}</div></div><b>${p.y.toLocaleString()} ${unit}</b></div>`).join('')||'<div class="empty">No entries in this range</div>'}</div></div>`};
- if(it.type==='history')body=metricView(o.metric||'weight');
- else if(it.type==='weight')body=metricView('weight')+`<button class="btn block" data-edit data-act="weight" style="margin-top:4px">Log weight</button>`;
- else if(it.type==='sleep')body=metricView('sleep')+`<button class="btn block" data-edit data-act="sleep" style="margin-top:4px">Log sleep</button>`;
- else if(it.type==='fuel'){const t=todayT(),g=P().targets,day=D.food[iso(new Date())]||[];body=`<div class="card"><div class="row">${ring(t.kcal,g.kcal,'of '+g.kcal+' kcal',120)}<div class="grow"><b style="font-size:30px">${Math.round(g.kcal-t.kcal)}</b><div class="muted">kcal left today</div></div></div><div style="margin-top:12px">${macroBars(t)}</div></div>
-  <div class="card"><h2>Logged today <small>${day.length} items</small></h2><div class="list">${day.map(e=>{const f=food(e.fid);return `<div class="item"><div class="grow"><div class="t">${esc(f.name)}</div><div class="s">${e.meal} · P${Math.round(f.p*e.q)} C${Math.round(f.c*e.q)} F${Math.round(f.f*e.q)}</div></div><b>${Math.round(f.kcal*e.q)}</b></div>`}).join('')||'<div class="muted">Nothing yet</div>'}</div></div><button class="btn block" data-edit data-act="addfood">＋ Log food</button>`}
- else if(it.type==='training'||it.type==='streak'){const n=nextTpl(),rec=[...D.workouts].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
-  body=`<div class="card"><h2>${D.active?'In progress':'Next up'}</h2><b style="font-size:22px">${esc(D.active?D.active.name:n.name)}</b><div class="muted">${esc((D.active?D.active.exercises.map(e=>e.name):n.exercises).join(' · '))}</div>${D.active?'':`<button class="btn block" style="margin-top:10px" data-edit data-act="start" data-t="${esc(n.name)}">Start ${esc(n.name)}</button>`}</div>
-  <div class="card"><h2>This week <small>${wkCount()}/${P().weekGoal}</small></h2>${T[6]('M',{show:'week'}).replace(/<small class="wl">.*?<\/small>/,'')}</div>
-  <div class="card"><h2>Recent</h2><div class="list">${rec.map(w=>`<button class="item" style="background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left" data-act="openw" data-id="${w.id}"><div class="grow"><div class="t">${esc(w.name)}</div><div class="s">${prettyDate(w.date)}</div></div><span class="pill">${vol(w).toLocaleString()} ${U()}</span></button>`).join('')}</div></div>`}
- else if(it.type==='supps'){const t=D.supplements.log[iso(new Date())]||[];body=`<div class="card"><h2>Today <small>${t.length}/${D.supplements.list.length}</small></h2><div class="chips">${D.supplements.list.map(s=>`<button class="chip ${t.includes(s)?'on':''}" data-act="supp" data-s="${esc(s)}">${t.includes(s)?'✓ ':''}${esc(s)}</button>`).join('')}</div></div>`}
- else if(it.type==='pantry'){body=`<div class="card"><h2>Pantry</h2><div class="list">${D.pantry.map(p=>{const st=pantryStatus(p);return `<div class="item"><div class="grow"><div class="t">${esc(p.name)}</div><div class="s">${p.qty} ${esc(p.unit)} · min ${p.min}</div></div><span class="pill ${st}">${st==='ok'?'OK':st==='low'?'Low':'Out'}</span></div>`}).join('')}</div></div>`}
- else if(it.type==='coach'){body=`<div class="card"><h2>Coach</h2>${coachTips().map(x=>`<div class="tip">${esc(x)}</div>`).join('')||'<div class="muted">All on track.</div>'}</div>`}
- return body+`<button class="btn ghost block openfull" data-go="${sec}">Open ${an} ›</button>`}
-function ovTitle(){if(OV.kind==='app')return APPS[OV.k][0];const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===OV.id);if(!it)return '';const o=it.opt||{};return it.type==='history'?METRIC[o.metric||'weight'][0]:WT[it.type][0]}
+function curWidget(){return LAYOUT.flatMap(p=>p.w).find(x=>x.id===OV.id)}
+function miniHTML(){const it=curWidget();if(!it)return '<div class="empty">Widget removed</div>';const T=WT[it.type],[cn,app]=CATS[T[2]];let body;
+ try{body=T[7](Object.assign({},T[4],it.opt),OV.days)}catch(e){console.warn(e);body='<div class="empty">Unavailable</div>'}
+ return body+`<button class="btn ghost block openfull" data-go="${it.type==='pantry'||it.type==='grocery'?'food:pantry':app}">Open ${cn} ›</button>`}
+function ovTitle(){if(OV.kind==='app')return APPS[OV.k][0];const it=curWidget();if(!it)return '';const o=it.opt||{};return it.type==='graph'?METRIC[o.metric||'weight'][0]:WT[it.type][0]}
 function ovBody(){return OV.kind==='app'?APPS[OV.k][1]():miniHTML()}
 function drawOV(){let el=$('#ov');if(!OV){el&&el.remove();return}const keep=el?el.querySelector('.ovb').scrollTop:0;
  if(!el){el=document.createElement('div');el.id='ov';el.className='ov';$('#app').appendChild(el)}
@@ -369,6 +446,7 @@ function closeOV(){const el=$('#ov');if(!el){OV=null;return}let r=OV.rect;const 
  OV=null;document.body.classList.remove('ovopen');setTimeout(()=>{if(!OV)el.remove()},380);render()}
 function bindOV(el){let st=null;
  el.querySelector('[data-close]').onclick=e=>{e.stopPropagation();closeOV()};
+ el.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{e.stopPropagation();const v=b.dataset.v;if(b.dataset.x==='rest'){restTimer(+v);return}if(!canEdit())return toast('Read-only account — editing is disabled');if(b.dataset.x==='water'){const d=iso(new Date());WATER[d]=Math.max(0,X.water(d)+ +v);localStorage.setItem(WKEY,JSON.stringify(WATER));drawOV();render();toast('Water updated')}if(b.dataset.x==='qlog'){const h=new Date().getHours(),meal=h<11?'Breakfast':h<15?'Lunch':h<17?'Snack':'Dinner';save(d=>{(d.food[iso(new Date())]=d.food[iso(new Date())]||[]).push({fid:v,meal,q:1})},'Logged to '+meal)}});
  el.querySelectorAll('[data-mdays]').forEach(b=>b.onclick=e=>{e.stopPropagation();OV.days=b.dataset.mdays;drawOV()});
  el.addEventListener('pointerdown',e=>{if(e.target.closest('button,a,input,select,label'))return;const hb=e.target.closest('.homebar,.ovh'),edge=e.clientX<28;if(!hb&&!edge)return;st={x:e.clientX,y:e.clientY,t:Date.now(),mode:edge&&!hb?'back':'down',hb:!!e.target.closest('.homebar')};el.setPointerCapture(e.pointerId)});
  el.addEventListener('pointermove',e=>{if(!st)return;const dx=e.clientX-st.x,dy=e.clientY-st.y;
@@ -384,7 +462,7 @@ function goPage(k){const [a,seg]=k.split(':');if(seg)S.foodSeg=seg;if(a==='today
 function render(){D=DB.get();applyTheme();document.body.classList.toggle('readonly',!canEdit());document.body.classList.toggle('editing',WSTATE.edit);metrics();
  const pages=pack();SB.n=pages.length;SB.cur=Math.min(SB.cur,pages.length-1);
  const edit=WSTATE.edit?`<div class="etools"><button class="pillbtn" data-pdel ${pages.length<2?'disabled':''}>− Page</button><button class="pillbtn" data-padd>＋ Page</button><button class="pillbtn" data-wadd aria-label="Add widget">＋ Widget</button><button class="pillbtn on" data-wdone>Done</button></div>`:'';
- $('#app').innerHTML=`<div class="sb" id="sb"><div class="track" id="track" style="transform:translateX(${-SB.cur*SB.W}px)">${pages.map((p,i)=>`<section class="page" data-pi="${i}"><div class="pin2"><header class="top">${WSTATE.edit&&i===SB.cur?edit:`<div style="min-width:0">${pageTitle(p,i)}</div>`}</header>
+ $('#app').innerHTML=`<div class="sb" id="sb"><div class="track" id="track" style="transform:translateX(${-SB.cur*SB.W}px)">${pages.map((p,i)=>`<section class="page" data-pi="${i}" data-cat="${p.cat}"><div class="pin2"><header class="top">${WSTATE.edit&&i===SB.cur?edit:`<div style="min-width:0">${pageTitle(p,i)}</div>`}</header>
  <div class="wgrid" style="grid-template-rows:repeat(${SB.rows},${SB.rh}px)">${p.items.map(x=>widgetHTML(x.w,x.r,x.c)).join('')}</div>${p.items.length?'':`<div class="emptypg">${WSTATE.edit?'Empty page. Tap ＋ Widget to add one, or − Page to remove it.':'Empty page'}</div>`}</div></section>`).join('')}</div></div>
  ${D.active&&!OV?`<button class="fab-live" data-go="train"><span>● ${esc(D.active.name)} in progress</span><span>Resume ›</span></button>`:''}
  <div class="dockwrap"><div class="pdots">${pages.map((p,i)=>`<i class="${i===SB.cur?'on':''}"></i>`).join('')}</div><nav class="dock" aria-label="Apps">${['train','food','progress','recovery','me'].map(k=>`<button data-app="${k}" aria-label="${APPS[k][0]}">${appIcon(k)}<span>${APPS[k][0].split(' ')[0]}</span></button>`).join('')}</nav></div>`;
@@ -397,8 +475,8 @@ function setEdit(on){if(on)commitPack();WSTATE.edit=on;render()}
 function bindSB(){const sb=$('#sb'),track=$('#track');let st=null,lp=null,edgeT=null;
  document.querySelectorAll('.dock [data-app]').forEach(b=>b.onclick=()=>{if(WSTATE.edit)setEdit(false);openOV({kind:'app',k:b.dataset.app},b.querySelector('.aico').getBoundingClientRect())});
  const q=s=>sb.querySelector(s);q('[data-wdone]')&&(q('[data-wdone]').onclick=()=>setEdit(false));q('[data-wadd]')&&(q('[data-wadd]').onclick=gallery);
- q('[data-padd]')&&(q('[data-padd]').onclick=()=>{LAYOUT.splice(SB.cur+1,0,{id:'p'+uid(),name:'',w:[]});saveLayout();SB.cur++;render();toast('Page added')});
- q('[data-pdel]')&&(q('[data-pdel]').onclick=()=>{const p=LAYOUT[SB.cur];if(p.w.length&&!confirm(`Remove this page and its ${p.w.length} widget${p.w.length>1?'s':''}?`))return;LAYOUT.splice(SB.cur,1);saveLayout();SB.cur=Math.max(0,SB.cur-1);render();toast('Page removed')});
+ q('[data-padd]')&&(q('[data-padd]').onclick=()=>{const c=LAYOUT[SB.cur].cat==='home'?'other':LAYOUT[SB.cur].cat;LAYOUT.splice(SB.cur+1,0,{id:'p'+uid(),cat:c,name:PCAT[c],w:[]});commitPack();saveLayout();SB.cur++;render();toast('Page added')});
+ q('[data-pdel]')&&(q('[data-pdel]').onclick=()=>{const p=LAYOUT[SB.cur];if(p.cat==='home'&&p.name==='Home')return toast('The Home page can’t be removed');if(p.w.length&&!confirm(`Remove this page and its ${p.w.length} widget${p.w.length>1?'s':''}?`))return;LAYOUT.splice(SB.cur,1);if(!LAYOUT.some(x=>x.cat==='other'))LAYOUT.push({id:'p'+uid(),cat:'other',name:'Other',w:[]});commitPack();SB.cur=Math.max(0,SB.cur-1);render();toast('Page removed')});
  sb.addEventListener('contextmenu',e=>e.preventDefault());
  sb.addEventListener('pointerdown',e=>{if(e.target.closest('.etools'))return;const w=e.target.closest('.w');st={x:e.clientX,y:e.clientY,t:Date.now(),w,btn:e.target.closest('[data-wx],[data-wsz]'),mode:null,pid:e.pointerId,hist:[[e.clientX,Date.now()]]};
   if(!WSTATE.edit)lp=setTimeout(()=>{if(st&&!st.mode){st.mode='lp';navigator.vibrate?.(15);setEdit(true)}},500)});
@@ -408,7 +486,7 @@ function bindSB(){const sb=$('#sb'),track=$('#track');let st=null,lp=null,edgeT=
   if(st.mode==='wdrag'){const w=st.w;w.style.transform=`translate(${dx-st.ox}px,${dy-st.oy}px) scale(1.06)`;w.style.pointerEvents='none';
    const edge=e.clientX<22?-1:e.clientX>innerWidth-22?1:0;
    if(edge&&!edgeT)edgeT=setTimeout(()=>{edgeT=null;if(!st||st.mode!=='wdrag')return;const id=w.dataset.wid,from=LAYOUT[SB.cur],it=from.w.find(x=>x.id===id),to=SB.cur+edge;if(to<0)return;
-    if(!LAYOUT[to])LAYOUT.push({id:'p'+uid(),name:'',w:[]});from.w=from.w.filter(x=>x!==it);LAYOUT[to].w.push(it);commitPack();st=null;SB.cur=to;render();toast('Moved to page '+(to+1))},550);
+    if(!LAYOUT[to])return;if(!mixed(LAYOUT[to].cat)&&LAYOUT[to].cat!==WT[it.type][2]){toast(`${CATS[WT[it.type][2]][0]} widgets can’t go on ${LAYOUT[to].name}`);return}from.w=from.w.filter(x=>x!==it);LAYOUT[to].w.push(it);commitPack();st=null;SB.cur=to;render();toast('Moved to page '+(to+1))},550);
    if(!edge){clearTimeout(edgeT);edgeT=null}
    const over=document.elementFromPoint(e.clientX,e.clientY)?.closest('.w');if(over&&over!==w&&!over.getAnimations().some(a=>!(window.CSSAnimation&&a instanceof CSSAnimation))){const pg=LAYOUT[SB.cur],a=pg.w.findIndex(x=>x.id===w.dataset.wid),b=pg.w.findIndex(x=>x.id===over.dataset.wid);
     if(a>=0&&b>=0){const r0=w.getBoundingClientRect();const [it]=pg.w.splice(a,1);pg.w.splice(b,0,it);const before=new Map([...w.parentNode.children].map(el=>[el.dataset.wid,el.getBoundingClientRect()]));
@@ -426,7 +504,10 @@ function bindSB(){const sb=$('#sb'),track=$('#track');let st=null,lp=null,edgeT=
   if(s.w)openOV({kind:'mini',id:s.w.dataset.wid},s.w.getBoundingClientRect())};
  sb.addEventListener('pointerup',end);sb.addEventListener('pointercancel',end);
  sb.addEventListener('keydown',e=>{const w=e.target.closest('.w');if(w&&(e.key==='Enter'||e.key===' ')){e.preventDefault();WSTATE.edit?wsettings(w.dataset.wid):openOV({kind:'mini',id:w.dataset.wid},w.getBoundingClientRect())}if(e.key==='ArrowRight')setPage(SB.cur+1);if(e.key==='ArrowLeft')setPage(SB.cur-1)})}
-function gallery(){sheet(`<h3>Add a widget</h3><p class="muted">Added to this page. If it doesn't fit, it moves to the next page, like on iPhone.</p><div class="gal">${Object.entries(WT).map(([k,T])=>`<div class="gitem"><div class="gh"><span class="gic">${T[1]}</span><b>${T[0]}</b></div><div class="gprev">${T[3].map(sz=>`<button class="gsz" data-add="${k}" data-sz="${sz}"><div class="w ${sz} mini"><div class="wi">${T[6](sz,T[4])}</div></div><span>${SZN[sz]}</span></button>`).join('')}</div></div>`).join('')}</div>`,el=>{
+function gallery(){const pg=LAYOUT[SB.cur],cats=mixed(pg.cat)?Object.keys(CATS):[pg.cat];
+ const item=([k,T])=>`<div class="gitem"><div class="gh"><span class="gic">${T[1]}</span><b>${T[0]}</b></div><div class="gprev">${T[3].map(sz=>`<button class="gsz" data-add="${k}" data-sz="${sz}"><div class="w ${sz} mini"><div class="wi">${T[6](sz,T[4])}</div></div><span>${SZN[sz]}</span></button>`).join('')}</div></div>`;
+ sheet(`<h3>Add a widget</h3><p class="muted">${mixed(pg.cat)?'Any widget can go on this page.':`Only ${CATS[pg.cat][0]} widgets can go on this page.`} If it doesn’t fit, a new ${esc(PCAT[pg.cat])} page is added.</p>
+ <div class="gal">${cats.map(c=>`${cats.length>1?`<h4 class="gcat">${CATS[c][0]}</h4>`:''}${Object.entries(WT).filter(([k,T])=>T[2]===c).map(item).join('')}`).join('')}</div>`,el=>{
  el.addEventListener('click',e=>{const b=e.target.closest('[data-add]');if(!b)return;LAYOUT[SB.cur].w.unshift(nw(b.dataset.add,b.dataset.sz));commitPack();closeSheet();render();toast(WT[b.dataset.add][0]+' widget added')})})}
 function wsettings(id){const it=LAYOUT.flatMap(p=>p.w).find(x=>x.id===id);if(!it)return;const T=WT[it.type];it.opt=Object.assign({},T[4],it.opt);
  const draw=el=>{el.querySelector('#wprev').innerHTML=`<div class="w ${it.size}"><div class="wi">${T[6](it.size,it.opt)}</div></div>`};
