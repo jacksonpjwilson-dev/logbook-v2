@@ -1,4 +1,16 @@
-const PREVIEW_VER='w9';
+const PREVIEW_VER='w10';
+/* themed promise-based dialogs: await ui.confirm({title,message,action,destructive}), ui.prompt({...}) -> string|null, ui.alert({...}) */
+const ui=(()=>{const esc_=t=>String(t??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ function open({title='',message='',action='OK',cancel='Cancel',destructive,input,value='',placeholder='',noCancel}){return new Promise(res=>{const prev=document.activeElement;const w=document.createElement('div');w.className='uim';w.setAttribute('role','alertdialog');w.setAttribute('aria-modal','true');
+  const red=destructive??/^(delete|remove|discard|erase|clear|reset)/i.test(action);
+  w.innerHTML=`<div class="uim-bd"></div><div class="uim-box"><div class="uim-body"><b class="uim-t">${esc_(title)}</b>${message?`<p class="uim-m">${esc_(message)}</p>`:''}${input?`<input class="uim-in" value="${esc_(value)}" placeholder="${esc_(placeholder)}" autocomplete="off">`:''}</div><div class="uim-acts ${noCancel?'one':''}">${noCancel?'':`<button class="uim-b uim-cancel">${esc_(cancel)}</button>`}<button class="uim-b uim-ok ${red?'red':''}">${esc_(action)}</button></div></div>`;
+  document.body.appendChild(w);requestAnimationFrame(()=>w.classList.add('on'));const inp=w.querySelector('.uim-in');setTimeout(()=>{(inp||w.querySelector('.uim-ok')).focus();if(inp)inp.select()},60);
+  const done=v=>{w.classList.remove('on');w.classList.add('off');document.removeEventListener('keydown',key,true);setTimeout(()=>{w.remove();prev&&prev.focus&&prev.focus()},220);res(v)};
+  const ok=()=>done(input?inp.value:true),no=()=>done(input?null:false);
+  const key=e=>{if(e.key==='Escape'){e.preventDefault();e.stopPropagation();no()}else if(e.key==='Enter'){e.preventDefault();e.stopPropagation();ok()}};document.addEventListener('keydown',key,true);
+  w.querySelector('.uim-ok').onclick=ok;const c=w.querySelector('.uim-cancel');if(c)c.onclick=no;w.querySelector('.uim-bd').onclick=no})}
+ return {confirm:o=>open(o),prompt:o=>open(Object.assign({action:'OK'},o,{input:true})),alert:o=>open(Object.assign({action:'OK'},o,{noCancel:true,destructive:false}))}})();
+window.ui=ui;
 (function(){
 'use strict';
 const $=s=>document.querySelector(s);
@@ -158,7 +170,7 @@ function vTrain(){const a=D.active;
  <div class="grid2" style="margin-top:12px"><button class="btn danger" data-act="discard">Discard</button><button class="btn" data-act="finish">Finish workout</button></div>`}
  const sp=Array.isArray(D.split)?D.split:[],nx=splitOf()?splitNext():-1;
  const tpls=D.templates.length?`<div class="list">${D.templates.map((t,i)=>`<div class="item"><button class="grow linkish" data-act="tpl" data-i="${i}"><div class="t">${esc(t.name)}</div><div class="s">${t.exercises.length} exercises · ${esc(t.exercises.slice(0,3).join(' · '))}${t.exercises.length>3?'…':''}</div></button><button class="btn sm" data-edit data-act="start" data-t="${esc(t.name)}">Start</button></div>`).join('')}</div>`
-  :`<div class="emptystate"><div class="big">🏋️</div><b>No workouts yet</b><p class="muted">Create your first workout, then add exercises from the library.</p><button class="btn block" data-edit data-act="newtpl">＋ Create workout</button><button class="btn ghost block sm" data-edit data-act="importw" style="margin-top:8px">Import The-Logbook program</button></div>`;
+  :`<div class="emptystate"><div class="big">🏋️</div><b>No workouts yet</b><p class="muted">Create your first workout, then add exercises from the library.</p><button class="btn block" data-edit data-act="newtpl">＋ Create workout</button></div>`;
  return trCalendar()+`<button class="btn block gohist" data-go="progress">📈 Go to History ›</button><div class="card"><h2>Workouts <small>${D.templates.length}</small></h2>${tpls}${D.templates.length?`<div class="grid2" data-edit style="margin-top:8px"><button class="btn ghost sm" data-act="newtpl">＋ Create workout</button><button class="btn ghost sm" data-act="start" data-t="">Empty session</button></div>`:''}</div>
  <div class="card" id="spliteditor"><h2>Split <small>${sp.length?sp.length+'-day cycle':'not set'}</small></h2><p class="muted" style="margin-top:0">Your split repeats in order, not by weekday. The next day follows the last one you logged.</p>
  <div class="row" style="gap:8px;align-items:center"><label class="f" style="margin:0">Days in cycle</label><select data-splitn ${canEdit()?'':'disabled'}>${Array.from({length:14},(_,i)=>`<option ${sp.length===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div>
@@ -166,7 +178,7 @@ function vTrain(){const a=D.active;
  <div class="grid2" data-edit style="margin-top:10px"><button class="btn ghost sm" data-act="splitskip">Skip / mark rest (Day ${nx+1})</button><button class="btn ghost sm" data-act="splitreset">Restart at Day 1</button></div>`:'<p class="muted">Pick how many days your split has, then choose a workout or Rest for each day.</p>'}</div>
  <div class="card"><h2>Exercise library <small>${LIB().length}</small></h2><input id="libq" type="search" placeholder="Search ${LIB().length} exercises" autocomplete="off" value="${esc(S.libQ||'')}"><div id="libacc" class="accwrap">${libAccordion(S.libQ)}</div>
  <button class="btn ghost block" data-edit data-act="exform" style="margin-top:10px">＋ Add custom exercise</button></div>
- <div class="card" data-edit><button class="btn ghost block sm" data-act="clearw">Clear all workouts (start blank)</button><button class="btn ghost block sm" style="margin-top:8px" data-act="importw">Import The-Logbook program (5 workouts + split)</button></div>`}
+ <div class="card" data-edit><button class="btn ghost block sm" data-act="clearw">Clear all workouts (start blank)</button></div>`}
 function pickExercise({title='Add exercise',first=null,label='Pick'},cb){sheet(`<h3>${esc(title)}</h3>${first?`<p class="muted">${esc(first)} exercises first.</p>`:''}<input id="pq" type="search" placeholder="Search exercises" autocomplete="off"><div id="pacc" class="accwrap">${libAccordion('',{pick:1,first,pickLabel:label})}</div>`,el=>{
  el.querySelector('#pq').oninput=e=>{el.querySelector('#pacc').innerHTML=libAccordion(e.target.value,{pick:1,first,pickLabel:label})};
  el.addEventListener('click',e=>{const b=e.target.closest('[data-pick]');if(b){closeSheet();cb(b.dataset.pick)}})})}
@@ -177,7 +189,7 @@ function tplSheet(i){const t=D.templates[i];if(!t)return;const ro=!canEdit();
   if(r){const j=+r.dataset.r;pickExercise({title:'Replace '+t.exercises[j],first:groupOf(t.exercises[j]),label:'Use'},n=>{save(d=>{d.templates[i].exercises[j]=n;if(d.templates[i].orig)d.templates[i].orig[j]=null},'Replaced with '+n);tplSheet(i)})}
   if(rm){save(d=>{d.templates[i].exercises.splice(+rm.dataset.rm,1);d.templates[i].orig&&d.templates[i].orig.splice(+rm.dataset.rm,1)});tplSheet(i)}});
  el.querySelector('#tadd')&&(el.querySelector('#tadd').onclick=()=>pickExercise({title:'Add to '+t.name,label:'Add'},n=>{save(d=>{d.templates[i].exercises.push(n);d.templates[i].orig&&d.templates[i].orig.push(null)},'Added');tplSheet(i)}));
- el.querySelector('#tdel')&&(el.querySelector('#tdel').onclick=()=>{if(confirm('Delete '+t.name+'?')){save(d=>{d.templates.splice(i,1);d.split=(d.split||[]).map(x=>x===t.name?'rest':x)},'Workout deleted');closeSheet()}});
+ el.querySelector('#tdel')&&(el.querySelector('#tdel').onclick=async()=>{if(await ui.confirm({title:'Delete “'+t.name+'”?',message:'The workout is removed and any split days using it become rest days.',action:'Delete'})){save(d=>{d.templates.splice(i,1);d.split=(d.split||[]).map(x=>x===t.name?'rest':x)},'Workout deleted');closeSheet()}});
  el.querySelector('#tstart')&&(el.querySelector('#tstart').onclick=()=>{closeSheet();startSession(t.name)})})}
 function exDetail(name){const e=libBy(name);if(!e)return;
  sheet(`${e.photo?`<img class="exphoto" src="${e.photo}" alt="${esc(e.name)}">`:`<div class="exphoto ph">${esc(e.group)}</div>`}<h3>${esc(e.name)}</h3>
@@ -186,10 +198,10 @@ function exDetail(name){const e=libBy(name);if(!e)return;
  <div data-edit><label class="f">Add to workout</label><div class="row"><select id="addto">${D.templates.map((t,i)=>`<option value="${i}">${esc(t.name)}</option>`).join('')}${D.active?'<option value="active">Current session</option>':''}<option value="new">＋ New workout…</option></select><button class="btn sm" id="addgo">Add</button></div>
  <div class="grid2" style="margin-top:12px">${e.builtin?'<span></span>':'<button class="btn danger" id="exdel">Delete</button>'}<button class="btn ghost" id="exed">Edit</button></div></div>`,el=>{
  el.querySelector('#exed')&&(el.querySelector('#exed').onclick=()=>exForm(e.name));
- el.querySelector('#exdel')&&(el.querySelector('#exdel').onclick=()=>{if(confirm('Delete '+e.name+'?')){save(d=>{d.lib=d.lib.filter(x=>x!==e&&x.name!==e.name)},'Exercise deleted');closeSheet()}});
+ el.querySelector('#exdel')&&(el.querySelector('#exdel').onclick=async()=>{if(await ui.confirm({title:'Delete “'+e.name+'”?',message:'This removes the exercise from your library.',action:'Delete'})){save(d=>{d.lib=d.lib.filter(x=>x!==e&&x.name!==e.name)},'Exercise deleted');closeSheet()}});
  el.querySelector('#addgo')&&(el.querySelector('#addgo').onclick=()=>{const v=el.querySelector('#addto').value;
   if(v==='active'){save(d=>d.active.exercises.push(newEx(e.name)),'Added to session');closeSheet();return}
-  if(v==='new'){const n=prompt('Workout name');if(!n||!n.trim())return;save(d=>d.templates.push({name:n.trim(),exercises:[e.name]}),'Created '+n.trim());closeSheet();return}
+  if(v==='new'){ui.prompt({title:'New workout',message:'Name the workout. '+e.name+' will be added to it.',placeholder:'e.g. Upper A',action:'Create'}).then(n=>{if(!n||!n.trim())return;save(d=>d.templates.push({name:n.trim(),exercises:[e.name]}),'Created '+n.trim());closeSheet()});return}
   save(d=>d.templates[+v].exercises.push(e.name),'Added to '+D.templates[+v].name);closeSheet()})})}
 function resizePhoto(file){return new Promise((res,rej)=>{const img=new Image(),url=URL.createObjectURL(file);img.onload=()=>{const max=480,sc=Math.min(1,max/Math.max(img.width,img.height)),c=document.createElement('canvas');c.width=Math.round(img.width*sc);c.height=Math.round(img.height*sc);c.getContext('2d').drawImage(img,0,0,c.width,c.height);
  let q=.8,d=c.toDataURL('image/jpeg',q);while(d.length>160000&&q>.3){q-=.1;d=c.toDataURL('image/jpeg',q)}URL.revokeObjectURL(url);d.length>160000?rej(new Error('too big')):res(d)};img.onerror=()=>rej(new Error('bad image'));img.src=url})}
@@ -236,7 +248,7 @@ function openWorkout(id){const w=D.workouts.find(x=>x.id===id);if(!w)return;shee
  <div class="grid2" data-edit><button class="btn danger" id="delw">Delete</button><button class="btn ghost" id="cl">Close</button></div>${canEdit()?'':'<button class="btn ghost block" id="cl2">Close</button>'}`,el=>{
  el.querySelector('#wdate')&&(el.querySelector('#wdate').onchange=e=>{const v=e.target.value;if(!v||v>iso(new Date()))return toast('Pick today or a past date');save(d=>d.workouts.find(x=>x.id===id).date=v,'Date changed')});
  el.querySelector('#cl')&&(el.querySelector('#cl').onclick=closeSheet);el.querySelector('#cl2')&&(el.querySelector('#cl2').onclick=closeSheet);
- el.querySelector('#delw')&&(el.querySelector('#delw').onclick=()=>{if(confirm('Delete this workout?')){save(d=>d.workouts=d.workouts.filter(x=>x.id!==id),'Deleted');closeSheet()}})})}
+ el.querySelector('#delw')&&(el.querySelector('#delw').onclick=async()=>{if(await ui.confirm({title:'Delete this workout?',message:'This logged session will be permanently removed.',action:'Delete'})){save(d=>d.workouts=d.workouts.filter(x=>x.id!==id),'Deleted');closeSheet()}})})}
 /* ---------- FOOD: scanner + custom food ---------- */
 let scanStream=null;
 function stopScan(){if(scanStream){scanStream.getTracks().forEach(t=>t.stop());scanStream=null}}
@@ -349,7 +361,6 @@ function vMe(){const p=P(),u=DB.currentUser(),t=p.targets;
  return `<div class="verlbl">Preview ${PREVIEW_VER}</div><div class="card"><h2>Appearance</h2><div class="seg">${[['light','Light'],['dark','Dark'],['auto','Auto']].map(([k,n])=>`<button class="${TH.mode===k?'on':''}" data-act="thmode" data-v="${k}">${n}</button>`).join('')}</div>
  <label class="f">Colourway</label><div class="cwgrid">${CW_ORDER.map(k=>{const c=CW[k],dk=document.documentElement.dataset.theme==='dark',v=dk?c.Dk:c.L;return `<button class="cw ${TH.cw===k?'on':''}" data-act="cw" data-v="${k}" style="background:${v.bg};color:${v.fg};font-family:${c.fh}"><span class="sw"><i style="background:${v.a}"></i><i style="background:${v.a2}"></i><i style="background:${v.a3}"></i></span><b>${esc(c.n)}</b></button>`}).join('')}</div>
  <p class="muted">Saved on this device. Auto follows your iPhone's light/dark setting.</p></div>
- <div class="card"><h2>Training program</h2><button class="btn ghost block" data-edit data-act="importw">Import The-Logbook program</button><p class="muted">Optional: adds 5 workouts and a 7-day split cycle from The-Logbook’s built-in program.</p></div>
  <div class="card"><h2>Home screen</h2><button class="btn ghost block" data-act="editmode">Edit widgets</button><button class="btn ghost block" style="margin-top:8px" data-act="resetlayout">Reset home screen to default</button></div>
  <div class="card"><h2>Account <span class="demo">Demo login</span></h2><div class="list">${D.accounts.map(a=>`<div class="item"><div class="avatar" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">${esc(a.name[0])}</div><div class="grow"><div class="t">${esc(a.name)}</div><div class="s">${a.role==='owner'?'Owner · can edit':'Viewer · read-only'}${a.note?' · '+esc(a.note):''}</div></div>${a.id===u.id?'<span class="pill ok">Signed in</span>':`<button class="btn ghost sm" data-act="signin" data-id="${a.id}">Sign in</button>`}</div>`).join('')}</div>
  <p class="muted">Mock sign-in for the preview. In the real app each person signs in with their own account and the owner grants read-only access.</p></div>
@@ -382,21 +393,20 @@ function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElem
  else if(st===2){const sug={'Build muscle':[2600,180,300,75],'Lose fat':[1900,170,170,60],'Get stronger':[2700,180,320,80],'Stay healthy':[2200,130,250,70]}[o.goal];o.t=o.t&&o.tg===o.goal?o.t:{kcal:sug[0],p:sug[1],c:sug[2],f:sug[3]};o.tg=o.goal;
   body=`<div class="hero">🍽️</div><h2>Daily targets</h2><p class="muted">Suggested for “${esc(o.goal)}”. Adjust if you like.</p><div class="grid2">${[['kcal','Calories'],['p','Protein g'],['c','Carbs g'],['f','Fat g']].map(([k,n])=>`<div><label class="f">${n}</label><input inputmode="numeric" data-ot="${k}" value="${o.t[k]}"></div>`).join('')}</div>`}
  else if(st===3)body=`<div class="hero">⚖️</div><h2>What's your weight?</h2><p class="muted">Starts your weight widget. You can add it later.</p><div class="grid2"><div><label class="f">Weight</label><input id="owt" inputmode="decimal" placeholder="e.g. 78.5" value="${o.wt||''}"></div><div><label class="f">Units</label><div class="seg">${['kg','lb'].map(u=>`<button class="${u===o.units?'on':''}" data-u="${u}">${u}</button>`).join('')}</div></div></div><button class="btn ghost block sm" style="margin-top:16px" id="olater">Add later</button>`;
- else if(st===4){body=`<div class="hero">🔁</div><h2>What's your split?</h2><p class="muted">Your split is a cycle of days that repeats in order, not tied to weekdays. Name each day, or leave it blank for rest. Or pick a template.</p><div class="chips">${[['ppl','Push/Pull/Legs'],['ul','Upper/Lower'],['fb','Full body'],['tlb','The-Logbook program'],['blank','Start blank']].map(([k,n])=>`<button class="chip" data-stpl="${k}">${n}</button>`).join('')}</div>
+ else if(st===4){body=`<div class="hero">🔁</div><h2>What's your split?</h2><p class="muted">Your split is a cycle of days that repeats in order, not tied to weekdays. Name each day, or leave it blank for rest. Or pick a template.</p><div class="chips">${[['ppl','Push/Pull/Legs'],['ul','Upper/Lower'],['fb','Full body'],['blank','Start blank']].map(([k,n])=>`<button class="chip" data-stpl="${k}">${n}</button>`).join('')}</div>
   <div class="row" style="gap:8px;align-items:center;margin-top:12px"><label class="f" style="margin:0">Days in cycle</label><select id="osn">${Array.from({length:14},(_,i)=>`<option ${o.split.length===i+1?'selected':''}>${i+1}</option>`).join('')}</select></div><div class="osplit">${o.split.map((x,i)=>`<label><span>Day ${i+1}</span><input data-osd="${i}" placeholder="Rest" value="${esc(x||'')}"></label>`).join('')}</div><button class="btn ghost block sm" style="margin-top:12px" id="olater">Add later</button>`}
  else{const [e,h,txt]=TOUR[st-5];body=`<div class="hero">${e}</div><span class="demo">Tour ${st-4}/${TOUR.length}</span><h2 style="margin-top:8px">${h}</h2><p class="muted" style="font-size:17px">${txt}</p>`}
  el.innerHTML=`<div style="flex:1;max-width:480px;width:100%;margin:0 auto">${body}</div><div style="max-width:480px;width:100%;margin:0 auto"><div class="dots">${Array.from({length:steps},(_,i)=>`<i class="${i===st?'on':''}"></i>`).join('')}</div>
  <div class="grid2">${st>(o.tourOnly?5:0)?'<button class="btn ghost" id="oback">Back</button>':'<button class="btn ghost" id="oskip">Skip</button>'}<button class="btn" id="onext">${st===steps-1?'Get started':'Continue'}</button></div></div>`;
  el.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{o.goal=b.dataset.g;drawOnb()});
  el.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{grab();o.units=b.dataset.u;drawOnb()});
- const IS=window.IMPORTED_SPLIT||[],SPT={ppl:['Push','Pull','Legs',''],ul:['Upper','Lower',''],fb:['Full body A','','Full body B',''],tlb:IS.slice(1).concat(IS.slice(0,1)).map(x=>x==='rest'?'':x),blank:['','','']};
+ const SPT={ppl:['Push','Pull','Legs',''],ul:['Upper','Lower',''],fb:['Full body A','','Full body B',''],blank:['','','']};
  el.querySelector('#osn')&&(el.querySelector('#osn').onchange=e=>{grab();const n=+e.target.value;o.split=o.split.slice(0,n);while(o.split.length<n)o.split.push('');drawOnb()});
- el.querySelectorAll('[data-stpl]').forEach(b=>b.onclick=()=>{o.split=SPT[b.dataset.stpl].slice();o.tlb=b.dataset.stpl==='tlb';drawOnb()});
+ el.querySelectorAll('[data-stpl]').forEach(b=>b.onclick=()=>{o.split=SPT[b.dataset.stpl].slice();drawOnb()});
  el.querySelector('#olater')&&(el.querySelector('#olater').onclick=()=>{if(st===3)o.wt='';else o.split=[''];o.split=st===3?o.split:[];o.step++;drawOnb()});
  const grab=()=>{const n=el.querySelector('#oname');if(n)o.name=n.value.trim();const w=el.querySelector('#owt');if(w)o.wt=w.value.trim();el.querySelectorAll('[data-osd]').forEach(i=>o.split[+i.dataset.osd]=i.value.trim());el.querySelectorAll('[data-ot]').forEach(i=>o.t[i.dataset.ot]=+i.value||0)};
  const finish=()=>{grab();if(!o.tourOnly&&canEdit())save(d=>{d.profile.name=o.name;d.profile.goal=o.goal;d.profile.units=o.units;if(o.t){d.profile.targets=o.t;d.profile.goalHist=[{from:'2000-01-01',t:Object.assign({},o.t)}]}d.profile.onboarded=true;
   const wv=parseFloat(o.wt);if(wv>0){const kg=+(o.units==='lb'?wv/2.20462:wv).toFixed(1);d.weight=[{date:iso(new Date()),kg}]}
-  if(o.tlb){const have=new Set(d.templates.map(t=>t.name));JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])).forEach(t=>{if(!have.has(t.name))d.templates.push(t)})}
   if(o.split.some(x=>x)){d.split=o.split.map(x=>x||'rest');const have=new Set(d.templates.map(t=>t.name));d.split.forEach(x=>{if(x!=='rest'&&!have.has(x)){have.add(x);d.templates.push({name:x,exercises:[]})}})}});else if(canEdit()&&!P().onboarded)save(d=>d.profile.onboarded=true);el.remove();S.onb=null;render();toast(P().name?`You’re all set, ${P().name}`:'You’re all set')};
  el.querySelector('#onext').onclick=()=>{grab();if(st===steps-1)finish();else{o.step++;drawOnb()}};
  el.querySelector('#oback')&&(el.querySelector('#oback').onclick=()=>{grab();o.step--;drawOnb()});
@@ -693,7 +703,7 @@ function bindSB(){const sb=$('#sb'),track=$('#track');let st=null,lp=null,edgeT=
  document.querySelectorAll('.dock [data-app]').forEach(b=>b.onclick=()=>{if(WSTATE.edit)setEdit(false);openOV({kind:'app',k:b.dataset.app},b.querySelector('.aico').getBoundingClientRect())});
  const q=s=>sb.querySelector(s);q('[data-wdone]')&&(q('[data-wdone]').onclick=()=>setEdit(false));q('[data-wadd]')&&(q('[data-wadd]').onclick=gallery);
  q('[data-padd]')&&(q('[data-padd]').onclick=()=>{const c=LAYOUT[SB.cur].cat==='home'?'other':LAYOUT[SB.cur].cat;LAYOUT.splice(SB.cur+1,0,{id:'p'+uid(),cat:c,name:PCAT[c],w:[]});commitPack();saveLayout();SB.cur++;render();toast('Page added')});
- q('[data-pdel]')&&(q('[data-pdel]').onclick=()=>{const p=LAYOUT[SB.cur];if(p.cat==='home'&&p.name==='Home')return toast('The Home page can’t be removed');if(p.w.length&&!confirm(`Remove this page and its ${p.w.length} widget${p.w.length>1?'s':''}?`))return;LAYOUT.splice(SB.cur,1);if(!LAYOUT.some(x=>x.cat==='other'))LAYOUT.push({id:'p'+uid(),cat:'other',name:'Other',w:[]});commitPack();SB.cur=Math.max(0,SB.cur-1);render();toast('Page removed')});
+ q('[data-pdel]')&&(q('[data-pdel]').onclick=async()=>{const p=LAYOUT[SB.cur];if(p.cat==='home'&&p.name==='Home')return toast('The Home page can’t be removed');if(p.w.length&&!(await ui.confirm({title:'Remove this page?',message:`Its ${p.w.length} widget${p.w.length>1?'s':''} will be removed too.`,action:'Remove'})))return;LAYOUT.splice(SB.cur,1);if(!LAYOUT.some(x=>x.cat==='other'))LAYOUT.push({id:'p'+uid(),cat:'other',name:'Other',w:[]});commitPack();SB.cur=Math.max(0,SB.cur-1);render();toast('Page removed')});
  sb.addEventListener('contextmenu',e=>e.preventDefault());sb.addEventListener('dragstart',e=>e.preventDefault());
  document.querySelectorAll('.pdots [data-pg]').forEach(b=>b.onclick=()=>setPage(+b.dataset.pg));
  let wacc=0,wT=null;sb.addEventListener('wheel',e=>{const dx=Math.abs(e.deltaX)>Math.abs(e.deltaY)?e.deltaX:(e.shiftKey?e.deltaY:0);if(!dx||WSTATE.edit&&st)return;e.preventDefault();wacc-=dx;
@@ -752,7 +762,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#sb'))return;const g=
  case 'thmode':TH.mode=ds.v;saveTheme();render();break;
  case 'cw':TH.cw=ds.v;saveTheme();render();break;
  case 'editmode':closeOV();setTimeout(()=>setEdit(true),420);break;
- case 'resetlayout':if(confirm('Reset home screen widgets?')){LAYOUT=defaultLayout();saveLayout();render();toast('Home screen reset')}break;
+ case 'resetlayout':ui.confirm({title:'Reset home screen?',message:'All pages and widgets go back to the default layout.',action:'Reset'}).then(ok=>{if(ok){LAYOUT=defaultLayout();saveLayout();render();toast('Home screen reset')}});break;
  case 'start':startSession(ds.t);break;
  case 'addset':save(d=>{const s=d.active.exercises[ds.ei].sets;const l=s[s.length-1]||{w:'',r:8};s.push({w:l.w,r:l.r,done:false})});break;
  case 'done':save(d=>{const s=d.active.exercises[ds.ei].sets[ds.si];s.done=!s.done;if(s.done)restTimer(90)});break;
@@ -769,39 +779,38 @@ document.addEventListener('click',e=>{if(e.target.closest('#sb'))return;const g=
  case 'exform':exForm();break;
  case 'splitskip':{const sp=splitOf();if(!sp)break;const i=splitNext();save(d=>{(d.splitMarks=d.splitMarks||[]).push({date:iso(new Date()),idx:i,ts:Date.now()})},`Day ${i+1} marked done`);break}
  case 'splitreset':{const sp=splitOf();if(!sp)break;save(d=>{(d.splitMarks=d.splitMarks||[]).push({date:iso(new Date()),idx:sp.length-1,ts:Date.now()})},'Next up: Day 1');break}
- case 'clearw':if(confirm('Remove all workouts and the split? (Demo data only)'))save(d=>{d.templates=[];d.split=[];d.splitMarks=[];d.active=null},'Workouts cleared');break;
- case 'importw':save(d=>{const have=new Set(d.templates.map(t=>t.name));JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])).forEach(t=>{if(!have.has(t.name))d.templates.push(t)});d.split=(window.IMPORTED_SPLIT||[]).slice(1).concat((window.IMPORTED_SPLIT||[]).slice(0,1));d.splitMarks=[]},'The-Logbook program imported');break;
+ case 'clearw':ui.confirm({title:'Clear all workouts?',message:'Removes every workout and your split. Logged sessions stay.',action:'Clear all'}).then(ok=>{if(ok)save(d=>{d.templates=[];d.split=[];d.splitMarks=[];d.active=null},'Workouts cleared')});break;
  case 'finish':{const a2=D.active;const kept=a2.exercises.map(e=>({...e,sets:e.sets.filter(s=>s.done&&s.w!=='')})).filter(e=>e.sets.length);if(!kept.length)return toast('Tick at least one set first');
   save(d=>{d.workouts.push({id:a2.id,date:a2.date,name:a2.name,notes:'',exercises:kept});d.active=null},'Workout saved 💪');clearInterval(restT);break}
- case 'discard':if(confirm('Discard this session?'))save(d=>d.active=null,'Session discarded');break;
+ case 'discard':ui.confirm({title:'Discard this session?',message:'Sets you’ve entered in this session will be lost.',action:'Discard'}).then(ok=>{if(ok)save(d=>d.active=null,'Session discarded')});break;
  case 'openw':openWorkout(ds.id);break;
- case 'newtpl':{const n=prompt('Workout name (e.g. Upper A)');if(n&&n.trim()){if(D.templates.some(t=>t.name===n.trim()))return toast('That name exists');save(d=>d.templates.push({name:n.trim(),exercises:[]}),'Workout created');tplSheet(D.templates.length-1)}break}
+ case 'newtpl':ui.prompt({title:'New workout',placeholder:'e.g. Upper A',action:'Create'}).then(n=>{if(n&&n.trim()){if(D.templates.some(t=>t.name===n.trim()))return toast('That name exists');save(d=>d.templates.push({name:n.trim(),exercises:[]}),'Workout created');tplSheet(D.templates.length-1)}});break;
  case 'addfood':foodSheet(ds.meal,ds.plan);break;
  case 'rmfood':save(d=>d.food[S.foodDate].splice(+ds.i,1));break;
  case 'rmplan':save(d=>d.mealPlan[ds.m].splice(+ds.i,1));break;
- case 'newsaved':{const n=prompt('Meal name (e.g. Usual breakfast)');if(n&&n.trim()){save(d=>{(d.savedMeals=d.savedMeals||[]).push({name:n.trim(),items:[]})},'Saved meal created');foodSheet('Snack','s'+(SM().length-1))}break}
- case 'savemeal':{const m=ds.meal,items=(D.food[S.foodDate]||[]).filter(e=>e.meal===m);if(!items.length)break;const n=prompt('Name this meal',`My ${MLBL(m).toLowerCase()}`);if(n&&n.trim())save(d=>{(d.savedMeals=d.savedMeals||[]).push({name:n.trim(),items:items.map(e=>{const o=Object.assign({},e);delete o.meal;delete o.i;return o})})},'Saved “'+n.trim()+'”');break}
+ case 'newsaved':ui.prompt({title:'New saved meal',placeholder:'e.g. Usual breakfast',action:'Create'}).then(n=>{if(n&&n.trim()){save(d=>{(d.savedMeals=d.savedMeals||[]).push({name:n.trim(),items:[]})},'Saved meal created');foodSheet('Snack','s'+(SM().length-1))}});break;
+ case 'savemeal':{const m=ds.meal,items=(D.food[S.foodDate]||[]).filter(e=>e.meal===m);if(!items.length)break;ui.prompt({title:'Save as meal',message:`Saves the ${items.length} food${items.length>1?'s':''} in ${MLBL(m)} for one-tap logging.`,value:`My ${MLBL(m).toLowerCase()}`,action:'Save'}).then(n=>{if(n&&n.trim())save(d=>{(d.savedMeals=d.savedMeals||[]).push({name:n.trim(),items:items.map(e=>{const o=Object.assign({},e);delete o.meal;delete o.i;return o})})},'Saved “'+n.trim()+'”')});break}
  case 'goals':if(!canEdit())return toast('Read-only account — editing is disabled');goalsSheet(ds.d);break;
  case 'archlog':logAsk(ds.fid,mealNow());break;
  case 'archedit':customFoodSheet(Object.assign({},food(ds.fid)));break;
- case 'archdel':if(confirm('Delete '+food(ds.fid).name+' from your archive?'))save(d=>{d.foods=d.foods.filter(f=>f.id!==ds.fid);(d.savedMeals||[]).forEach(m=>m.items=m.items.filter(e=>e.fid!==ds.fid))},'Deleted from archive');break;
+ case 'archdel':ui.confirm({title:'Delete “'+food(ds.fid).name+'”?',message:'It will be removed from your food archive and any saved meals. Past logs keep their entries.',action:'Delete'}).then(ok=>{if(ok)save(d=>{d.foods=d.foods.filter(f=>f.id!==ds.fid);(d.savedMeals||[]).forEach(m=>m.items=m.items.filter(e=>e.fid!==ds.fid))},'Deleted from archive')});break;
  case 'logsaved':{const x=SM()[+ds.j];if(!x||!x.items.length){toast('Add foods to this meal first');break}const m=ds.meal||mealNow();save(d=>{const t=S.foodDate||iso(new Date());d.food[t]=d.food[t]||[];x.items.forEach(e=>{d.food[t].push(Object.assign({},e,{meal:m}));})},`Logged ${x.name} to ${MLBL(m)}`);break}
  case 'sqedit':{const e=SM()[+ds.j].items[+ds.i];amountSheet(e.fid,{init:e,cta:'Update amount'},ne=>save(d=>{d.savedMeals[+ds.j].items[+ds.i]=Object.assign({fid:e.fid},ne)},'Amount updated'));break}
  case 'sq':save(d=>{const e=d.savedMeals[+ds.j].items[+ds.i];e.q=Math.max(0.5,+(e.q+ +ds.n).toFixed(1))});break;
  case 'rmsaveditem':save(d=>d.savedMeals[+ds.j].items.splice(+ds.i,1));break;
- case 'renamesaved':{const x=SM()[+ds.j];const n=prompt('Rename meal',x.name);if(n&&n.trim())save(d=>d.savedMeals[+ds.j].name=n.trim(),'Renamed');break}
- case 'delsaved':if(confirm('Delete this saved meal?'))save(d=>d.savedMeals.splice(+ds.j,1),'Deleted');break;
+ case 'renamesaved':{const x=SM()[+ds.j];ui.prompt({title:'Rename meal',value:x.name,action:'Save'}).then(n=>{if(n&&n.trim())save(d=>d.savedMeals[+ds.j].name=n.trim(),'Renamed')});break}
+ case 'delsaved':ui.confirm({title:'Delete “'+SM()[+ds.j].name+'”?',message:'The saved meal is removed. Foods stay in your archive.',action:'Delete'}).then(ok=>{if(ok)save(d=>d.savedMeals.splice(+ds.j,1),'Deleted')});break;
  case 'fd':S.foodDate=iso(new Date(new Date(S.foodDate+'T12:00').getTime()+ds.n*864e5));render();break;
  case 'cm':S.calMonth+=+ds.n;render();break;
  case 'sleep':{const t=iso(new Date()),cur=D.sleep.find(s=>s.date===t)||{hours:7.5,quality:3};sheet(`<h3>Log sleep</h3><label class="f">Hours slept</label><input id="sh" inputmode="decimal" value="${cur.hours}"><label class="f">Quality</label><div class="seg" id="sq">${[1,2,3,4,5].map(q=>`<button class="${q===cur.quality?'on':''}" data-q="${q}">${q}★</button>`).join('')}</div><button class="btn block" id="ss">Save sleep</button>`,el=>{let q=cur.quality;el.querySelector('#sq').onclick=ev=>{const x=ev.target.closest('[data-q]');if(!x)return;q=+x.dataset.q;el.querySelectorAll('#sq button').forEach(y=>y.classList.toggle('on',y===x))};
   el.querySelector('#ss').onclick=()=>{const h=+el.querySelector('#sh').value;if(!(h>0&&h<24))return toast('Enter hours 0–24');save(d=>{d.sleep=d.sleep.filter(s=>s.date!==t);d.sleep.push({date:t,hours:h,quality:q})},'Sleep saved');closeSheet()}});break}
  case 'weight':{const t=iso(new Date()),cur=D.weight.find(s=>s.date===t);sheet(`<h3>Log body weight</h3><label class="f">Weight (${U()})</label><input id="wv" inputmode="decimal" value="${cur?toDisp(cur.kg):''}"><button class="btn block" style="margin-top:12px" id="ws">Save</button>`,el=>{el.querySelector('#ws').onclick=()=>{const v=+el.querySelector('#wv').value;if(!(v>0))return toast('Enter a weight');save(d=>{d.weight=d.weight.filter(s=>s.date!==t);d.weight.push({date:t,kg:fromDisp(v)})},'Weight saved');closeSheet()}});break}
  case 'supp':save(d=>{const t=iso(new Date()),l=d.supplements.log[t]=d.supplements.log[t]||[];const i=l.indexOf(ds.s);i<0?l.push(ds.s):l.splice(i,1)});break;
- case 'addsupp':{const n=prompt('Supplement name');if(n&&n.trim())save(d=>d.supplements.list.push(n.trim()));break}
+ case 'addsupp':ui.prompt({title:'Add supplement',placeholder:'e.g. Creatine',action:'Add'}).then(n=>{if(n&&n.trim())save(d=>d.supplements.list.push(n.trim()))});break;
  case 'signin':DB.signIn(ds.id);D=DB.get();closeOV();toast('Signed in as '+DB.currentUser().name);break;
  case 'export':exportData(ds.k);break;
  case 'tour':onboarding(true);break;
- case 'reset':if(confirm('Reset all demo data?')){D=DB.reset();render();onboarding(false)}break;
+ case 'reset':ui.confirm({title:'Erase all data?',message:'Everything you’ve logged in this preview on this device will be deleted. This can’t be undone.',action:'Erase'}).then(ok=>{if(ok){D=DB.reset();render();onboarding(false)}});break;
  }});
 document.addEventListener('input',e=>{if(e.target.id==='archq'){S.archQ=e.target.value;if(OV){drawOV();const i=$('#archq');if(i){i.focus();i.setSelectionRange(i.value.length,i.value.length)}}return}if(e.target.id==='libq'){S.libQ=e.target.value;const a=$('#libacc');if(a)a.innerHTML=libAccordion(S.libQ)}});
 document.addEventListener('toggle',e=>{const d=e.target;if(d.matches&&d.matches('#libacc details')&&!S.libQ){S.libOpen=S.libOpen||{};S.libOpen[d.dataset.g]=d.open}},true);
