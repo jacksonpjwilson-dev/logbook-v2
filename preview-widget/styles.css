@@ -274,3 +274,7 @@ small.why{color:var(--text)!important;opacity:.8}
 .homebar i{width:140px;height:6px;opacity:.85;box-shadow:0 0 0 1px color-mix(in srgb,var(--bg) 60%,transparent)}
 .ov.dragging{box-shadow:0 20px 60px rgba(0,0,0,.35);user-select:none}
 .ov.dragging .ovb{pointer-events:none}
+
+.verlbl{text-align:center;font-size:12px;color:var(--muted);margin:-4px 0 10px;letter-spacing:.04em}
+.osplit{display:grid;gap:6px;margin-top:12px}.osplit label{display:flex;align-items:center;gap:10px}.osplit span{width:38px;font-weight:600;color:var(--muted)}.osplit input{flex:1}
+.hdrhist{border:0;background:var(--accent);color:#fff;font-weight:700;font-size:14px;padding:8px 12px;border-radius:999px;cursor:pointer;white-space:nowrap}

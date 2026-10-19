@@ -1,3 +1,4 @@
+const PREVIEW_VER='w7b';
 (function(){
 'use strict';
 const $=s=>document.querySelector(s);
@@ -121,12 +122,12 @@ function vTrain(){const a=D.active;
  <div class="grid2" style="margin-top:12px"><button class="btn danger" data-act="discard">Discard</button><button class="btn" data-act="finish">Finish workout</button></div>`}
  const recentAll=[...D.workouts].sort((a,b)=>b.date.localeCompare(a.date)),recent=S.histAll?recentAll:recentAll.slice(0,3),sp=D.split||[],today=new Date().getDay();
  const tpls=D.templates.length?`<div class="list">${D.templates.map((t,i)=>`<div class="item"><button class="grow linkish" data-act="tpl" data-i="${i}"><div class="t">${esc(t.name)}</div><div class="s">${t.exercises.length} exercises · ${esc(t.exercises.slice(0,3).join(' · '))}${t.exercises.length>3?'…':''}</div></button><button class="btn sm" data-edit data-act="start" data-t="${esc(t.name)}">Start</button></div>`).join('')}</div>`
-  :`<div class="emptystate"><div class="big">🏋️</div><b>No workouts yet</b><p class="muted">Create your first workout, then add exercises from the library.</p><button class="btn block" data-edit data-act="newtpl">＋ Create workout</button></div>`;
+  :`<div class="emptystate"><div class="big">🏋️</div><b>No workouts yet</b><p class="muted">Create your first workout, then add exercises from the library.</p><button class="btn block" data-edit data-act="newtpl">＋ Create workout</button><button class="btn ghost block sm" data-edit data-act="importw" style="margin-top:8px">Import The-Logbook program</button></div>`;
  return trCalendar()+`<div class="quick"><button class="btn ghost" data-go="progress">📈 History</button><button class="btn ghost" data-edit data-act="newtpl">＋ Workout</button></div><div class="card"><h2>Workouts <small>${D.templates.length}</small></h2>${tpls}${D.templates.length?`<div class="grid2" data-edit style="margin-top:8px"><button class="btn ghost sm" data-act="newtpl">＋ Create workout</button><button class="btn ghost sm" data-act="start" data-t="">Empty session</button></div>`:''}</div>
  <div class="card"><h2>Weekly split <small>${splitOf()?'today highlighted':'not set'}</small></h2><div class="splitgrid">${DOW.map((d,i)=>`<label class="${i===today?'today':''}"><span>${d}</span><select data-split="${i}" ${canEdit()?'':'disabled'}><option value="rest">Rest</option>${D.templates.map(t=>`<option ${sp[i]===t.name?'selected':''}>${esc(t.name)}</option>`).join('')}</select></label>`).join('')}</div></div>
  <div class="card"><h2>Exercise library <small>${LIB().length}</small></h2><input id="libq" type="search" placeholder="Search ${LIB().length} exercises" autocomplete="off" value="${esc(S.libQ||'')}"><div id="libacc" class="accwrap">${libAccordion(S.libQ)}</div>
  <button class="btn ghost block" data-edit data-act="exform" style="margin-top:10px">＋ Add custom exercise</button></div>
- <div class="card" data-edit><button class="btn ghost block sm" data-act="clearw">Clear all workouts (start blank)</button><button class="btn ghost block sm" style="margin-top:8px" data-act="importw">Restore imported workouts from The Logbook</button></div>
+ <div class="card" data-edit><button class="btn ghost block sm" data-act="clearw">Clear all workouts (start blank)</button><button class="btn ghost block sm" style="margin-top:8px" data-act="importw">Import The-Logbook program (5 workouts + split)</button></div>
  <div class="card"><h2>Training history <small>${D.workouts.length} sessions</small></h2><div class="list">${recent.map(w=>`<button class="item" style="background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;cursor:pointer" data-act="openw" data-id="${w.id}"><div class="grow"><div class="t">${esc(w.name)}</div><div class="s">${prettyDate(w.date)} · ${w.exercises.length} exercise${w.exercises.length===1?"":"s"}</div></div><span class="pill">${vol(w).toLocaleString()} ${U()}</span></button>`).join('')||'<div class="empty">No sessions logged yet. Tap a day on the calendar or Start a workout.</div>'}</div>${recentAll.length>3?`<button class="btn ghost block sm" data-act="histmore" style="margin-top:8px">${S.histAll?'Show less':'Show more ('+(recentAll.length-3)+')'}</button>`:''}</div>`}
 function pickExercise({title='Add exercise',first=null,label='Pick'},cb){sheet(`<h3>${esc(title)}</h3>${first?`<p class="muted">${esc(first)} exercises first.</p>`:''}<input id="pq" type="search" placeholder="Search exercises" autocomplete="off"><div id="pacc" class="accwrap">${libAccordion('',{pick:1,first,pickLabel:label})}</div>`,el=>{
  el.querySelector('#pq').oninput=e=>{el.querySelector('#pacc').innerHTML=libAccordion(e.target.value,{pick:1,first,pickLabel:label})};
@@ -291,9 +292,10 @@ function vCal(){const now=new Date();const m=new Date(now.getFullYear(),now.getM
 
 /* ---------- ME ---------- */
 function vMe(){const p=P(),u=DB.currentUser(),t=p.targets;
- return `<div class="card"><h2>Appearance</h2><div class="seg">${[['light','Light'],['dark','Dark'],['auto','Auto']].map(([k,n])=>`<button class="${TH.mode===k?'on':''}" data-act="thmode" data-v="${k}">${n}</button>`).join('')}</div>
+ return `<div class="verlbl">Preview ${PREVIEW_VER}</div><div class="card"><h2>Appearance</h2><div class="seg">${[['light','Light'],['dark','Dark'],['auto','Auto']].map(([k,n])=>`<button class="${TH.mode===k?'on':''}" data-act="thmode" data-v="${k}">${n}</button>`).join('')}</div>
  <label class="f">Colourway</label><div class="cwgrid">${CW_ORDER.map(k=>{const c=CW[k],dk=document.documentElement.dataset.theme==='dark',v=dk?c.Dk:c.L;return `<button class="cw ${TH.cw===k?'on':''}" data-act="cw" data-v="${k}" style="background:${v.bg};color:${v.fg};font-family:${c.fh}"><span class="sw"><i style="background:${v.a}"></i><i style="background:${v.a2}"></i><i style="background:${v.a3}"></i></span><b>${esc(c.n)}</b></button>`}).join('')}</div>
  <p class="muted">Saved on this device. Auto follows your iPhone's light/dark setting.</p></div>
+ <div class="card"><h2>Training program</h2><button class="btn ghost block" data-edit data-act="importw">Import The-Logbook program</button><p class="muted">Optional: adds 5 workouts and the weekly split from The-Logbook’s built-in program.</p></div>
  <div class="card"><h2>Home screen</h2><button class="btn ghost block" data-act="editmode">Edit widgets</button><button class="btn ghost block" style="margin-top:8px" data-act="resetlayout">Reset home screen to default</button></div>
  <div class="card"><h2>Account <span class="demo">Demo login</span></h2><div class="list">${D.accounts.map(a=>`<div class="item"><div class="avatar" style="width:40px;height:40px;display:flex;align-items:center;justify-content:center">${esc(a.name[0])}</div><div class="grow"><div class="t">${esc(a.name)}</div><div class="s">${a.role==='owner'?'Owner · can edit':'Viewer · read-only'}${a.note?' · '+esc(a.note):''}</div></div>${a.id===u.id?'<span class="pill ok">Signed in</span>':`<button class="btn ghost sm" data-act="signin" data-id="${a.id}">Sign in</button>`}</div>`).join('')}</div>
  <p class="muted">Mock sign-in for the preview. In the real app each person signs in with their own account and the owner grants read-only access.</p></div>
@@ -317,21 +319,29 @@ const TOUR=[['📱','Home screen','Widgets summarise your day. Tap one to open t
  ['🥗','Food','Log meals, build a meal plan against your targets, and track pantry stock. Low items land on a shopping list.'],
  ['📈','Progress','Estimated 1RM per lift, weekly volume, body weight, sleep and a training calendar.'],
  ['👥','Sharing','Viewers like Sally or Atlas can sign in read-only. Switch accounts under Me.']];
-function onboarding(tourOnly){S.onb={step:tourOnly?3:0,tourOnly,goal:P().goal,units:P().units,name:P().name};drawOnb()}
+function onboarding(tourOnly){S.onb={step:tourOnly?5:0,split:['','','','','','',''],tourOnly,goal:P().goal,units:P().units,name:P().name};drawOnb()}
 function drawOnb(){const o=S.onb;let el=$('#onb');if(!el){el=document.createElement('div');el.id='onb';el.className='onb';document.body.appendChild(el)}
- const steps=3+TOUR.length,st=o.step;let body='';
+ const steps=5+TOUR.length,st=o.step;let body='';
  if(st===0)body=`<div class="hero">📓</div><h2>Welcome to Logbook</h2><p class="muted">Training, food, sleep and pantry in one place. This is a preview filled with <b>demo data</b>, so feel free to poke around.</p><label class="f">What should we call you?</label><input id="oname" value="${esc(o.name)}" autocomplete="given-name">`;
  else if(st===1)body=`<div class="hero">🎯</div><h2>Your goal</h2><p class="muted">We’ll suggest targets from this. You can change them any time.</p><div class="chips">${['Build muscle','Lose fat','Get stronger','Stay healthy'].map(g=>`<button class="chip ${g===o.goal?'on':''}" data-g="${g}">${g}</button>`).join('')}</div>
  <label class="f" style="margin-top:20px">Units</label><div class="seg">${['kg','lb'].map(u=>`<button class="${u===o.units?'on':''}" data-u="${u}">${u}</button>`).join('')}</div>`;
  else if(st===2){const sug={'Build muscle':[2600,180,300,75],'Lose fat':[1900,170,170,60],'Get stronger':[2700,180,320,80],'Stay healthy':[2200,130,250,70]}[o.goal];o.t=o.t&&o.tg===o.goal?o.t:{kcal:sug[0],p:sug[1],c:sug[2],f:sug[3]};o.tg=o.goal;
   body=`<div class="hero">🍽️</div><h2>Daily targets</h2><p class="muted">Suggested for “${esc(o.goal)}”. Adjust if you like.</p><div class="grid2">${[['kcal','Calories'],['p','Protein g'],['c','Carbs g'],['f','Fat g']].map(([k,n])=>`<div><label class="f">${n}</label><input inputmode="numeric" data-ot="${k}" value="${o.t[k]}"></div>`).join('')}</div>`}
- else{const [e,h,txt]=TOUR[st-3];body=`<div class="hero">${e}</div><span class="demo">Tour ${st-2}/${TOUR.length}</span><h2 style="margin-top:8px">${h}</h2><p class="muted" style="font-size:17px">${txt}</p>`}
+ else if(st===3)body=`<div class="hero">⚖️</div><h2>What's your weight?</h2><p class="muted">Starts your weight widget. You can add it later.</p><div class="grid2"><div><label class="f">Weight</label><input id="owt" inputmode="decimal" placeholder="e.g. 78.5" value="${o.wt||''}"></div><div><label class="f">Units</label><div class="seg">${['kg','lb'].map(u=>`<button class="${u===o.units?'on':''}" data-u="${u}">${u}</button>`).join('')}</div></div></div><button class="btn ghost block sm" style="margin-top:16px" id="olater">Add later</button>`;
+ else if(st===4){const DN=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];body=`<div class="hero">🗓️</div><h2>What's your split?</h2><p class="muted">Name each training day, leave rest days blank. Or pick a template.</p><div class="chips">${[['ppl','Push/Pull/Legs'],['ul','Upper/Lower'],['fb','Full body ×3'],['tlb','The-Logbook program'],['blank','Start blank']].map(([k,n])=>`<button class="chip" data-stpl="${k}">${n}</button>`).join('')}</div><div class="osplit">${DN.map((n,i)=>`<label><span>${n}</span><input data-osd="${i}" placeholder="Rest" value="${esc(o.split[i]||'')}"></label>`).join('')}</div><button class="btn ghost block sm" style="margin-top:12px" id="olater">Add later</button>`}
+ else{const [e,h,txt]=TOUR[st-5];body=`<div class="hero">${e}</div><span class="demo">Tour ${st-4}/${TOUR.length}</span><h2 style="margin-top:8px">${h}</h2><p class="muted" style="font-size:17px">${txt}</p>`}
  el.innerHTML=`<div style="flex:1;max-width:480px;width:100%;margin:0 auto">${body}</div><div style="max-width:480px;width:100%;margin:0 auto"><div class="dots">${Array.from({length:steps},(_,i)=>`<i class="${i===st?'on':''}"></i>`).join('')}</div>
- <div class="grid2">${st>(o.tourOnly?3:0)?'<button class="btn ghost" id="oback">Back</button>':'<button class="btn ghost" id="oskip">Skip</button>'}<button class="btn" id="onext">${st===steps-1?'Get started':'Continue'}</button></div></div>`;
+ <div class="grid2">${st>(o.tourOnly?5:0)?'<button class="btn ghost" id="oback">Back</button>':'<button class="btn ghost" id="oskip">Skip</button>'}<button class="btn" id="onext">${st===steps-1?'Get started':'Continue'}</button></div></div>`;
  el.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>{o.goal=b.dataset.g;drawOnb()});
- el.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{o.units=b.dataset.u;drawOnb()});
- const grab=()=>{const n=el.querySelector('#oname');if(n)o.name=n.value.trim()||'Friend';el.querySelectorAll('[data-ot]').forEach(i=>o.t[i.dataset.ot]=+i.value||0)};
- const finish=()=>{grab();if(!o.tourOnly&&canEdit())save(d=>{d.profile.name=o.name;d.profile.goal=o.goal;d.profile.units=o.units;if(o.t)d.profile.targets=o.t;d.profile.onboarded=true});else if(canEdit()&&!P().onboarded)save(d=>d.profile.onboarded=true);el.remove();S.onb=null;render();toast(`You’re all set, ${P().name}`)};
+ el.querySelectorAll('[data-u]').forEach(b=>b.onclick=()=>{grab();o.units=b.dataset.u;drawOnb()});
+ const SPT={ppl:['','Push','Pull','Legs','Push','Pull','Legs'],ul:['','Upper','Lower','','Upper','Lower',''],fb:['','Full body A','','Full body B','','Full body C',''],tlb:(window.IMPORTED_SPLIT||[]).map(x=>x==='rest'?'':x),blank:['','','','','','','']};
+ el.querySelectorAll('[data-stpl]').forEach(b=>b.onclick=()=>{o.split=SPT[b.dataset.stpl].slice();o.tlb=b.dataset.stpl==='tlb';drawOnb()});
+ el.querySelector('#olater')&&(el.querySelector('#olater').onclick=()=>{if(st===3)o.wt='';else o.split=['','','','','','',''];o.step++;drawOnb()});
+ const grab=()=>{const n=el.querySelector('#oname');if(n)o.name=n.value.trim()||'Friend';const w=el.querySelector('#owt');if(w)o.wt=w.value.trim();el.querySelectorAll('[data-osd]').forEach(i=>o.split[+i.dataset.osd]=i.value.trim());el.querySelectorAll('[data-ot]').forEach(i=>o.t[i.dataset.ot]=+i.value||0)};
+ const finish=()=>{grab();if(!o.tourOnly&&canEdit())save(d=>{d.profile.name=o.name;d.profile.goal=o.goal;d.profile.units=o.units;if(o.t)d.profile.targets=o.t;d.profile.onboarded=true;
+  const wv=parseFloat(o.wt);if(wv>0){const kg=+(o.units==='lb'?wv/2.20462:wv).toFixed(1);d.weight=[{date:iso(new Date()),kg}]}
+  if(o.tlb){const have=new Set(d.templates.map(t=>t.name));JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])).forEach(t=>{if(!have.has(t.name))d.templates.push(t)})}
+  if(o.split.some(x=>x)){d.split=o.split.map(x=>x||'rest');const have=new Set(d.templates.map(t=>t.name));d.split.forEach(x=>{if(x!=='rest'&&!have.has(x)){have.add(x);d.templates.push({name:x,exercises:[]})}})}});else if(canEdit()&&!P().onboarded)save(d=>d.profile.onboarded=true);el.remove();S.onb=null;render();toast(`You’re all set, ${P().name}`)};
  el.querySelector('#onext').onclick=()=>{grab();if(st===steps-1)finish();else{o.step++;drawOnb()}};
  el.querySelector('#oback')&&(el.querySelector('#oback').onclick=()=>{grab();o.step--;drawOnb()});
  el.querySelector('#oskip')&&(el.querySelector('#oskip').onclick=finish)}
@@ -568,7 +578,7 @@ function ovTitle(){if(OV.kind==='app')return APPS[OV.k][0];const it=curWidget();
 function ovBody(){return OV.kind==='app'?APPS[OV.k][1]():miniHTML()}
 function drawOV(){let el=$('#ov');if(!OV){el&&el.remove();return}const keep=el?el.querySelector('.ovb').scrollTop:0;
  if(!el){el=document.createElement('div');el.id='ov';el.className='ov';$('#app').appendChild(el)}
- el.innerHTML=`<div class="ovh"><button class="back" data-close aria-label="Back">‹ Home</button><b>${esc(ovTitle())}</b><span style="width:56px"></span></div><div class="ovb"><div class="pin">${ovBody()}</div></div><div class="homebar" role="button" aria-label="Swipe up to go Home"><i></i></div>`;
+ el.innerHTML=`<div class="ovh"><button class="back" data-close aria-label="Back">‹ Home</button><b>${esc(ovTitle())}</b>${OV.kind==='app'&&(OV.k==='train'||OV.k==='food')?'<button class="hdrhist" data-hist>History ›</button>':'<span style="width:56px"></span>'}</div><div class="ovb"><div class="pin">${ovBody()}</div></div><div class="homebar" role="button" aria-label="Swipe up to go Home"><i></i></div>`;
  el.querySelector('.ovb').scrollTop=keep;if(!canEdit())el.querySelectorAll('input,select,textarea').forEach(i=>{if(i.id!=='liftsel')i.disabled=true});bindOV(el)}
 function rectFT(r){const W=VW(),H=VH(),f=FR();return `translate(${r.left-f.left}px,${r.top-f.top}px) scale(${r.width/W},${r.height/H})`}
 function openOV(state,rect){OV=state;OV.rect=rect;drawOV();const el=$('#ov');if(!rect)rect={left:VW()*.3,top:VH()*.35,width:VW()*.4,height:VH()*.3};
@@ -579,7 +589,7 @@ function closeOV(){const el=$('#ov');if(!el){OV=null;return}let r=OV.rect;const 
  el.style.transition='transform .36s cubic-bezier(.3,.7,.3,1),border-radius .36s,opacity .36s';el.style.transform=rectFT(r);el.style.borderRadius='60px';el.style.opacity='0';
  OV=null;document.body.classList.remove('ovopen');setTimeout(()=>{if(!OV)el.remove()},380);render()}
 function bindOV(el){let st=null;
- el.querySelector('[data-close]').onclick=e=>{e.stopPropagation();closeOV()};
+ el.querySelector('[data-close]').onclick=e=>{e.stopPropagation();closeOV()};const hh=el.querySelector('[data-hist]');if(hh)hh.onclick=e=>{e.stopPropagation();goPage('progress')};
  el.querySelectorAll('[data-x]').forEach(b=>b.onclick=e=>{e.stopPropagation();const v=b.dataset.v;if(b.dataset.x==='rest'){restTimer(+v);return}if(!canEdit())return toast('Read-only account — editing is disabled');if(b.dataset.x==='water'){const d=iso(new Date());WATER[d]=Math.max(0,X.water(d)+ +v);localStorage.setItem(WKEY,JSON.stringify(WATER));drawOV();render();toast('Water updated')}if(b.dataset.x==='qlog'){const h=new Date().getHours(),meal=h<11?'Breakfast':h<15?'Lunch':h<17?'Snack':'Dinner';save(d=>{(d.food[iso(new Date())]=d.food[iso(new Date())]||[]).push({fid:v,meal,q:+b.dataset.q||1})},'Logged to '+meal)}});
  el.querySelectorAll('[data-mdays]').forEach(b=>b.onclick=e=>{e.stopPropagation();OV.days=b.dataset.mdays;drawOV()});
  // iOS-style home gesture: only from the bottom home-bar zone (~34px); edge-swipe right still goes back
@@ -693,7 +703,7 @@ document.addEventListener('click',e=>{if(e.target.closest('#sb'))return;const g=
  case 'exinfo':exDetail(ds.n);break;
  case 'exform':exForm();break;
  case 'clearw':if(confirm('Remove all workouts and the split? (Demo data only)'))save(d=>{d.templates=[];d.split=['rest','rest','rest','rest','rest','rest','rest'];d.active=null},'Workouts cleared');break;
- case 'importw':save(d=>{const have=new Set(d.templates.map(t=>t.name));JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])).forEach(t=>{if(!have.has(t.name))d.templates.push(t)});d.split=(window.IMPORTED_SPLIT||[]).slice()},'Imported workouts restored');break;
+ case 'importw':save(d=>{const have=new Set(d.templates.map(t=>t.name));JSON.parse(JSON.stringify(window.IMPORTED_TEMPLATES||[])).forEach(t=>{if(!have.has(t.name))d.templates.push(t)});d.split=(window.IMPORTED_SPLIT||[]).slice()},'The-Logbook program imported');break;
  case 'finish':{const a2=D.active;const kept=a2.exercises.map(e=>({...e,sets:e.sets.filter(s=>s.done&&s.w!=='')})).filter(e=>e.sets.length);if(!kept.length)return toast('Tick at least one set first');
   save(d=>{d.workouts.push({id:a2.id,date:a2.date,name:a2.name,notes:'',exercises:kept});d.active=null},'Workout saved 💪');clearInterval(restT);break}
  case 'discard':if(confirm('Discard this session?'))save(d=>d.active=null,'Session discarded');break;
@@ -733,3 +743,8 @@ render();
 if(!P().onboarded&&canEdit())onboarding(false);
 
 })();
+
+/* preview update: own service worker (scope /preview-widget/) + version check */
+(function(){if('serviceWorker'in navigator){navigator.serviceWorker.register('sw.js?v='+PREVIEW_VER,{scope:'./'}).then(r=>r.update()).catch(()=>{});
+ let reloaded=false;navigator.serviceWorker.addEventListener('controllerchange',()=>{if(reloaded)return;reloaded=true;location.reload()})}
+ fetch('version.json?t='+Date.now(),{cache:'no-store'}).then(r=>r.json()).then(j=>{if(j.v&&j.v!==PREVIEW_VER&&sessionStorage.getItem('lb2w:vr')!==j.v){sessionStorage.setItem('lb2w:vr',j.v);location.replace(location.pathname+'?v='+j.v)}}).catch(()=>{})})();
