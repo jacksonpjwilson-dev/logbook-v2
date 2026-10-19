@@ -1,6 +1,6 @@
 // Preview-only service worker (scope: /logbook-v2/preview-widget/). Overrides the root app's SW for this folder.
 // Network-first, bypassing HTTP cache, so updates always show; cache is only an offline fallback.
-const CACHE='lb2w-preview-w15';
+const CACHE='lb2w-preview-w16';
 self.addEventListener('install',e=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('message',e=>{if(e.data==='skip')self.skipWaiting()});

@@ -384,3 +384,8 @@ small.why{color:var(--text)!important;opacity:.8}
 .obform{flex:none}
 @media (max-height:700px){.obart{min-height:90px}.obart.sm{min-height:64px}.obform .hide-short{display:none}.osplit{gap:4px}.osplit input{padding-top:8px;padding-bottom:8px}.obform .chips.sm .chip{min-height:34px}}
 @media (max-height:700px){.obmain[data-k="4"] .obart{display:none}}
+/* w16 schedule picker */
+.spick{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 14px;margin:0 0 6px;cursor:pointer;color:var(--text);font:inherit}
+.spick .t{font-weight:650}.spick .s{font-size:13px;color:var(--muted)}.spick.rec{border:1.5px solid var(--accent);background:color-mix(in srgb,var(--accent) 10%,var(--card))}.spick.on .pill{background:var(--accent);color:#fff}
+.spick>.muted{font-size:20px;color:var(--accent)}
+.tcal .ring.rest{border-style:dashed;opacity:.55}
