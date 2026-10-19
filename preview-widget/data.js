@@ -24,8 +24,7 @@ function seed(){ // DEMO DATA ONLY — no real personal information
     supplements:{list:[],log:{}},
     foods,food,
     mealSlots:[{id:'m1',name:'Meal 1'},{id:'m2',name:'Meal 2'},{id:'m3',name:'Meal 3'}],schedule:{},savedMeals:[],
-    pantry:[],
-    accounts:[{id:'owner',name:'You',role:'owner'}]
+    pantry:[]
   };
 }
 const LocalBackend={
@@ -41,13 +40,13 @@ window.DB={
   iso,dayOff,
   init(){data=backend.load();return data},
   get(){return data},
-  currentUser(){const id=backend.getSession();return data.accounts.find(a=>a.id===id)||data.accounts[0]},
-  canEdit(){return this.currentUser().role==='owner'},
-  signIn(id){backend.setSession(id)},
+  /* One owner per device/account. Who you are comes from Firebase sign-in (sync.js), not a local role switcher. */
+  currentUser(){const u=window.SYNC&&SYNC.state&&SYNC.state.user;return {id:u?u.uid:'owner',name:u?(u.name||u.email||'You'):'You',role:'owner'}},
+  canEdit(){return true},
   /* All writes go through mutate(); viewers are rejected here as well as in the UI. */
   mutate(fn){if(!this.canEdit()){throw new Error('read-only')}fn(data);backend.save(data);listeners.forEach(l=>l(data))},
   replace(d){if(!this.canEdit())throw new Error('read-only');data=d;backend.save(d)},
-  reset(){data=backend.reset();backend.setSession('owner');return data},
+  reset(){data=backend.reset();return data},
   onChange(l){listeners.push(l)}
 };
 })();
