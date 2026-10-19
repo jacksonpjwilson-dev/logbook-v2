@@ -285,3 +285,4 @@ small.why{color:var(--text)!important;opacity:.8}
 .wempty{font-size:15px!important;opacity:.8}.wcta{color:var(--accent);font-weight:600}
 [data-act="sq"],[data-act="rmsaveditem"]{width:34px!important;height:34px!important;min-width:34px!important;padding:0!important;flex:none}
 .goalbtn{display:block;width:100%;border:0;background:none;padding:0;text-align:left;color:inherit;font:inherit;cursor:pointer;position:relative}.goalbtn .pencil{position:absolute;right:0;top:2px;font-size:12px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 12%,transparent);padding:3px 8px;border-radius:999px}.tgl{display:flex;gap:10px;align-items:center;margin-top:14px;font-weight:600}.tgl input{width:20px;height:20px}
+.stepper{display:flex;align-items:center;gap:12px}.stepper b{font-size:26px;min-width:40px;text-align:center}.livebox{margin:12px 0;background:color-mix(in srgb,var(--accent) 8%,var(--card))}
