@@ -46,7 +46,7 @@ function load(src){return new Promise((res,rej)=>{const s=document.createElement
 async function init(){if(fb)return fb;if(!window.firebase){await load('firebase-app-compat.js');await load('firebase-auth-compat.js');await load('firebase-firestore-compat.js')}
  const app=firebase.apps&&firebase.apps.length?firebase.app():firebase.initializeApp(CFG);fb={auth:firebase.auth(),db:firebase.firestore()};
  fb.auth.onAuthStateChanged(u=>{if(u){st.user={uid:u.uid,email:u.email,name:u.displayName};localStorage.setItem('lb2w:signedin','1');start()}else{st.user=null;st.status='signedout';localStorage.removeItem('lb2w:signedin');if(unsub){unsub();unsub=null}emit()}});
- try{await fb.auth.getRedirectResult()}catch(e){}return fb}
+ fb.auth.getRedirectResult().catch(e=>console.warn('redirect result',e));return fb} // not awaited: a Google tap must open its popup immediately
 const ref=()=>fb.db.collection(COLL).doc(st.user.uid);
 function errMsg(e){const c=e&&e.code||'';return /permission/.test(c)?'Cloud access denied: the Firestore rules need to allow logbookV2/{uid} (see Settings note).':/unavailable|network/.test(c)?'Offline. Changes are saved on this device and will sync later.':(e&&e.message)||String(e)}
 async function sync(){if(!fb||!st.user||st.busy)return;st.busy=true;st.status='syncing';emit();
@@ -59,8 +59,10 @@ function start(){st.status='syncing';emit();sync().then(()=>{if(unsub)unsub();un
   if(chash(out)!==h)schedule();else if(st.status!=='synced'){st.status='synced';st.at=Date.now();emit()}},e=>{st.status='error';st.err=errMsg(e);emit()})})}
 function schedule(){if(!st.user)return;clearTimeout(pushT);pushT=setTimeout(sync,1500)}
 window.SYNC={get state(){return st},on(f){subs.push(f)},
- async google(){await init();const p=new firebase.auth.GoogleAuthProvider();const standalone=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
-  try{if(standalone){localStorage.setItem('lb2w:signedin','1');await fb.auth.signInWithRedirect(p)}else await fb.auth.signInWithPopup(p)}catch(e){if(/popup-blocked|operation-not-supported/.test(e.code||'')){localStorage.setItem('lb2w:signedin','1');await fb.auth.signInWithRedirect(p)}else throw e}},
+ google(){ // popup opened inside the tap, never a redirect on iPhone/iPad (Safari blocks the cross-site storage a redirect needs, so you land back signed out)
+  const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+  const go=()=>{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});return fb.auth.signInWithPopup(p).catch(e=>{if(/popup-blocked|operation-not-supported/.test(e.code||'')&&!ios){localStorage.setItem('lb2w:signedin','1');return fb.auth.signInWithRedirect(p)}throw e})};
+  return fb?go():init().then(go)},
  async email(email,pass,create){await init();return create?fb.auth.createUserWithEmailAndPassword(email,pass):fb.auth.signInWithEmailAndPassword(email,pass)},
  async reset(email){await init();return fb.auth.sendPasswordResetEmail(email)},
  async signOut(){if(fb)await fb.auth.signOut();const m=meta();delete m.uid;saveMeta(m)},
