@@ -58,18 +58,21 @@ function start(){st.status='syncing';emit();sync().then(()=>{if(unsub)unsub();un
   const L=localRecords(),out=merge(L,C,false);applying=true;applyRecords(out);applying=false;
   if(chash(out)!==h)schedule();else if(st.status!=='synced'){st.status='synced';st.at=Date.now();emit()}},e=>{st.status='error';st.err=errMsg(e);emit()})})}
 function schedule(){if(!st.user)return;clearTimeout(pushT);pushT=setTimeout(sync,1500)}
+let prep=null;function prepare(){if(fb)return Promise.resolve(fb);if(!prep)prep=init().catch(e=>{prep=null;throw e});return prep.catch(e=>{console.warn('preload',e)})} // load SDKs + auth before any Google tap
 window.SYNC={get state(){return st},on(f){subs.push(f)},
  google(){ // popup opened inside the tap, never a redirect on iPhone/iPad (Safari blocks the cross-site storage a redirect needs, so you land back signed out)
   const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
   const go=()=>{const p=new firebase.auth.GoogleAuthProvider();p.setCustomParameters({prompt:'select_account'});return fb.auth.signInWithPopup(p).catch(e=>{if(/popup-blocked|operation-not-supported/.test(e.code||'')&&!ios){localStorage.setItem('lb2w:signedin','1');return fb.auth.signInWithRedirect(p)}throw e})};
-  return fb?go():init().then(go)},
+  if(fb)return go(); // fb ready: popup opens synchronously inside the tap
+  prepare();const e=new Error('Getting Google ready, tap again');e.code='app/not-ready';return Promise.reject(e)}, // never open the popup after an async load (iOS blocks it)
+ prepare,
  async email(email,pass,create){await init();return create?fb.auth.createUserWithEmailAndPassword(email,pass):fb.auth.signInWithEmailAndPassword(email,pass)},
  async reset(email){await init();return fb.auth.sendPasswordResetEmail(email)},
  async signOut(){if(fb)await fb.auth.signOut();const m=meta();delete m.uid;saveMeta(m)},
  syncNow:()=>sync(),_canon:canon,_merge:merge,_flatten:flatten,_unflatten:unflatten,COLL};
 /* hook local writes */
 window.addEventListener('load',()=>{DB.onChange(()=>{if(applying)return;if(stampChanged())schedule()});if(!localStorage.getItem(META))stamp(true);
- if(localStorage.getItem('lb2w:signedin'))init().catch(e=>{st.status='error';st.err=errMsg(e);emit()})});
+ if(localStorage.getItem('lb2w:signedin'))init().catch(e=>{st.status='error';st.err=errMsg(e);emit()});else prepare()}); // preload when signed out so the first Google tap opens the popup in the gesture
 window.addEventListener('online',()=>schedule());
 window.__lbLocalChange=()=>{if(stampChanged())schedule()};
 })();
