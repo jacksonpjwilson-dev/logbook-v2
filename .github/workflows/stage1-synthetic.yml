@@ -1,0 +1,25 @@
+name: Stage 1 synthetic safety tests
+on:
+  push:
+    branches: [logbook-v2-upgrade]
+    paths:
+      - 'preview-widget/safety-core.js'
+      - 'tests/stage1-safety.test.cjs'
+      - '.github/workflows/stage1-synthetic.yml'
+  workflow_dispatch:
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Static safety check
+        run: |
+          node --check preview-widget/safety-core.js
+          node --check tests/stage1-safety.test.cjs
+      - name: Run synthetic migration and conflict tests
+        run: node --test tests/stage1-safety.test.cjs
