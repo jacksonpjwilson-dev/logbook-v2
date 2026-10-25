@@ -65,3 +65,17 @@ test('unresolved conflict prevents restore',async()=>{
  await one.ingest({x:safety.record('x',3)});
  await assert.rejects(one.restore(safety.backup({}),{confirmed:true}),/Resolve conflicts/);
 });
+
+test('choosing local conflict version does not flag same remote change again',async()=>{
+ const one=new OfflineStore(memoryAdapter());await one.init();
+ await one.ingest({x:safety.record('x',1)});
+ await one.edit('x',2);
+ const remote={x:safety.record('x',3)};
+ await one.ingest(remote);
+ assert.equal(one.snapshot().conflicts.length,1);
+ await one.resolve({x:'local'});
+ assert.equal(one.snapshot().conflicts.length,0);
+ await one.ingest(remote);
+ assert.equal(one.snapshot().conflicts.length,0);
+ assert.equal(one.snapshot().records.x.value,2);
+});
