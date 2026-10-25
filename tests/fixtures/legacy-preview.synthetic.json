@@ -1,0 +1,119 @@
+{
+  "fixture": "synthetic-stage0",
+  "note": "TEST-ONLY fictional values; do not import to a real account",
+  "schema": "legacy-preview-shape",
+  "profile": {
+    "name": "Sample Person",
+    "goal": "Build muscle",
+    "units": "lb",
+    "targets": {
+      "kcal": 2700,
+      "p": 180,
+      "c": 300,
+      "f": 80
+    },
+    "sleepGoal": 8,
+    "weekGoal": 4
+  },
+  "templates": [
+    {
+      "name": "Push",
+      "exercises": [
+        "Bench Press",
+        "Overhead Press"
+      ]
+    }
+  ],
+  "split": [
+    "Push",
+    "Pull",
+    "Legs"
+  ],
+  "splitMarks": [],
+  "workouts": [
+    {
+      "id": "demo-w1",
+      "date": "2026-10-01",
+      "name": "Push",
+      "exercises": [
+        {
+          "name": "Bench Press",
+          "sets": [
+            {
+              "w": 80,
+              "r": 8,
+              "done": true
+            },
+            {
+              "w": 80,
+              "r": 8,
+              "done": false
+            }
+          ]
+        },
+        {
+          "name": "Overhead Press",
+          "sets": [
+            {
+              "w": 40,
+              "r": 10,
+              "done": true
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "active": null,
+  "sleep": [
+    {
+      "date": "2026-10-02",
+      "hours": 7.5,
+      "quality": 4
+    }
+  ],
+  "weight": [
+    {
+      "date": "2026-10-02",
+      "kg": 84.5
+    }
+  ],
+  "supplements": {
+    "list": [
+      "Demo Vitamin"
+    ],
+    "log": {
+      "2026-10-02": [
+        "Demo Vitamin"
+      ]
+    }
+  },
+  "foods": [
+    {
+      "id": "demo-food",
+      "name": "Demo oats",
+      "kcal": 150,
+      "p": 5,
+      "c": 27,
+      "f": 3
+    }
+  ],
+  "food": {
+    "2026-10-02": [
+      {
+        "fid": "demo-food",
+        "q": 1,
+        "meal": "m1"
+      }
+    ]
+  },
+  "mealSlots": [
+    {
+      "id": "m1",
+      "name": "Meal 1"
+    }
+  ],
+  "schedule": {},
+  "savedMeals": [],
+  "pantry": []
+}
