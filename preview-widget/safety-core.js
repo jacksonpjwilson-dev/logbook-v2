@@ -126,6 +126,7 @@
   function migrationCommit(plan,reviewed,backupVerified){
     assert(backupVerified===true,'Verified durable backup required');
     assert(plan&&plan.snapshot,'Missing migration plan');
+    assert(!plan.ambiguous.some(x=>x.type==='record-id'),'Duplicate or invalid record IDs require lossless remapping first');
     assert(plan.ambiguous.length===0||reviewed===true,'Ambiguous identifiers require explicit review');
     validateSnapshot(plan.snapshot);
     return clone(plan.snapshot);
