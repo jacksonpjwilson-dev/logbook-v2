@@ -11,7 +11,7 @@
     return {async read(){return s.clone(saved)},async write(v){saved=s.clone(v)}};
   }
   function assert(c,m){if(!c)throw new Error(m)}
-  const baseState=()=>({schema:s.SCHEMA,records:{},baseline:{},pending:[],history:[],conflicts:[],sequence:0});
+  const baseState=()=>({schema:s.SCHEMA,records:{},baseline:{},pending:[],history:[],conflicts:[],rollbackBackups:[],sequence:0});
   class OfflineStore{
     constructor(adapter, clock=Date.now){
       assert(adapter&&typeof adapter.read==='function'&&typeof adapter.write==='function','Durable adapter required');
@@ -32,7 +32,7 @@
       const next=this.snapshot();
       const previous=next.records[id];const version=previous?previous.version+1:1;
       const updated=s.record(id,value,version,deleted);
-      if(previous&&s.equal(previous,updated))return next;
+      if(previous&&previous.deleted===!!deleted&&(deleted||s.equal(previous.value,value)))return next;
       next.records[id]=updated;
       next.history=s.historyAppend(next.history,id,previous,updated,this.clock());
       const op={op:'edit',id,sequence:++next.sequence,record:s.clone(updated)};
@@ -79,16 +79,23 @@
       return this.commit(next);
     }
     async restore(snapshot,{confirmed=false}={}){
-      const next=this.snapshot(),plan=s.restorePlan(next.records,snapshot);
+      const next=this.snapshot();
+      assert(!next.conflicts.length,'Resolve conflicts before restoration');
+      const plan=s.restorePlan(next.records,snapshot);
       const result=s.commitRestore(plan,confirmed);
-      for(const [id,record] of Object.entries(result.records)){
-        next.history=s.historyAppend(next.history,id,next.records[id],record,this.clock());
+      // Persist rollback independently of the caller so interrupted restores remain reversible.
+      next.rollbackBackups=(next.rollbackBackups||[]).concat([{at:this.clock(),snapshot:s.clone(result.rollback)}]);
+      const ids=new Set([...Object.keys(next.records),...Object.keys(result.records)]);
+      for(const id of ids){
+        const before=next.records[id],after=result.records[id];
+        if(!s.equal(before,after))next.history=s.historyAppend(next.history,id,before,after,this.clock());
       }
       next.records=result.records;next.pending.push({op:'restore',sequence:++next.sequence});
-      next.conflicts=[];await this.commit(next);
+      await this.commit(next);
       return {snapshot:this.snapshot(),rollback:result.rollback};
     }
     recoverableHistory(){return s.historyAt(this.snapshot().history,this.clock())}
+    rollbackHistory(){return (this.snapshot().rollbackBackups||[]).filter(e=>e.at>=this.clock()-s.RETENTION_MS)}
   }
   return {OfflineStore,memoryAdapter};
 });
