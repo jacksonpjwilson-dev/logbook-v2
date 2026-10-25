@@ -4,7 +4,9 @@ on:
     branches: [logbook-v2-upgrade]
     paths:
       - 'preview-widget/safety-core.js'
+      - 'preview-widget/stage1-store.js'
       - 'tests/stage1-safety.test.cjs'
+      - 'tests/stage1-store.test.cjs'
       - '.github/workflows/stage1-synthetic.yml'
   workflow_dispatch:
 jobs:
@@ -20,6 +22,8 @@ jobs:
       - name: Static safety check
         run: |
           node --check preview-widget/safety-core.js
+          node --check preview-widget/stage1-store.js
           node --check tests/stage1-safety.test.cjs
+          node --check tests/stage1-store.test.cjs
       - name: Run synthetic migration and conflict tests
-        run: node --test tests/stage1-safety.test.cjs
+        run: node --test tests/stage1-*.test.cjs
