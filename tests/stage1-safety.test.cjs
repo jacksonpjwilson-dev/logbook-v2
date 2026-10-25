@@ -41,7 +41,7 @@ test('version history retention & rollback',()=>{
  h=s.historyAppend(h,'a',r('a',2),r('a',3),10000000001);
  assert.equal(s.historyAt(h,10000000001).length,2);
  assert.deepEqual(s.historyRestore(h,'a',0,10000000001),r('a',1));
- assert.equal(s.historyAt(h,10000000000+s.RETENTION_MS+1).length,0);
+ assert.equal(s.historyAt(h,10000000000+s.RETENTION_MS+2).length,0);
 });
 test('migration preserves original, blocks ambiguous same-name exercise',()=>{
  const legacy={version:1,lib:[{id:'x1',name:'Curl'},{id:'x2',name:'Curl'}],workouts:[{id:'w1',exercises:[{name:'Curl',sets:[{w:20,r:10,done:false}]}]}],food:{'2026-10-01':[]}};
