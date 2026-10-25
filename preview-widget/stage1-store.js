@@ -61,10 +61,11 @@
         if(!(conflict.id in (decisions||{})))continue;
         if(conflict.id in res.merged)next.records[conflict.id]=s.clone(res.merged[conflict.id]);
         else delete next.records[conflict.id];
-        if(conflict.id in decisions&&decisions[conflict.id]==='remote'){
-          if(conflict.id in res.merged)next.baseline[conflict.id]=s.clone(res.merged[conflict.id]);
-          else delete next.baseline[conflict.id];
-        }
+        // The latest remote value becomes the comparison baseline regardless
+        // of the user's choice. Choosing local creates an intentional pending
+        // change against that baseline, rather than re-triggering the conflict.
+        if(conflict.remote!==undefined)next.baseline[conflict.id]=s.clone(conflict.remote);
+        else delete next.baseline[conflict.id];
         next.pending.push({op:'resolution',id:conflict.id,sequence:++next.sequence,decision:decisions[conflict.id]});
       }
       next.conflicts=next.conflicts.filter(c=>res.unresolved.includes(c.id));
