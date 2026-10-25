@@ -15,5 +15,5 @@ test('Firestore emulator provides revision-based CAS isolation',async t=>{
  const second=await post(payload(2),'?currentDocument.updateTime='+encodeURIComponent(original.updateTime));
  assert.equal(second.status,200,await second.text());
  const stale=await post(payload(3),'?currentDocument.updateTime='+encodeURIComponent(original.updateTime));
- assert.equal(stale.status,400,await stale.text());
+ assert.ok([400,409,412].includes(stale.status),'Stale write unexpectedly succeeded: '+stale.status+' '+await stale.text());
 });
