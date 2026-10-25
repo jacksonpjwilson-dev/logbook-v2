@@ -7,9 +7,13 @@ on:
       - 'preview-widget/stage1-store.js'
       - 'preview-widget/stage1-indexeddb.js'
       - 'preview-widget/stage1-emulator.js'
+      - 'preview-widget/stage1-sync-controller.js'
+      - 'stage1/**'
       - 'tests/stage1-safety.test.cjs'
       - 'tests/stage1-store.test.cjs'
       - 'tests/stage1-isolation.test.cjs'
+      - 'tests/stage1-sync-controller.test.cjs'
+      - 'tests/stage1-firestore-emulator.test.cjs'
       - 'tests/support/stage1-node-adapter.cjs'
       - '.github/workflows/stage1-synthetic.yml'
   workflow_dispatch:
@@ -29,8 +33,30 @@ jobs:
           node --check preview-widget/stage1-store.js
           node --check preview-widget/stage1-indexeddb.js
           node --check preview-widget/stage1-emulator.js
+          node --check preview-widget/stage1-sync-controller.js
           node --check tests/stage1-safety.test.cjs
           node --check tests/stage1-store.test.cjs
           node --check tests/stage1-isolation.test.cjs
+          node --check tests/stage1-sync-controller.test.cjs
+          node --check tests/stage1-firestore-emulator.test.cjs
       - name: Run synthetic migration and conflict tests
         run: node --test tests/stage1-*.test.cjs
+
+  firestore-emulator:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Isolated demo project Firestore emulator verification
+        env:
+          GCLOUD_PROJECT: demo-logbook-stage1
+        run: |
+          npx --yes firebase-tools@14 emulators:exec --project demo-logbook-stage1 --config stage1/firebase.json --only firestore,auth "node --test tests/stage1-firestore-emulator.test.cjs"
