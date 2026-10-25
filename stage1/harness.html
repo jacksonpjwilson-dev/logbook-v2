@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Logbook Stage 1 — Isolated Local Test</title>
+<style>body{max-width:720px;margin:2rem auto;padding:1rem;font:16px system-ui;background:#f6f7f9;color:#172026}button{padding:.65rem 1rem;border:1px solid #7b8791;border-radius:.6rem;margin:.25rem;background:white}pre{white-space:pre-wrap;overflow-wrap:anywhere;background:white;padding:1rem;border-radius:1rem}</style></head>
+<body><h1>Logbook Stage 1</h1><p>Localhost-only synthetic IndexedDB smoke test. Never connects to Firebase or loads your current Logbook data.</p>
+<button id="run">Run local persistence test</button><pre id="out">Waiting for local test.</pre>
+<script>if(!['localhost','127.0.0.1','::1','[::1]'].includes(location.hostname)){document.body.textContent='Stage 1 test harness is available only on localhost.';throw Error('Loopback-only test harness')}</script>
+<script src="../preview-widget/safety-core.js"></script>
+<script src="../preview-widget/stage1-store.js"></script>
+<script src="../preview-widget/stage1-indexeddb.js"></script>
+<script>
+document.getElementById('run').addEventListener('click',async()=>{
+ const out=document.getElementById('out');out.textContent='Running...';
+ try {
+  const key='synthetic-'+Math.random().toString(36).slice(2);
+  const adapter=LogbookIndexedDB.createAdapter({indexedDB,dbName:'logbook-v2-stage1-browser-smoke',key});
+  const one=new LogbookOfflineStore.OfflineStore(adapter);
+  await one.init();await one.edit('workout:synthetic-1',{name:'Fictional Push',sets:[{weight:50,reps:8,done:false}]});
+  const second=new LogbookOfflineStore.OfflineStore(adapter);
+  await second.init();
+  const state=second.snapshot();
+  if(state.records['workout:synthetic-1'].value.sets[0].done!==false||state.pending.length!==1)throw Error('Data was not recovered');
+  out.textContent='PASS: synthetic unfinished workout and pending queue survived full store reinitialization.\n'+JSON.stringify({record:state.records['workout:synthetic-1'],pendingCount:state.pending.length},null,2);
+  await adapter.close();
+ }catch(e){out.textContent='FAILED: '+e.message}
+});
+</script></body></html>
