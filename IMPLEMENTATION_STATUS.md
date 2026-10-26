@@ -11,7 +11,7 @@ The handoff has been preserved in `docs/handoff/`. Three original visual sheets 
 ## Evidence
 
 - Baseline: native Node 24, 31 individual checks passed, 1 emulator check skipped. `--test-isolation=none` exposes individual test results in this environment; the default subprocess reporter only reports files.
-- Current Node: **48 individual checks passed, 2 emulator-only checks skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
+- Current Node: **50 individual checks passed, 2 emulator-only checks skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
 - Chromium: actual IndexedDB reload, pending queue recovery, concurrent tabs, same-record conflict preservation, offline edit, aborted transaction, quota failure passed via `tests/stage1-browser.cjs`.
 - Firebase Auth/Firestore emulator: **2 integration checks passed**, exit 0, using Firebase CLI 14.27.0, Java 21, `demo-logbook-stage1`, Auth/Firestore bound to loopback. Includes stale write rejection, anonymous/other-account denial, invalid revisions, and production collection denial.
 - Workbench UI: visible synthetic add, backup, side-by-side conflict resolution, restore preview/confirmation, Undo all passed; screenshot generated at `stage1/artifacts/workbench.png` (local artifact, not committed).
@@ -153,3 +153,8 @@ No further visual assets are needed for the current storage milestone. Exact the
 Recovery entries now merge and travel in the same cloud compare-and-swap as records. A fresh isolated device can recover prior edits and deletions. Added `preview-widget/stage1-rest-transport.js`: explicit loopback endpoints, demo-only project IDs, local anonymous Auth sessions, redirects denied, JSON commit preconditions, authenticated owner document paths. Actual emulator test covers independent-device edits, conflicts, resolution, deletion and fresh-device recovery. No SDK/production configuration is loaded.
 
 `main` rechecked at `278f0936b8a8f8f4b39bd6fbbe2dc72c961b3f32`. Production entry points, legacy app scripts/styles, service workers and Firebase config are unchanged by both milestones.
+
+
+## CI concurrency correction
+
+Follow-up run [40359360769](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359360769) passed Node and browser jobs but failed the real-emulator concurrent-device check. The test had not asserted every intermediate sync result, so a failed request surfaced later as a missing record. Intermediate results are now asserted. The transport now handles the case where revision security rules reject a concurrent stale commit before its precondition: only an authenticated read proving revision advancement permits a retry. Genuine unchanged-revision permission failures still surface. Two deterministic regressions and the actual emulator suite pass locally; fresh CI evidence is pending.

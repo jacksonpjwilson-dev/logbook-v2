@@ -48,7 +48,12 @@ async function createTransport({pageHostname,host='127.0.0.1',port=8080,authHost
   const current=await pullVersioned();if(current.revision!==expected.revision)return {accepted:false,remote:current};
   const payload={revision:current.revision+1,records,history,synthetic:true};
   const response=await request(base+':commit',{method:'POST',headers,redirect:'error',body:JSON.stringify({writes:[{update:{name,fields:encode(payload).mapValue.fields},currentDocument:current.updateTime?{updateTime:current.updateTime}:{exists:false}}]})});
-  if(!response.ok){const error=await response.json();if(['FAILED_PRECONDITION','ABORTED','ALREADY_EXISTS'].includes(error.error?.status))return {accepted:false};throw Error('Local emulator write failed: '+response.status)}
+  if(!response.ok){const error=await response.json();if(['FAILED_PRECONDITION','ABORTED','ALREADY_EXISTS'].includes(error.error?.status))return {accepted:false};
+   // Rules can reject a stale sequential revision before checking updateTime.
+   // Retry only when an authenticated read proves the cloud actually advanced.
+   if(error.error?.status==='PERMISSION_DENIED'){
+    const latest=await pullVersioned();if(latest.revision!==current.revision)return {accepted:false,remote:latest};
+   }throw Error('Local emulator write failed: '+response.status)}
   return {accepted:true,revision:payload.revision};
  }};
 }

@@ -37,8 +37,9 @@ test('real emulator transport synchronizes independent devices and recoverable h
  const cloud=await createTransport(options),other=await createTransport({...options,session:cloud.session});
  const a=new OfflineStore(memoryAdapter()),b=new OfflineStore(memoryAdapter());await a.init();await b.init();
  const sa=createCoordinator(a,cloud),sb=createCoordinator(b,other);
- await a.edit('x',{note:'first',sets:[{done:false,w:45.5}]});await sa.sync();await sb.sync();
- await a.edit('left',1);await b.edit('right',2);await Promise.all([sa.sync(),sb.sync()]);await sa.sync();await sb.sync();
+ const synced=async coordinator=>{const result=await coordinator.sync();assert.equal(result.status,'synced',JSON.stringify(result))};
+ await a.edit('x',{note:'first',sets:[{done:false,w:45.5}]});await synced(sa);await synced(sb);
+ await a.edit('left',1);await b.edit('right',2);const concurrent=await Promise.all([sa.sync(),sb.sync()]);for(const result of concurrent)assert.ok(['synced','retry-needed'].includes(result.status),JSON.stringify(result));await synced(sa);await synced(sb);
  assert.equal(a.snapshot().records.right.value,2);assert.equal(b.snapshot().records.left.value,1);
  await a.edit('x',{note:'device A'});await b.edit('x',{note:'device B'});await sa.sync();assert.equal((await sb.sync()).status,'conflict');
  await b.resolve({x:'remote'});await sb.sync();await a.edit('x',null,{deleted:true});await sa.sync();
