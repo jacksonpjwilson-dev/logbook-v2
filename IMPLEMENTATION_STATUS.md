@@ -16,7 +16,7 @@ The handoff has been preserved in `docs/handoff/`. Three original visual sheets 
 - Firebase Auth/Firestore emulator: **2 integration checks passed**, exit 0, using Firebase CLI 14.27.0, Java 21, `demo-logbook-stage1`, Auth/Firestore bound to loopback. Includes stale write rejection, anonymous/other-account denial, invalid revisions, and production collection denial.
 - Workbench UI: visible synthetic add, backup, side-by-side conflict resolution, restore preview/confirmation, Undo all passed; screenshot generated at `stage1/artifacts/workbench.png` (local artifact, not committed).
 - iPhone Safari/installed PWA: not run; requires a physical device. No Safari parity claim.
-- GitHub Actions: [first hardening run](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40356870895) passed all three jobs; individual Node, Chromium/workbench and emulator logs reviewed. Follow-up history/transport commit requires its own CI evidence.
+- GitHub Actions: [first hardening run](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40356870895) passed all three jobs; individual Node, Chromium/workbench and emulator logs reviewed. Latest [run 40359721786](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359721786) also passed all three jobs after the concurrency correction; all job logs reviewed.
 
 ## Changes under validation
 
@@ -27,7 +27,7 @@ The handoff has been preserved in `docs/handoff/`. Three original visual sheets 
 
 ## Stage 1 outstanding gates
 
-Full legacy-app integration, complete migration/reference mapping and validation, broader browser interruption coverage, extended recovery/retention stress tests, latest CI evidence, and iPhone validation remain open. Do not use these experimental modules with real data.
+Full legacy-app integration, complete migration/reference mapping and validation, broader browser interruption coverage, extended recovery/retention stress tests, and iPhone validation remain open. Do not use these experimental modules with real data.
 
 ## Requirement traceability
 
@@ -96,7 +96,7 @@ Full legacy-app integration, complete migration/reference mapping and validation
 ## Acceptance checklist
 
 - [x] TST01 — native Node suite executed; emulator skipped only in ordinary offline invocation.
-- [x] TST02 — first hardening run green and logs reviewed; follow-up changes require a fresh run.
+- [x] TST02 — first hardening run green and logs reviewed; latest correction run also green with logs reviewed.
 - [x] TST03 — local demo Auth/Firestore run passed, exit 0.
 - [ ] TST04 — pending full acceptance evidence.
 - [x] TST05 — independent-record concurrency passes in Node and Chromium.
@@ -157,4 +157,19 @@ Recovery entries now merge and travel in the same cloud compare-and-swap as reco
 
 ## CI concurrency correction
 
-Follow-up run [40359360769](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359360769) passed Node and browser jobs but failed the real-emulator concurrent-device check. The test had not asserted every intermediate sync result, so a failed request surfaced later as a missing record. Intermediate results are now asserted. The transport now handles the case where revision security rules reject a concurrent stale commit before its precondition: only an authenticated read proving revision advancement permits a retry. Genuine unchanged-revision permission failures still surface. Two deterministic regressions and the actual emulator suite pass locally; fresh CI evidence is pending.
+Follow-up run [40359360769](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359360769) passed Node and browser jobs but failed the real-emulator concurrent-device check. The test had not asserted every intermediate sync result, so a failed request surfaced later as a missing record. Intermediate results are now asserted. The transport now handles the case where revision security rules reject a concurrent stale commit before its precondition: only an authenticated read proving revision advancement permits a retry. Genuine unchanged-revision permission failures still surface. Two deterministic regressions and the actual emulator suite pass locally and in [CI run 40359721786](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359721786).
+
+
+## Verified milestone handoff
+
+Code commit: `635620cfd70f7726de40c2207eb5f083fd5dcbb5` (on development branch only).
+
+Latest reviewed CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359721786
+
+- Synthetic job: 50 passed, 2 emulator-only checks skipped in this job, zero failures.
+- Emulator job: both integration checks executed and passed, zero skips/failures.
+- Browser job: Chromium persistence/concurrency/storage-failure checks and workbench recovery UI passed.
+- Working source and branch match; main remains unchanged; no deployment was triggered.
+
+**Stage 1 is still incomplete. Stage 2 has not started.** The remaining work includes full isolated integration with the legacy application, full legacy identity mapping/validation, wider interrupted-network/migration/restore tests and iPhone validation. These results validate this storage milestone, not the complete handoff or release readiness. No approval is needed for routine follow-on development within the authorized branch.
+
