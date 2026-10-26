@@ -4,7 +4,7 @@ Updated 2026-10-26. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Earlier Stage 1/2 and chunk/retry CI runs are green and reviewed; final restore/account/Training safeguards await their fresh CI run. Stages 3–6 remain outside the current requested work.
+Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Final Stage 1/2 CI is green and all three job logs have been reviewed. Stages 3–6 remain outside the current requested work.
 
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
 - New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
@@ -13,10 +13,13 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 
 ## Evidence
 
+- Final code commit: `ccfa5e38f8165c624219e59f1d3a106c3d665bcb`. Reviewed final CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40393997855 — all three jobs passed (104 ordinary Node checks, six actual emulator checks, all six browser scripts).
+- Downloadable synthetic previews: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40393997855/artifacts/12685531689 (GitHub artifact retention: 14 days).
+
 - Reviewed Stage 1 integration CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40375539711 — all three jobs passed; logs reviewed.
 - Reviewed chunk/retry CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40385066550 — all three jobs passed; logs reviewed.
 - Reviewed Stage 2 CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40382327475 — all jobs passed; logs reviewed.
-- Current local aggregate: **104 Node checks passed, 6 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **6 integration checks successfully**.
+- Final local/CI aggregate: **104 Node checks passed, 6 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **6 integration checks successfully**.
 - Chromium suites passed locally: storage/workbench; visible legacy integration/offline reopen; Training session/substitution/correction/recovery; Training template/superset/units/picker/charts/reduced-motion.
 - Actual browser + local Auth/Firestore suites passed: legacy automatic sync/offline rejoin; Training background-sync typing preservation, explicit conflict choice and resolution persistence.
 - Final local regressions also cover merge restore with preserved indexes, rejected conflict-version recovery, immutable account binding, concurrent first connection, fixed built-in exercise identities, workout deletion/Undo, invalid measurement completion clearing, and HTML injection resistance.
@@ -25,11 +28,10 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 
 ## Material remaining acceptance work
 
-1. Review fresh CI for the final restore/account/Training safeguards.
-2. Physical iPhone/Safari/PWA background/install/update behavior and final visual matching.
-3. Formal migration identity mapping/review for ambiguous legacy arrays and real independent backup verification before any authorized future cutover. Opaque arrays remain lossless and flagged, never guessed.
-4. Long-running load/operational coverage and production chunk cleanup. The one-document limit is fixed with immutable chunks and a CAS manifest. Actual emulator tests verify >1 MiB snapshots, interrupted staging, lost acknowledgments and integrity rejection. Explicit item/manifest limits fail closed with local data retained.
-5. Production authentication/rules/token lifecycle and deployment require separate work/authorization. Emulator rules must never be deployed.
+1. Physical iPhone/Safari/PWA background/install/update behavior and final visual matching.
+2. Formal migration identity mapping/review for ambiguous legacy arrays and real independent backup verification before any authorized future cutover. Opaque arrays remain lossless and flagged, never guessed.
+3. Long-running load/operational coverage and production chunk cleanup. The one-document limit is fixed with immutable chunks and a CAS manifest. Actual emulator tests verify >1 MiB snapshots, interrupted staging, lost acknowledgments and integrity rejection. Explicit item/manifest limits fail closed with local data retained.
+4. Production authentication/rules/token lifecycle and deployment require separate work/authorization. Emulator rules must never be deployed.
 
 ## Requirement traceability
 
@@ -44,25 +46,25 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 | G07 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
 | G08 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | G09 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
-| T01 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T02 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T03 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T04 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T05 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T06 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T07 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T08 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T09 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T10 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T11 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T12 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T13 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T14 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T15 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T16 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T17 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T18 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
-| T19 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T01 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T02 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T03 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T04 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T05 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T06 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T07 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T08 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T09 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T10 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T11 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T12 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T13 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T14 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T15 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T16 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T17 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T18 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
+| T19 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
 | N01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | N02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | N03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
@@ -100,7 +102,7 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 | Gate | Evidence/status |
 | --- | --- |
 | TST01 | Native Node suite executed, verified exit 0. |
-| TST02 | Stage 1 and Stage 2 CI green/logs reviewed; final hardening CI pending. |
+| TST02 | Final Stage 1/2 CI green; all job logs reviewed; run 40393997855. |
 | TST03 | Demo-only loopback Auth/Firestore integration passed. |
 | TST04 | Chromium reload/offline/IDB/concurrent tabs/quota/abort passed; physical iPhone pending. |
 | TST05 | Independent local/cloud record edits merge in Node, Chromium and actual emulators. |
@@ -135,7 +137,7 @@ All Stage 2 gates above have development test evidence; they are not a blanket r
 Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, Nutrition, Sleep/Weight/Supplements, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
 
 
-## Final hardening under verification
+## Verified final hardening
 
 Content-addressed record/history staging uses SHA-256 verification and one root-manifest CAS. Interrupted staging never publishes partial state. Actual emulator tests verify >1 MiB snapshots, lost post-commit acknowledgment/no duplicate revision, immutable reuse, chunk ownership and corruption rejection. Canonical equality/order avoids redundant writes/history duplication. Literal prototype-named unknown fields remain data; definition edits retain unknown metadata/equipment. Demo sync failures show context and retain local queues.
 
