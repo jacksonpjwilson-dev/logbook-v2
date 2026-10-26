@@ -98,5 +98,19 @@
     recoverableHistory(){return s.historyAt(this.snapshot().history,this.clock())}
     rollbackHistory(){return (this.snapshot().rollbackBackups||[]).filter(e=>e.at>=this.clock()-s.RETENTION_MS)}
   }
+  // Every state-changing operation runs against the latest committed snapshot.
+  // Without serialization, two asynchronous IndexedDB writes can both read
+  // the same snapshot and the slower write can erase the other change.
+  const mutating=['edit','ingest','resolve','acknowledge','restore'];
+  for(const method of mutating){
+    const original=OfflineStore.prototype[method];
+    OfflineStore.prototype[method]=function(...args){
+      const previous=this._mutationTail||Promise.resolve();
+      const operation=previous.then(()=>original.apply(this,args));
+      // A rejected write must not permanently block later recovery attempts.
+      this._mutationTail=operation.then(()=>undefined,()=>undefined);
+      return operation;
+    };
+  }
   return {OfflineStore,memoryAdapter};
 });
