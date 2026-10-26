@@ -12,7 +12,7 @@ const working=set=>set.done===true&&set.kind==='working'&&validSet(set);
 function estimate(set){if(!working(set)||set.reps>15)return null;return set.reps===1?set.weightKg:set.weightKg*(1+set.reps/30)}
 function empty(){return {schema:1,catalog:{},templates:{},rotation:{templateIds:[],next:0,events:[]},active:null,workouts:{},favorites:[],restSeconds:90}}
 function snapshotTemplate(template){const {versions,...body}=template;return clone(body)}
-function putExercise(state,exercise){const next=clone(state);assert(exercise&&validId(exercise.id)&&exercise.name,'Exercise identity and name required');const before=next.catalog[exercise.id];next.catalog[exercise.id]={...clone(exercise),version:(before?.version||0)+1};return next}
+function putExercise(state,exercise){const next=clone(state);assert(exercise&&validId(exercise.id)&&exercise.name,'Exercise identity and name required');const before=next.catalog[exercise.id];next.catalog[exercise.id]={...(before?clone(before):{}),...clone(exercise),version:(before?.version||0)+1};return next}
 function saveTemplate(state,input){
  const next=clone(state),previous=next.templates[input.id];assert(validId(input.id)&&input.name?.trim(),'Template identity and name required');assert(Array.isArray(input.exercises),'Template plan required');
  const exercises=input.exercises.map(entry=>{
@@ -23,7 +23,7 @@ function saveTemplate(state,input){
  assert(new Set(exercises.map(entry=>entry.id)).size===exercises.length,'Template exercise entries require distinct identities');for(const entry of exercises){assert(validId(entry.id),'Invalid plan identity');for(const set of entry.sets)assert(validId(set.id)&&['working','warmup'].includes(set.kind),'Invalid prescribed set')}
  const groups=new Set(exercises.map(entry=>entry.supersetId).filter(Boolean));for(const group of groups)assert(exercises.filter(entry=>entry.supersetId===group).length>=2,'Superset requires two or more exercises');
  const versions=previous?[...(previous.versions||[]),snapshotTemplate(previous)]:[];
- next.templates[input.id]={id:input.id,name:input.name.trim(),version:(previous?.version||0)+1,exercises,versions};return next;
+ next.templates[input.id]={...(previous?snapshotTemplate(previous):{}),...clone(input),id:input.id,name:input.name.trim(),version:(previous?.version||0)+1,exercises,versions};return next;
 }
 function setRotation(state,ids){assert(Array.isArray(ids)&&ids.length<=8&&new Set(ids).size===ids.length,'Rotation supports up to eight unique workouts');const next=clone(state);for(const id of ids)assert(next.templates[id],'Unknown rotation template');const suggested=next.rotation.templateIds[next.rotation.next];next.rotation.templateIds=clone(ids);next.rotation.next=Math.max(0,ids.indexOf(suggested));return next}
 function previousSets(state,exerciseId,sourcePlanId){

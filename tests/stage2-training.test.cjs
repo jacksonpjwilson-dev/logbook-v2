@@ -84,3 +84,6 @@ test('regrouping supersets clears orphaned single-exercise groups',()=>{
 test('warm-up rows never inherit a prior working-set weight',()=>{
  let state=completed(base(),'t1',100).state;const template=copy(state.templates.t1);template.exercises[0].sets[0].kind='warmup';template.exercises[0].sets[0].weightKg=20;state=T.saveTemplate(state,template);state=start(state,'t1',10000,'2026-10-02');assert.equal(state.active.exercises[0].sets[0].weightKg,20);assert.equal(state.active.exercises[0].sets[0].previous,null);assert.equal(state.active.exercises[0].sets[1].weightKg,100);
 });
+test('definition edits retain existing equipment and unknown template metadata',()=>{
+ let state=base();state.templates.t1.futurePreference={enabled:true};state=T.putExercise(state,{id:'e1',name:'Renamed Bench',group:'Chest'});assert.equal(state.catalog.e1.equip,'Barbell');state=T.saveTemplate(state,{id:'t1',name:'New name',exercises:state.templates.t1.exercises});assert.deepEqual(state.templates.t1.futurePreference,{enabled:true});
+});

@@ -4,7 +4,7 @@ Updated 2026-10-26. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 2 is implemented locally and pending its fresh CI run. Stages 3–6 remain outside the current requested work.
+Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 2 CI is green and reviewed; the chunk/retry follow-up requires its fresh CI run. Stages 3–6 remain outside the current requested work.
 
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
 - New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
@@ -14,7 +14,8 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 ## Evidence
 
 - Reviewed Stage 1 integration CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40375539711 — all three jobs passed; logs reviewed.
-- Current local aggregate: **84 Node checks passed, 3 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **3 integration checks successfully**.
+- Reviewed Stage 2 CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40382327475 — all jobs passed; logs reviewed.
+- Current local aggregate: **90 Node checks passed, 4 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **4 integration checks successfully**.
 - Chromium suites passed locally: storage/workbench; visible legacy integration/offline reopen; Training session/substitution/correction/recovery; Training template/superset/units/picker/charts/reduced-motion.
 - Actual browser + local Auth/Firestore suites passed: legacy automatic sync/offline rejoin; Training background-sync typing preservation, explicit conflict choice and resolution persistence.
 - Browser screenshots are generated under ignored `stage1/artifacts/` (legacy integration, Training active/history). No synthetic screenshot values are treated as user records.
@@ -22,10 +23,10 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 
 ## Material remaining acceptance work
 
-1. Review fresh CI for the complete Stage 2 change (current local results are not a CI claim).
+1. Review fresh CI for the final chunk/retry hardening; Stage 2 is already green in the reviewed run above.
 2. Physical iPhone/Safari/PWA background/install/update behavior and final visual matching.
 3. Formal migration identity mapping/review for ambiguous legacy arrays and real independent backup verification before any authorized future cutover. Opaque arrays remain lossless and flagged, never guessed.
-4. Cloud capacity/load and long-running/interrupted-network stress coverage. The current demo REST transport still stores a whole synchronized snapshot in one Firestore document; large histories require further hardening before production reliance.
+4. Long-running load/operational coverage and production chunk cleanup. The one-document limit is fixed with immutable chunks and a CAS manifest. Actual emulator tests verify >1 MiB snapshots, interrupted staging, lost acknowledgments and integrity rejection. Explicit item/manifest limits fail closed with local data retained.
 5. Production authentication/rules/token lifecycle and deployment require separate work/authorization. Emulator rules must never be deployed.
 
 ## Requirement traceability
@@ -97,16 +98,16 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 | Gate | Evidence/status |
 | --- | --- |
 | TST01 | Native Node suite executed, verified exit 0. |
-| TST02 | Stage 1 integration CI green/logs reviewed; full Stage 2 CI pending. |
+| TST02 | Stage 1 and Stage 2 CI green/logs reviewed; final hardening CI pending. |
 | TST03 | Demo-only loopback Auth/Firestore integration passed. |
 | TST04 | Chromium reload/offline/IDB/concurrent tabs/quota/abort passed; physical iPhone pending. |
 | TST05 | Independent local/cloud record edits merge in Node, Chromium and actual emulators. |
 | TST06 | Visible side-by-side choice and no repeated conflict after resolution pass. |
 | TST07 | Tombstone/edit stale rejoin preserves explicit conflict; fresh-device deletion recovery passes. |
-| TST08 | Durable queue/restart/failed writes/CAS/offline rejoin covered; expanded interruption/load tests pending. |
+| TST08 | Durable queue/restart/failed writes/CAS/offline rejoin covered; interrupted staging and lost post-commit acknowledgment tested; extended long-running load remains pending. |
 | TST09 | Actual legacy seed/unknown fields/order/sidecars roundtrip; duplicate/missing IDs preserved and flagged/blocked as appropriate. Formal real mapping pending. |
 | TST10 | SHA-256/readback backup, rollback, failed target transaction and stale in-flight restore coverage pass for synthetic data. |
-| TST11 | Inclusive 30-day recovery boundary and indefinite ordinary records tested; large cloud capacity not signed off. |
+| TST11 | Inclusive 30-day recovery boundary and indefinite ordinary records tested; >1 MiB chunked snapshots verified; long-running operational capacity/cleanup remains pending. |
 | TST12 | Restore preview/confirmation/targeted Undo preserves unrelated records; device-scale restore stress pending. |
 | TST13 | Actual emulator ownership/revision/anonymous/other-user/production-collection denial pass; production security not changed. |
 | TST14 | Main and original app entry points/sync/workers untouched; no deployment workflow invoked. |
@@ -130,3 +131,10 @@ All Stage 2 gates above have development test evidence; they are not a blanket r
 ## Visual and later-phase tracking
 
 Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, Nutrition, Sleep/Weight/Supplements, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
+
+
+## Final hardening under verification
+
+Content-addressed record/history staging uses SHA-256 verification and one root-manifest CAS. Interrupted staging never publishes partial state. Actual emulator tests verify >1 MiB snapshots, lost post-commit acknowledgment/no duplicate revision, immutable reuse, chunk ownership and corruption rejection. Canonical equality/order avoids redundant writes/history duplication. Literal prototype-named unknown fields remain data; definition edits retain unknown metadata/equipment. Demo sync failures show context and retain local queues.
+
+No production deployment, real account access, merge or real-data migration occurred. Physical iPhone and formal migration/release gates remain open; later theme/visual phases are not claimed complete.

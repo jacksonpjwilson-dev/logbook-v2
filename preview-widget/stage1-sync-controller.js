@@ -1,6 +1,6 @@
 /* Stage 1 synthetic-only synchronization coordinator. No production Firebase imports.
    Transport must be emulator-only and implement pullVersioned/compareAndSwap. */
-(function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LogbookStage1Sync=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
+(function(root,factory){const api=factory(typeof module==='object'&&module.exports?require('./safety-core.js'):root.LogbookSafety);if(typeof module==='object'&&module.exports)module.exports=api;else root.LogbookStage1Sync=api;})(typeof globalThis!=='undefined'?globalThis:this,function(s){
 'use strict';
 function createCoordinator(store,transport){
  if(!store||!transport||transport.mode!=='emulator-only')throw Error('Isolated emulator transport required');
@@ -19,7 +19,7 @@ function createCoordinator(store,transport){
     const desired=JSON.parse(JSON.stringify(state.records));
     for(const id of blocked){if(id in (remote.records||{}))desired[id]=remote.records[id];else delete desired[id]}
     // If already synchronized, clear only the confirmed pending batch.
-    const equal=JSON.stringify(desired)===JSON.stringify(remote.records||{})&&JSON.stringify(state.history)===JSON.stringify(remote.history||[]);
+    const equal=s.equal(desired,remote.records||{})&&s.equal(state.history,remote.history||[]);
     if(equal){
       const uploaded=Object.fromEntries(Object.entries(desired).filter(([id])=>!blocked.has(id)));
       await store.confirmUpload(uploaded,{sequence:conflicts.length?0:state.sequence});

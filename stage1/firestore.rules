@@ -5,13 +5,25 @@ service cloud.firestore {
   match /syntheticLogbookV2/{uid} {
    allow read: if request.auth != null && request.auth.uid == uid;
    allow create, update: if request.auth != null && request.auth.uid == uid
-     && request.resource.data.keys().hasOnly(['revision', 'records', 'synthetic', 'history'])
+     && request.resource.data.keys().hasOnly(['revision', 'records', 'synthetic', 'history', 'manifest'])
      && request.resource.data.synthetic == true
      && request.resource.data.records is map
      && request.resource.data.history is list
+     && (!request.resource.data.keys().hasAny(['manifest']) || (request.resource.data.manifest is list && request.resource.data.manifest.size() <= 6000))
      && request.resource.data.revision is int
      && ((!exists(/databases/$(database)/documents/syntheticLogbookV2/$(uid)) && request.resource.data.revision == 1)
        || (exists(/databases/$(database)/documents/syntheticLogbookV2/$(uid)) && request.resource.data.revision == resource.data.revision + 1));
+  }
+  match /syntheticLogbookV2/{uid}/chunks/{chunkId} {
+   allow read: if request.auth != null && request.auth.uid == uid;
+   allow create: if request.auth != null && request.auth.uid == uid
+     && request.resource.data.keys().hasOnly(['kind', 'payload', 'sha256', 'synthetic'])
+     && request.resource.data.synthetic == true
+     && request.resource.data.kind in ['records', 'history']
+     && request.resource.data.payload is string
+     && request.resource.data.sha256 is string;
+   // Content-addressed staging is immutable. Never deploy emulator rules.
+   allow update, delete: if false;
   }
   match /{document=**} {allow read, write: if false;}
  }

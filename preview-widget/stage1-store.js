@@ -81,10 +81,11 @@
       const next=this.snapshot();
       s.validateSnapshot({schema:s.SCHEMA,records:remote});
       assert(Array.isArray(remoteHistory),'Invalid remote recovery history');
+      const knownHistory=new Set(next.history.map(s.canonical));
       for(const entry of remoteHistory){
         assert(entry&&Number.isFinite(entry.at)&&entry.at>=0,'Invalid recovery timestamp');s.record(entry.id,null);
         for(const value of [entry.previous,entry.next])if(value!==undefined)s.validateSnapshot({schema:s.SCHEMA,records:{[entry.id]:value}});
-        if(!next.history.some(existing=>s.equal(existing,entry)))next.history.push(s.clone(entry));
+        const key=s.canonical(entry);if(!knownHistory.has(key)){next.history.push(s.clone(entry));knownHistory.add(key)}
       }
       const m=s.threeWay(next.baseline,next.records,remote);
       // Existing conflicts remain explicit even if a later pull equals baseline.
@@ -94,7 +95,7 @@
       const blocked=new Set(next.conflicts.map(c=>c.id));
       // Preserve local changes, including conflicts, until resolved. Compatible remote changes merge.
       for(const [id,v] of Object.entries(m.merged))if(!blocked.has(id)){
-        if(!s.equal(next.records[id],v))next.history=s.historyAppend(next.history,id,next.records[id],v,this.clock());
+        if(next.records[id]!==undefined&&!s.equal(next.records[id],v))next.history=s.historyAppend(next.history,id,next.records[id],v,this.clock());
         next.records[id]=s.clone(v);
       }
       for(const id of Object.keys(next.records))if(!(id in m.merged)&&!blocked.has(id))delete next.records[id];
@@ -103,6 +104,7 @@
         if(blocked.has(id))continue;
         if(id in remote)next.baseline[id]=s.clone(remote[id]);else delete next.baseline[id];
       }
+      next.history=next.history.map(entry=>({entry,key:s.canonical(entry)})).sort((a,b)=>a.entry.at-b.entry.at||(a.entry.id<b.entry.id?-1:a.entry.id>b.entry.id?1:0)||(a.key<b.key?-1:a.key>b.key?1:0)).map(item=>item.entry);
       return this.commit(next);
     }
     async resolve(decisions){

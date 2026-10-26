@@ -48,3 +48,32 @@ test('real emulator transport synchronizes independent devices and recoverable h
  assert.ok(fresh.recoverableHistory().some(e=>e.previous?.value?.note==='first'));
  const current=await cloud.pullVersioned();assert.ok(current.history.length>0);
 });
+test('chunked snapshots exceed 1 MiB safely and interrupted staging cannot publish partial data',async t=>{
+ if(!HOST&&!process.env.LOGBOOK_REQUIRE_EMULATORS){t.skip('Emulators not running');return}assert.ok(HOST&&AUTH);assert.match(process.env.GCLOUD_PROJECT||'',/^demo-/);
+ const {createTransport}=require('../preview-widget/stage1-rest-transport.js'),{OfflineStore,memoryAdapter}=require('../preview-widget/stage1-store.js'),{createCoordinator}=require('../preview-widget/stage1-sync-controller.js');
+ const [host,port]=HOST.split(':'),[authHost,authPort]=AUTH.split(':'),options={pageHostname:'localhost',host,port:+port,authHost,authPort:+authPort,projectId:process.env.GCLOUD_PROJECT},cloud=await createTransport(options),store=new OfflineStore(memoryAdapter());await store.init();
+ for(let i=0;i<20;i++)await store.edit('large:'+i,{fixture:i,note:'Synthetic '.repeat(7000)});
+ assert.ok(Buffer.byteLength(JSON.stringify(store.snapshot().records))>1024*1024);
+ let staged=0,interrupt=true;
+ const faulty=await createTransport({...options,session:cloud.session,fetch:async(url,request)=>{
+  if(interrupt&&url.endsWith(':commit')&&JSON.parse(request.body).writes[0].update.name.includes('/chunks/')){if(++staged===2){interrupt=false;throw Error('Synthetic interrupted staging')}}return fetch(url,request);
+ }});
+ const sync=createCoordinator(store,faulty);assert.equal((await sync.sync()).status,'offline');assert.equal((await cloud.pullVersioned()).revision,0);assert.equal(store.snapshot().pending.length,20);
+ assert.equal((await sync.sync()).status,'synced');const pulled=await cloud.pullVersioned();assert.equal(Object.keys(pulled.records).length,20);assert.ok(pulled.manifest.length>1);assert.equal(pulled.records['large:19'].value.note,'Synthetic '.repeat(7000));
+ const fresh=new OfflineStore(memoryAdapter());await fresh.init();assert.equal((await createCoordinator(fresh,cloud).sync()).status,'synced');assert.equal(fresh.recoverableHistory().length,20);
+ const root='http://'+HOST+'/v1/projects/'+process.env.GCLOUD_PROJECT+'/databases/(default)/documents/syntheticLogbookV2/'+cloud.session.uid;
+ const response=await fetch(root,{headers:{authorization:'Bearer '+cloud.session.token}}),body=await response.json();assert.ok(Buffer.byteLength(JSON.stringify(body))<1024*1024);assert.ok(body.fields.manifest.arrayValue.values.length>1);
+ assert.equal((await fetch(root+'/chunks/'+pulled.manifest[0].id)).status,403,'Anonymous chunk read must fail');
+ const other=await createTransport(options);assert.equal((await fetch(root+'/chunks/'+pulled.manifest[0].id,{headers:{authorization:'Bearer '+other.session.token}})).status,403,'Other-user chunk read must fail');
+ let dropAck=true;const lostAck=await createTransport({...options,session:cloud.session,fetch:async(url,request)=>{
+  const response=await fetch(url,request);if(dropAck&&url.endsWith(':commit')&&!JSON.parse(request.body).writes[0].update.name.includes('/chunks/')&&response.ok){dropAck=false;throw Error('Synthetic lost root acknowledgment')}return response;
+ }});
+ await store.edit('lost-ack',{note:'Synthetic committed-but-unacknowledged write'});const beforeRevision=(await cloud.pullVersioned()).revision,lostSync=createCoordinator(store,lostAck);
+ assert.equal((await lostSync.sync()).status,'offline');assert.equal(store.snapshot().pending.length,1);assert.equal((await cloud.pullVersioned()).revision,beforeRevision+1);
+ assert.equal((await lostSync.sync()).status,'synced');assert.equal(store.snapshot().pending.length,0);assert.equal((await cloud.pullVersioned()).revision,beforeRevision+1,'Retry published a duplicate root revision');
+
+ const tampered=await createTransport({...options,session:cloud.session,fetch:async(url,request)=>{
+  const response=await fetch(url,request);if(url.includes('/chunks/')&&response.ok){const body=await response.json();body.fields.payload.stringValue='[]';return new Response(JSON.stringify(body),{status:200})}return response;
+ }});
+ await assert.rejects(tampered.pullVersioned(),/integrity/);
+});

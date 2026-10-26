@@ -75,3 +75,9 @@ test('fresh device recovers cloud-synchronized prior and deleted versions',async
  assert.ok(fresh.recoverableHistory().some(e=>e.previous?.value?.note==='second'&&e.next.deleted));
  const count=fresh.snapshot().history.length;await createCoordinator(fresh,cloud).sync();assert.equal(fresh.snapshot().history.length,count);
 });
+test('equivalent object key order does not cause redundant cloud writes',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('b',{z:1,a:2});await store.edit('a',3);const cloud=transport(),cas=cloud.compareAndSwap;let writes=0;
+ cloud.compareAndSwap=async(...args)=>{writes++;return cas(...args)};const coordinator=createCoordinator(store,cloud);await coordinator.sync();const pull=cloud.pullVersioned;
+ cloud.pullVersioned=async()=>{const state=await pull();state.records=Object.fromEntries(Object.entries(state.records).reverse());return state};
+ assert.equal((await coordinator.sync()).status,'synced');assert.equal(writes,1);
+});

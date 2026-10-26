@@ -71,3 +71,11 @@ The development worker scope is `/stage1/dev/`, cache `logbook-stage1-synthetic-
 The banner can explicitly connect to local demo Auth/Firestore. CSP permits same-origin assets and loopback ports 8080/9099 only. Real accounts/imports are disabled. Browser+emulator tests cover automatic sync, offline edit/rejoin, reload and deleted-version recovery. Production authentication/token refresh and final migration/device acceptance remain outside this milestone.
 
 Run the visible integration with `NODE_PATH=/tmp/logbook-tools/node_modules node tests/stage1-legacy-browser.cjs`. Run `tests/stage1-legacy-emulator-browser.cjs` inside the documented demo-only `emulators:exec` command, with the same NODE_PATH and HTTP server running. CI builds and runs both.
+
+## Chunked demo snapshots and retry safety
+
+The REST transport stages immutable, SHA-256-verified record/history chunks and publishes a small revision-controlled manifest. Default chunks target 192 KiB; a single JSON item over 768 KiB is rejected before staging with local data retained. The manifest is capped at 6,000 references. Limits fail closed; no records/history are truncated. The older injected-SDK transport refuses chunked roots rather than treating an empty inline map as deletion.
+
+Actual emulator tests cover >1 MiB records plus history, interrupted staging/reuse, loss of the root acknowledgment after server commit, unchanged revision on acknowledgment retry, anonymous/other-account chunk denial, and tampering rejection. Root CAS is the publication boundary. Canonical ordering prevents redundant writes/history duplication. Initial mirrored records do not manufacture arrival-history entries.
+
+Unused chunks are deliberately not deleted by this client. Production cleanup/quota/load operation and authentication lifecycle remain release work. Recovery availability uses the tested 30-day filter; ordinary records persist indefinitely. Browser/memory adapters support CAS; plain read/write fallback adapters are single-instance test fixtures, not a concurrent production backend.

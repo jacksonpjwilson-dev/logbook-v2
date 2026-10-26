@@ -165,3 +165,8 @@ test('explicitly reviewed conflict snapshot cannot resolve a changed comparison'
  const one=new OfflineStore(memoryAdapter());await one.init();await one.ingest({x:safety.record('x',1)});await one.edit('x',2);await one.ingest({x:safety.record('x',3)});const reviewed=one.snapshot().conflicts;await one.ingest({x:safety.record('x',4)});
  await assert.rejects(one.resolve({x:'remote'},{expectedConflicts:reviewed}),/Conflict changed/);assert.equal(one.snapshot().conflicts[0].remote.value,4);
 });
+test('remote history is deduplicated and deterministically ordered across devices',async()=>{
+ const events=[{id:'x',at:100,previous:safety.record('x','B'),next:safety.record('x','C')},{id:'x',at:100,previous:safety.record('x','A'),next:safety.record('x','B')}];
+ const a=new OfflineStore(memoryAdapter()),b=new OfflineStore(memoryAdapter());await a.init();await b.init();await a.ingest({},events);await b.ingest({},events.slice().reverse());await a.ingest({},events);
+ assert.deepEqual(a.snapshot().history,b.snapshot().history);assert.equal(a.snapshot().history.length,2);
+});

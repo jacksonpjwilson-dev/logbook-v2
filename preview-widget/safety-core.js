@@ -11,10 +11,11 @@
   const clone=x=>x===undefined?undefined:JSON.parse(JSON.stringify(x));
   const sorted=x=>{
     if(Array.isArray(x))return x.map(sorted);
-    if(x&&typeof x==='object'){const v={};for(const k of Object.keys(x).sort())v[k]=sorted(x[k]);return v}
+    if(x&&typeof x==='object'){const v=Object.create(null);for(const k of Object.keys(x).sort())v[k]=sorted(x[k]);return v}
     return x;
   };
-  const equal=(a,b)=>JSON.stringify(sorted(a))===JSON.stringify(sorted(b));
+  const canonical=value=>JSON.stringify(sorted(value));
+  const equal=(a,b)=>canonical(a)===canonical(b);
   const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
   const validId=x=>!['__proto__','constructor','prototype'].includes(x)&&typeof x==='string'&&/^[a-zA-Z0-9_:@.-]{1,160}$/.test(x);
   const record=(id,value,version=1,deleted=false)=>{assert(validId(id),'Invalid record ID');assert(Number.isSafeInteger(version)&&version>0,'Invalid record version');return {id,version,deleted:!!deleted,value:deleted?null:clone(value)}};
@@ -153,5 +154,5 @@
     validateSnapshot(plan.snapshot);
     return clone(plan.snapshot);
   }
-  return {SCHEMA,RETENTION_MS,clone,equal,record,threeWay,resolve,backup,validateSnapshot,restorePlan,commitRestore,historyAppend,historyAt,historyRestore,migrateLegacy,migrationCommit};
+  return {SCHEMA,RETENTION_MS,clone,equal,canonical,record,threeWay,resolve,backup,validateSnapshot,restorePlan,commitRestore,historyAppend,historyAt,historyRestore,migrateLegacy,migrationCommit};
 });

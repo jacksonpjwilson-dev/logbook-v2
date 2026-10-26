@@ -64,7 +64,7 @@ async function connectEmulators(){
 function syncCloud(){
  const operation=cloudTail.then(async()=>{
   await tail;if(!coordinator)throw Error('Connect the local demo emulators first');
-  const result=await coordinator.sync();redrawLegacy();refresh('Demo emulator: '+result.status);return result;
+  const result=await coordinator.sync();redrawLegacy();refresh('Demo emulator: '+result.status+(result.error?' · '+result.error:''));return result;
  });cloudTail=operation.catch(()=>{});return operation;
 }
 document.getElementById('development-connect').onclick=run(connectEmulators);

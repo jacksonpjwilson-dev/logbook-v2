@@ -74,3 +74,6 @@ test('migration excludes authentication and sync metadata sidecars',()=>{
  const plan=s.migrateLegacy({version:1},{auxiliary:{'lb2w:sync':{uid:'fake'},'lb2w:signedin':'1','lb2w:session':'owner'}});
  assert.ok(!Object.keys(plan.snapshot.records).some(k=>k.includes('sync')||k.includes('signedin')||k.includes('session')));
 });
+test('canonical equality retains literal prototype-named unknown fields',()=>{
+ const value=JSON.parse('{"__proto__":{"unknown":true},"ordinary":1}');assert.equal(s.equal(value,{ordinary:1}),false);assert.equal(s.equal(s.clone(value),value),true);assert.equal(Object.hasOwn(s.clone(value),'__proto__'),true);
+});

@@ -15,3 +15,8 @@ test('genuine permission denial is surfaced when cloud revision has not advanced
  const cloud=await createTransport({pageHostname:'localhost',session,fetch:async url=>url.endsWith(':commit')?new Response(JSON.stringify({error:{status:'PERMISSION_DENIED'}}),{status:403}):new Response(JSON.stringify(document(1)))});
  await assert.rejects(cloud.compareAndSwap({revision:1},{}),/write failed: 403/);
 });
+test('oversized single records fail before staging and retain the caller data',async()=>{
+ let writes=0;const cloud=await createTransport({pageHostname:'localhost',session,fetch:async(url)=>{if(url.endsWith(':commit'))writes++;return new Response(JSON.stringify(document(1)))}});
+ const records={large:{id:'large',version:1,deleted:false,value:'synthetic '.repeat(100000)}};
+ await assert.rejects(cloud.compareAndSwap({revision:1},records),/single record exceeds/);assert.equal(writes,0);assert.equal(records.large.value.length,1000000);
+});

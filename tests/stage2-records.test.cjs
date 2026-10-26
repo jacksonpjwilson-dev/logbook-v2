@@ -16,3 +16,6 @@ test('corrected workout versions are recoverable through the durable store',asyn
  const entryHistory=store.recoverableHistory().find(event=>event.id==='training.workout:'+finished.sessionId&&event.previous);assert.equal(entryHistory.previous.value.notes,'');assert.equal(entryHistory.next.value.notes,'Explicit correction');
  const reopened=new OfflineStore(adapter);await reopened.init();assert.equal(R.materialize(reopened.snapshot().records).workouts[finished.sessionId].version,2);
 });
+test('unknown literal settings fields survive projection without modifying prototypes',()=>{
+ const state=seed();Object.defineProperty(state,'__proto__',{value:{futureSetting:true},enumerable:true});const restored=R.materialize(R.project(state));assert.equal(Object.hasOwn(restored,'__proto__'),true);assert.deepEqual(restored.__proto__,{futureSetting:true});assert.equal(Object.getPrototypeOf(restored),Object.prototype);
+});

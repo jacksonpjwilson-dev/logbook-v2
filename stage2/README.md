@@ -32,6 +32,6 @@ Install `playwright-core@1.64.1` in the selected tool prefix and set `CHROMIUM_P
 firebase emulators:exec --project demo-logbook-stage1 --config stage1/firebase.json --only firestore,auth "LOGBOOK_REQUIRE_EMULATORS=1 node --test --experimental-test-isolation=none tests/*firestore-emulator.test.cjs && node tests/stage2-emulator-browser.cjs"
 ```
 
-The UI's Demo sync button creates local emulator users only. Saved demo sessions reconnect on reopen; production authentication/token-refresh support is excluded. Cloud transport capacity/long-running stress and physical iPhone Safari/PWA acceptance still need verification before release. Ambiguous real legacy identity mapping and any real-data migration require their separate safeguards and authorization.
+The UI's Demo sync button creates local emulator users only. Saved demo sessions reconnect on reopen; production authentication/token-refresh support is excluded. Verified chunks plus a CAS manifest cover >1 MiB snapshots, interruption and retry. Long-running operation/cleanup and physical iPhone Safari/PWA acceptance still need release verification. Ambiguous real legacy identity mapping and any real-data migration require their separate safeguards and authorization.
 
 These screens validate functionality and accessibility. They do **not** claim the final visual reference match or implement the later 16-theme/Home-widget phase. Original root/preview entry points, styles, sync and workers remain untouched.
