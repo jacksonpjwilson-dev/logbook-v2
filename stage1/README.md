@@ -51,4 +51,11 @@ firebase emulators:exec --project demo-logbook-stage1 --config stage1/firebase.j
 
 The emulator REST test uses a JSON `documents:commit` write precondition. The earlier query-string PATCH test failed against the actual emulator and was replaced; the passing result covers the exercised commit API.
 
-`stage1-migration.js` accepts only explicitly supplied fixtures; it does not discover/read user browser storage. It writes a separate full-source backup and verifies SHA-256 plus exact readback before migration. Duplicate identities remain blocked for review. Local rollback histories are durable, but cloud-wide recovery history and full migration mapping/integration still need acceptance work. See `IMPLEMENTATION_STATUS.md` before proceeding to Training or any cutover.
+`stage1-migration.js` accepts only explicitly supplied fixtures; it does not discover/read user browser storage. It writes a separate full-source backup and verifies SHA-256 plus exact readback before migration. Duplicate identities remain blocked for review. Local rollback histories are durable, and recoverable versions now synchronize atomically with records. Full migration mapping/integration and broader interruption/retention stress coverage still need acceptance work. See `IMPLEMENTATION_STATUS.md` before proceeding to Training or any cutover.
+
+
+## Demo-only authenticated REST transport
+
+`preview-widget/stage1-rest-transport.js` creates anonymous users only against the explicitly selected loopback Auth emulator. It uses no Firebase SDK or production config, rejects non-demo projects and non-loopback endpoints before any request, and rejects redirects. Devices can explicitly share the returned synthetic session in emulator tests. Do not log the session token. Tokens remain in memory and production authentication is unsupported.
+
+Records and recovery history share one JSON Firestore commit with an update-time/existence precondition. The integration test runs two independent local stores against this real emulator transport, resolves a same-record conflict, deletes a record, and checks that a fresh third store recovers its prior versions.

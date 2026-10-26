@@ -11,12 +11,12 @@ The handoff has been preserved in `docs/handoff/`. Three original visual sheets 
 ## Evidence
 
 - Baseline: native Node 24, 31 individual checks passed, 1 emulator check skipped. `--test-isolation=none` exposes individual test results in this environment; the default subprocess reporter only reports files.
-- Current Node: **46 individual checks passed, 1 emulator-only check skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
+- Current Node: **48 individual checks passed, 2 emulator-only checks skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
 - Chromium: actual IndexedDB reload, pending queue recovery, concurrent tabs, same-record conflict preservation, offline edit, aborted transaction, quota failure passed via `tests/stage1-browser.cjs`.
-- Firebase Auth/Firestore emulator: **1 integration check passed**, exit 0, using Firebase CLI 14.27.0, Java 21, `demo-logbook-stage1`, Auth/Firestore bound to loopback. Includes stale write rejection, anonymous/other-account denial, invalid revisions, and production collection denial.
+- Firebase Auth/Firestore emulator: **2 integration checks passed**, exit 0, using Firebase CLI 14.27.0, Java 21, `demo-logbook-stage1`, Auth/Firestore bound to loopback. Includes stale write rejection, anonymous/other-account denial, invalid revisions, and production collection denial.
 - Workbench UI: visible synthetic add, backup, side-by-side conflict resolution, restore preview/confirmation, Undo all passed; screenshot generated at `stage1/artifacts/workbench.png` (local artifact, not committed).
 - iPhone Safari/installed PWA: not run; requires a physical device. No Safari parity claim.
-- GitHub Actions: pending push and reviewed run.
+- GitHub Actions: [first hardening run](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40356870895) passed all three jobs; individual Node, Chromium/workbench and emulator logs reviewed. Follow-up history/transport commit requires its own CI evidence.
 
 ## Changes under validation
 
@@ -27,7 +27,7 @@ The handoff has been preserved in `docs/handoff/`. Three original visual sheets 
 
 ## Stage 1 outstanding gates
 
-Full legacy-app integration, complete migration/reference mapping and validation, cloud-wide recovery histories, broader browser interruption coverage, Auth transport integration, CI evidence, and iPhone validation remain open. Do not use these experimental modules with real data.
+Full legacy-app integration, complete migration/reference mapping and validation, broader browser interruption coverage, extended recovery/retention stress tests, latest CI evidence, and iPhone validation remain open. Do not use these experimental modules with real data.
 
 ## Requirement traceability
 
@@ -96,7 +96,7 @@ Full legacy-app integration, complete migration/reference mapping and validation
 ## Acceptance checklist
 
 - [x] TST01 — native Node suite executed; emulator skipped only in ordinary offline invocation.
-- [ ] TST02 — pending full acceptance evidence.
+- [x] TST02 — first hardening run green and logs reviewed; follow-up changes require a fresh run.
 - [x] TST03 — local demo Auth/Firestore run passed, exit 0.
 - [ ] TST04 — pending full acceptance evidence.
 - [x] TST05 — independent-record concurrency passes in Node and Chromium.
@@ -107,7 +107,7 @@ Full legacy-app integration, complete migration/reference mapping and validation
 - [ ] TST10 — pending full acceptance evidence.
 - [ ] TST11 — pending full acceptance evidence.
 - [ ] TST12 — pending full acceptance evidence.
-- [ ] TST13 — emulator ownership and denial rules passed; integrated authenticated app transport remains pending.
+- [x] TST13 — authenticated demo REST transport, owner isolation, other-account/anonymous/production denial tests passed on local emulators; production rules are neither accessed nor changed.
 - [ ] TST14 — pending full acceptance evidence.
 - [ ] TST15 — pending full acceptance evidence.
 - [ ] TRA01 — pending full acceptance evidence.
@@ -143,7 +143,13 @@ Brand/icon/splash, 16 named themes, four pages/navigation, 38-widget registry, T
 
 1. Review all three GitHub Actions jobs for this milestone; do not equate local tests with CI.
 2. Complete safe legacy data/UI integration in an isolated development path, with every entity and sidecar accounted for and ambiguous mappings reviewed.
-3. Synchronize recoverable history across isolated devices, finish authenticated emulator transport tests, interrupted migration/restore and crash scenarios.
+3. Extend interrupted migration/restore and crash scenarios and recovery history stress coverage. Cross-device history and authenticated REST transport now pass both synthetic and actual emulator tests.
 4. Recheck all Stage 1 acceptance items before Stage 2 Training implementation. Physical iPhone checks remain explicitly unverified where unavailable.
 
 No further visual assets are needed for the current storage milestone. Exact theme-panel matching is reserved for the later visual phase.
+
+## Follow-up: cross-device recovery history
+
+Recovery entries now merge and travel in the same cloud compare-and-swap as records. A fresh isolated device can recover prior edits and deletions. Added `preview-widget/stage1-rest-transport.js`: explicit loopback endpoints, demo-only project IDs, local anonymous Auth sessions, redirects denied, JSON commit preconditions, authenticated owner document paths. Actual emulator test covers independent-device edits, conflicts, resolution, deletion and fresh-device recovery. No SDK/production configuration is loaded.
+
+`main` rechecked at `278f0936b8a8f8f4b39bd6fbbe2dc72c961b3f32`. Production entry points, legacy app scripts/styles, service workers and Firebase config are unchanged by both milestones.

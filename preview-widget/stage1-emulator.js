@@ -17,12 +17,12 @@ function createTransport({pageHostname,host='127.0.0.1',port=8080,db,projectId='
  const ref=()=>db.collection(collection).doc(uid);
  return {mode:'emulator-only',
  async pullVersioned(){const s=await ref().get();return s.exists?s.data():{revision:0,records:{}}},
- async compareAndSwap(expected,desired){
+ async compareAndSwap(expected,desired,{history=[]}={}){
   if(!expected||!Number.isSafeInteger(expected.revision))throw Error('Expected revision required');
   return db.runTransaction(async tx=>{
    const snap=await tx.get(ref()),remote=snap.exists?snap.data():{revision:0,records:{}};
    if(remote.revision!==expected.revision)return {accepted:false,remote};
-   tx.set(ref(),{revision:remote.revision+1,records:desired,synthetic:true});
+   tx.set(ref(),{revision:remote.revision+1,records:desired,history,synthetic:true});
    return {accepted:true,revision:remote.revision+1};
   })
  }};

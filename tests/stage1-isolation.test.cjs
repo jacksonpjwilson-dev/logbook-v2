@@ -22,3 +22,10 @@ const t=emu.createTransport({pageHostname:'localhost',db});
 assert.deepEqual(await t.pullVersioned(),{revision:0,records:{}});
 assert.ok(calls.some(x=>x[1]==='syntheticLogbookV2'));
 await assert.rejects(t.compareAndSwap(null,{}),/revision/)});
+test('REST transport rejects production endpoints and projects before any request',async()=>{
+ const {createTransport}=require('../preview-widget/stage1-rest-transport.js');let calls=0;const fetch=async()=>{calls++;throw Error('must not request')};
+ await assert.rejects(createTransport({pageHostname:'localhost',host:'firestore.googleapis.com',fetch}),/non-loopback/);
+ await assert.rejects(createTransport({pageHostname:'localhost',projectId:'logbook-e784a',fetch}),/Demo/);
+ await assert.rejects(createTransport({pageHostname:'localhost',authHost:'identitytoolkit.googleapis.com',fetch}),/non-loopback/);
+ assert.equal(calls,0);
+});

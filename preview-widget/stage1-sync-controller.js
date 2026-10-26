@@ -11,7 +11,7 @@ function createCoordinator(store,transport){
   try{
    for(let attempt=0;attempt<maxRetries;attempt++){
     const remote=await transport.pullVersioned();
-    await store.ingest(remote.records||{});
+    await store.ingest(remote.records||{},remote.history||[]);
     let state=store.snapshot();
     const conflicts=state.conflicts;
     // Upload unrelated records while keeping each conflicted remote value intact.
@@ -19,13 +19,13 @@ function createCoordinator(store,transport){
     const desired=JSON.parse(JSON.stringify(state.records));
     for(const id of blocked){if(id in (remote.records||{}))desired[id]=remote.records[id];else delete desired[id]}
     // If already synchronized, clear only the confirmed pending batch.
-    const equal=JSON.stringify(desired)===JSON.stringify(remote.records||{});
+    const equal=JSON.stringify(desired)===JSON.stringify(remote.records||{})&&JSON.stringify(state.history)===JSON.stringify(remote.history||[]);
     if(equal){
       const uploaded=Object.fromEntries(Object.entries(desired).filter(([id])=>!blocked.has(id)));
       await store.confirmUpload(uploaded,{sequence:conflicts.length?0:state.sequence});
       return {status:conflicts.length?'conflict':store.snapshot().pending.length?'pending':'synced',conflicts,revision:remote.revision};
     }
-    const response=await transport.compareAndSwap({revision:remote.revision},desired);
+    const response=await transport.compareAndSwap({revision:remote.revision},desired,{history:state.history});
     if(!response.accepted)continue;
     // Never acknowledge edits that arrived while the cloud request was pending.
     await store.confirmUpload(Object.fromEntries(Object.entries(desired).filter(([id])=>!blocked.has(id))),{sequence:conflicts.length?0:state.sequence});

@@ -58,8 +58,15 @@
       next.pending.push(op);
       return this.commit(next);
     }
-    async ingest(remote){
+    async ingest(remote,remoteHistory=[]){
       const next=this.snapshot();
+      s.validateSnapshot({schema:s.SCHEMA,records:remote});
+      assert(Array.isArray(remoteHistory),'Invalid remote recovery history');
+      for(const entry of remoteHistory){
+        assert(entry&&Number.isFinite(entry.at)&&entry.at>=0,'Invalid recovery timestamp');s.record(entry.id,null);
+        for(const value of [entry.previous,entry.next])if(value!==undefined)s.validateSnapshot({schema:s.SCHEMA,records:{[entry.id]:value}});
+        if(!next.history.some(existing=>s.equal(existing,entry)))next.history.push(s.clone(entry));
+      }
       const m=s.threeWay(next.baseline,next.records,remote);
       // Existing conflicts remain explicit even if a later pull equals baseline.
       const existing=new Map(next.conflicts.map(c=>[c.id,c]));
@@ -67,7 +74,10 @@
       next.conflicts=[...existing.values()].map(c=>({...c,local:s.clone(next.records[c.id]),remote:c.scope==='local'?c.remote:s.clone(remote[c.id])}));
       const blocked=new Set(next.conflicts.map(c=>c.id));
       // Preserve local changes, including conflicts, until resolved. Compatible remote changes merge.
-      for(const [id,v] of Object.entries(m.merged))if(!blocked.has(id))next.records[id]=s.clone(v);
+      for(const [id,v] of Object.entries(m.merged))if(!blocked.has(id)){
+        if(!s.equal(next.records[id],v))next.history=s.historyAppend(next.history,id,next.records[id],v,this.clock());
+        next.records[id]=s.clone(v);
+      }
       for(const id of Object.keys(next.records))if(!(id in m.merged)&&!blocked.has(id))delete next.records[id];
       // A new remote baseline is accepted only for conflict-free items.
       for(const id of new Set([...Object.keys(next.baseline),...Object.keys(remote)])){
@@ -82,7 +92,9 @@
       const res=s.resolve(prior,decisions);
       for(const conflict of next.conflicts){
         if(!(conflict.id in (decisions||{})))continue;
-        if(conflict.id in res.merged)next.records[conflict.id]=s.clone(res.merged[conflict.id]);
+        const before=next.records[conflict.id],selected=res.merged[conflict.id];
+        if(!s.equal(before,selected))next.history=s.historyAppend(next.history,conflict.id,before,selected,this.clock());
+        if(conflict.id in res.merged)next.records[conflict.id]=s.clone(selected);
         else delete next.records[conflict.id];
         // The latest remote value becomes the comparison baseline regardless
         // of the user's choice. Choosing local creates an intentional pending

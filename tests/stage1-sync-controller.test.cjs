@@ -6,9 +6,9 @@ function transport(){
  let current={revision:0,records:{}};let inject=null;
  return {mode:'emulator-only',setInject(f){inject=f},state(){return current},
  async pullVersioned(){return JSON.parse(JSON.stringify(current))},
- async compareAndSwap(expected,desired){if(inject){const f=inject;inject=null;f(current)}
+ async compareAndSwap(expected,desired,{history=[]}={}){if(inject){const f=inject;inject=null;f(current)}
  if(current.revision!==expected.revision)return {accepted:false,remote:current};
- current={revision:current.revision+1,records:JSON.parse(JSON.stringify(desired))};
+ current={revision:current.revision+1,records:JSON.parse(JSON.stringify(desired)),history:JSON.parse(JSON.stringify(history))};
  return {accepted:true,revision:current.revision}}};
 }
 test('isolated sync successfully confirms queued synthetic records',async()=>{
@@ -65,4 +65,13 @@ test('tombstone survives stale offline rejoin, edit-versus-delete requires choic
  await a.edit('x',null,{deleted:true});await sa.sync();await b.edit('x',2);
  assert.equal((await sb.sync()).status,'conflict');assert.equal(cloud.state().records.x.deleted,true);
  await b.resolve({x:'remote'});assert.equal((await sb.sync()).status,'synced');assert.equal(b.snapshot().records.x.deleted,true);
+});
+test('fresh device recovers cloud-synchronized prior and deleted versions',async()=>{
+ const cloud=transport(),a=new OfflineStore(memoryAdapter());await a.init();const sync=createCoordinator(a,cloud);
+ await a.edit('x',{note:'first'});await sync.sync();await a.edit('x',{note:'second'});await sync.sync();await a.edit('x',null,{deleted:true});await sync.sync();
+ const fresh=new OfflineStore(memoryAdapter());await fresh.init();await createCoordinator(fresh,cloud).sync();
+ assert.equal(fresh.snapshot().records.x.deleted,true);
+ assert.ok(fresh.recoverableHistory().some(e=>e.previous?.value?.note==='first'));
+ assert.ok(fresh.recoverableHistory().some(e=>e.previous?.value?.note==='second'&&e.next.deleted));
+ const count=fresh.snapshot().history.length;await createCoordinator(fresh,cloud).sync();assert.equal(fresh.snapshot().history.length,count);
 });

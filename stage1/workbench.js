@@ -7,9 +7,9 @@ const store=new LogbookOfflineStore.OfflineStore(adapter('local'));await store.i
 const cloud=adapter('cloud'),backup=adapter('backup');let offline=false,preview=null;
 const transport={mode:'emulator-only', // Local simulation of the emulator contract, never a network transport.
  async pullVersioned(){if(offline)throw Error('Simulated offline');return await cloud.read()||{revision:0,records:{}}},
- async compareAndSwap(expected,records){if(offline)throw Error('Simulated offline');const current=await cloud.read();
+ async compareAndSwap(expected,records,{history=[]}={}){if(offline)throw Error('Simulated offline');const current=await cloud.read();
  if((current?.revision||0)!==expected.revision)return {accepted:false};
- const next={revision:expected.revision+1,records:s.clone(records)};
+ const next={revision:expected.revision+1,records:s.clone(records),history:s.clone(history)};
  return {accepted:await cloud.compareAndSwap(current,next),revision:next.revision};
  }};
 const coordinator=LogbookStage1Sync.createCoordinator(store,transport);
@@ -35,7 +35,7 @@ $('conflict').onclick=run(async()=>{
  if(!store.snapshot().records[id])await store.edit(id,{note:'Fictional original'});
  await coordinator.sync();await store.edit(id,{note:'Fictional local change'});
  const current=await cloud.read(),records=s.clone(current.records);records[id]=s.record(id,{note:'Fictional other-device change'},(records[id]?.version||0)+1);
- if(!await cloud.compareAndSwap(current,{revision:current.revision+1,records}))throw Error('Simulation changed; retry');
+ if(!await cloud.compareAndSwap(current,{revision:current.revision+1,records,history:current.history||[]}))throw Error('Simulation changed; retry');
  await coordinator.sync();draw('Compare both fictional versions below');
 });
 $('backup').onclick=run(async()=>{await backup.write(s.backup(store.snapshot().records,{synthetic:true}));draw('Synthetic backup saved')});
