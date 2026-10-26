@@ -79,3 +79,31 @@ test('choosing local conflict version does not flag same remote change again',as
  assert.equal(one.snapshot().conflicts.length,0);
  assert.equal(one.snapshot().records.x.value,2);
 });
+
+test('parallel edits cannot erase each other across asynchronous writes',async()=>{
+ let durable=null;
+ const adapter={read:async()=>durable,write:async v=>{
+   await new Promise(resolve=>setTimeout(resolve,v.records&&v.records.a?8:1));
+   durable=safety.clone(v);
+ }};
+ const one=new OfflineStore(adapter);await one.init();
+ await Promise.all([one.edit('a',1),one.edit('b',2),one.edit('c',3)]);
+ assert.equal(one.snapshot().records.a.value,1);
+ assert.equal(one.snapshot().records.b.value,2);
+ assert.equal(one.snapshot().records.c.value,3);
+ const reopened=new OfflineStore(adapter);await reopened.init();
+ assert.equal(reopened.snapshot().pending.length,3);
+ assert.equal(reopened.snapshot().records.c.value,3);
+});
+test('a rejected write does not poison subsequent updates',async()=>{
+ let durable=null,fail=true;
+ const adapter={read:async()=>durable,write:async v=>{
+   if(fail&&v.pending&&v.pending.length){fail=false;throw Error('disk error')}
+   durable=safety.clone(v)
+ }};
+ const one=new OfflineStore(adapter);await one.init();
+ await assert.rejects(one.edit('a',1),/disk/);
+ await one.edit('b',2);
+ assert.equal(one.snapshot().records.a,undefined);
+ assert.equal(one.snapshot().records.b.value,2);
+});
