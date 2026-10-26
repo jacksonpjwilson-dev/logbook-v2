@@ -59,3 +59,15 @@ The emulator REST test uses a JSON `documents:commit` write precondition. The ea
 `preview-widget/stage1-rest-transport.js` creates anonymous users only against the explicitly selected loopback Auth emulator. It uses no Firebase SDK or production config, rejects non-demo projects and non-loopback endpoints before any request, and rejects redirects. Devices can explicitly share the returned synthetic session in emulator tests. Do not log the session token. Tokens remain in memory and production authentication is unsupported.
 
 Records and recovery history share one JSON Firestore commit with an update-time/existence precondition. The integration test runs two independent local stores against this real emulator transport, resolves a same-record conflict, deletes a record, and checks that a fresh third store recovers its prior versions.
+
+## Isolated integration with the existing application
+
+Build with `node stage1/build-dev.cjs`, serve on loopback, and open `http://127.0.0.1:8765/stage1/dev/?fixture=example`. The query selects a synthetic namespace. The build extracts the actual legacy seed using an in-memory storage stub, strips original worker/update code, rewrites storage to a synthetic facade, awaits durable app mutations, and disables imports/resets. Markers fail closed when source changes unexpectedly. Generated files are ignored and rebuilt by CI. Production source files are unchanged.
+
+The bridge projects unambiguous IDs into individual versioned records. Missing/duplicate identities stay intact and flagged; IDs are never guessed from names. Ordering, unknown fields and raw snapshots are preserved. Independent edits merge atomically and competing edits require visible review. The seed has a separate SHA-256 archive. Synthetic backups have restore previews, confirmation and targeted Undo; in-flight writes invalidate stale choices.
+
+The development worker scope is `/stage1/dev/`, cache `logbook-stage1-synthetic-dev-v1`. It never unregisters production workers or reads/deletes their caches. Chromium offline reopen and unfinished-set recovery pass; iPhone/installed-PWA behavior remains unverified.
+
+The banner can explicitly connect to local demo Auth/Firestore. CSP permits same-origin assets and loopback ports 8080/9099 only. Real accounts/imports are disabled. Browser+emulator tests cover automatic sync, offline edit/rejoin, reload and deleted-version recovery. Production authentication/token refresh and final migration/device acceptance remain outside this milestone.
+
+Run the visible integration with `NODE_PATH=/tmp/logbook-tools/node_modules node tests/stage1-legacy-browser.cjs`. Run `tests/stage1-legacy-emulator-browser.cjs` inside the documented demo-only `emulators:exec` command, with the same NODE_PATH and HTTP server running. CI builds and runs both.

@@ -153,3 +153,11 @@ test('stale conflict choice cannot select a newer unreviewed version',async()=>{
  await assert.rejects(a.resolve({x:'remote'}),/Conflict changed/);
  assert.equal((await adapter.read()).conflicts[0].remote.value,4);
 });
+test('restore requested during an in-flight edit cannot overwrite an unreviewed queued change',async()=>{
+ const adapter=memoryAdapter(),store=new OfflineStore(adapter);await store.init();await store.edit('x',1);
+ const write=adapter.compareAndSwap;let unblock,started;
+ const blocked=new Promise(resolve=>{started=resolve}),gate=new Promise(resolve=>{unblock=resolve});
+ adapter.compareAndSwap=async(...args)=>{if(args[1].records.x?.value===2){started();await gate}return write(...args)};
+ const edit=store.edit('x',2);await blocked;const restoration=store.restore(safety.backup({x:safety.record('x',1)}),{confirmed:true});unblock();await edit;
+ await assert.rejects(restoration,/stale/);assert.equal(store.snapshot().records.x.value,2);
+});

@@ -32,3 +32,10 @@ test('verified synthetic migration is idempotent and source hash is stable',asyn
  const first=await rehearse(options),second=await rehearse(options);
  assert.equal(first.status,'migrated');assert.equal(second.status,'already-migrated');assert.equal(first.sha256,second.sha256);
 });
+test('interrupted target commit leaves the verified migration source recoverable',async()=>{
+ const adapter=memoryAdapter(),store=new OfflineStore(adapter);await store.init();const original=adapter.compareAndSwap;
+ adapter.compareAndSwap=async(expected,next)=>{if(Object.keys(next.records).length)throw Error('Interrupted target transaction');return original(expected,next)};
+ const backup=memoryAdapter(),legacy={version:1,profile:{name:'Synthetic interrupted migration'}};
+ await assert.rejects(rehearse({legacy,backupAdapter:backup,store,confirmed:true}),/Interrupted/);
+ assert.deepEqual((await backup.read()).source.legacy,legacy);assert.deepEqual((await adapter.read()).records,{});
+});

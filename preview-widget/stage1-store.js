@@ -58,6 +58,25 @@
       next.pending.push(op);
       return this.commit(next);
     }
+    async applyRecords(base,desired){
+      s.validateSnapshot({schema:s.SCHEMA,records:base});s.validateSnapshot({schema:s.SCHEMA,records:desired});
+      const next=this.snapshot(),merge=s.threeWay(base,desired,next.records);
+      const conflicts=new Map(next.conflicts.map(c=>[c.id,c]));
+      const changed=new Set([...Object.keys(base),...Object.keys(desired)].filter(id=>!s.equal(base[id],desired[id])));
+      for(const id of changed)assert(!conflicts.has(id),'Resolve this record conflict before editing');
+      for(const conflict of merge.conflicts){
+        conflicts.set(conflict.id,{...conflict,scope:'local'});
+        if(conflict.local!==undefined)merge.merged[conflict.id]=s.clone(conflict.local);
+        else delete merge.merged[conflict.id];
+      }
+      for(const id of new Set([...Object.keys(next.records),...Object.keys(merge.merged)])){
+        const before=next.records[id],after=merge.merged[id];if(s.equal(before,after))continue;
+        next.history=s.historyAppend(next.history,id,before,after,this.clock());
+        if(after!==undefined)next.records[id]=s.clone(after);else delete next.records[id];
+        next.pending.push({op:'batch-edit',id,sequence:++next.sequence});
+      }
+      next.conflicts=[...conflicts.values()];return this.commit(next);
+    }
     async ingest(remote,remoteHistory=[]){
       const next=this.snapshot();
       s.validateSnapshot({schema:s.SCHEMA,records:remote});
@@ -170,13 +189,15 @@
   // Every state-changing operation runs against the latest committed snapshot.
   // Without serialization, two asynchronous IndexedDB writes can both read
   // the same snapshot and the slower write can erase the other change.
-  const mutating=['edit','ingest','resolve','acknowledge','confirmUpload','restore','undoRestore'];
+  const mutating=['edit','applyRecords','ingest','resolve','acknowledge','confirmUpload','restore','undoRestore'];
   for(const method of mutating){
     const original=OfflineStore.prototype[method];
     OfflineStore.prototype[method]=function(...args){
       const previous=this._mutationTail||Promise.resolve();
+      const conflictObserved=method==='resolve'?this.snapshot().conflicts:null;
+      const restoreObserved=method==='restore'?s.clone(args[1]?.expectedRecords??this.snapshot().records):null;
       const operation=previous.then(async()=>{
-        let observed;const conflictObserved=method==='resolve'?this.snapshot().conflicts:null;const restoreObserved=method==='restore'?this.snapshot().records:null;
+        let observed;
         if(method==='edit')observed=s.clone(this.snapshot().records[args[0]]);
         for(let attempt=0;attempt<12;attempt++){
           if(this.adapter.compareAndSwap){

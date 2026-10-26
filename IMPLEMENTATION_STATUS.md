@@ -11,7 +11,7 @@ The handoff has been preserved in `docs/handoff/`. Three original visual sheets 
 ## Evidence
 
 - Baseline: native Node 24, 31 individual checks passed, 1 emulator check skipped. `--test-isolation=none` exposes individual test results in this environment; the default subprocess reporter only reports files.
-- Current Node: **50 individual checks passed, 2 emulator-only checks skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
+- Current Node: **58 individual checks passed, 2 emulator-only checks skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
 - Chromium: actual IndexedDB reload, pending queue recovery, concurrent tabs, same-record conflict preservation, offline edit, aborted transaction, quota failure passed via `tests/stage1-browser.cjs`.
 - Firebase Auth/Firestore emulator: **2 integration checks passed**, exit 0, using Firebase CLI 14.27.0, Java 21, `demo-logbook-stage1`, Auth/Firestore bound to loopback. Includes stale write rejection, anonymous/other-account denial, invalid revisions, and production collection denial.
 - Workbench UI: visible synthetic add, backup, side-by-side conflict resolution, restore preview/confirmation, Undo all passed; screenshot generated at `stage1/artifacts/workbench.png` (local artifact, not committed).
@@ -173,3 +173,16 @@ Latest reviewed CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/ru
 
 **Stage 1 is still incomplete. Stage 2 has not started.** The remaining work includes full isolated integration with the legacy application, full legacy identity mapping/validation, wider interrupted-network/migration/restore tests and iPhone validation. These results validate this storage milestone, not the complete handoff or release readiness. No approval is needed for routine follow-on development within the authorized branch.
 
+
+## Legacy integration milestone (local validation complete; fresh CI pending)
+
+- Added `preview-widget/stage1-legacy-codec.js` and atomic `OfflineStore.applyRecords` for lossless per-entity projection when stable IDs exist. Missing/duplicate IDs stay opaque and flagged. Actual legacy seed roundtrip, ordering, renames, deletion, independent edits and conflicts pass.
+- Added deterministic `stage1/build-dev.cjs` and `stage1/dev/`. Production source is read-only input. Imports/resets/real accounts are disabled; synthetic original-storage-key sentinels remain untouched.
+- Visible legacy UI tests pass: session entry, unfinished set/notes recovery, side-by-side conflict choice, verified backup, restore preview/confirmation and Undo.
+- The isolated development worker/cache passes actual Chromium offline reload. Original workers/caches are unchanged.
+- Actual browser+Auth/Firestore tests pass: demo-only auth, automatic sync, offline edit/rejoin, reload and deleted-version recovery. Cloud calls are serialized; production configuration is never loaded.
+- Added interrupted migration target-commit and in-flight stale-restore regressions.
+
+Local evidence: **58 Node checks passed; 2 emulator checks pass separately; Chromium legacy UI/offline and browser+emulator suites passed**. CI now builds and runs these suites. Legacy Training defects remain Stage 2 work, not fixed by storage integration.
+
+Stage 1 remains a synthetic development implementation with final migration/device acceptance open. Stage 2 is not yet started. This work does not authorize production migration, merge or release.

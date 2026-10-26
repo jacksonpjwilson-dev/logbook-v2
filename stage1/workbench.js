@@ -45,7 +45,7 @@ $('preview').onclick=run(async()=>{
 });
 $('restore').onclick=run(async()=>{
  if(!preview||!s.equal(store.snapshot().records,preview.expected))throw Error('Preview is stale; preview again');
- await store.restore(preview.incoming,{confirmed:true});preview=null;$('restore').hidden=true;draw('Restore saved; Undo available');
+ await store.restore(preview.incoming,{confirmed:true,expectedRecords:preview.expected});preview=null;$('restore').hidden=true;draw('Restore saved; Undo available');
 });
 $('undo').onclick=run(async()=>{const entries=store.snapshot().rollbackBackups;let i=entries.length-1;while(i>=0&&entries[i].undone)i--;await store.undoRestore(i,{confirmed:true});draw('Restore undone')});
 window.stage1Workbench={store,coordinator};draw('Isolated workbench ready');
