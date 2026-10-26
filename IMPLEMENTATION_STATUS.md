@@ -1,188 +1,132 @@
 # Implementation status
 
-Updated 2026-10-26. Work is restricted to `logbook-v2-upgrade`; no main edits, deployment, production Firebase, real accounts or personal records.
+Updated 2026-10-26. Authorized branch: **logbook-v2-upgrade only**. No main changes, deployment, production Firebase, real account login or real personal records.
 
-## Current milestone
+## Current result
 
-Stage 1 is **in progress**, not signed off. Stage 2 Training is queued behind the Stage 1 acceptance gate. Baseline head: `39e494fe26fa4db4c8b4053d6651a215790241d5`.
+Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 2 is implemented locally and pending its fresh CI run. Stages 3–6 remain outside the current requested work.
 
-The handoff has been preserved in `docs/handoff/`. Three original visual sheets were supplied in the separate ZIP and are available in the session; full visual work is deferred as requested. The ZIP guide supersedes the earlier note claiming these images were unavailable.
+- Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
+- New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
+- Original `preview-widget/index.html`, `app.js`, `data.js`, `sync.js`, `styles.css`, `sw.js`, root entry points and main are unchanged. New workers/cache names are scoped to their development paths and never delete production caches.
+- The supplied Markdown handoff is preserved in `docs/handoff/`. Three original reference sheets are available in the session. Exact visual/theme work is deferred as requested; the development UI is not an exact visual-fidelity claim.
 
 ## Evidence
 
-- Baseline: native Node 24, 31 individual checks passed, 1 emulator check skipped. `--test-isolation=none` exposes individual test results in this environment; the default subprocess reporter only reports files.
-- Current Node: **58 individual checks passed, 2 emulator-only checks skipped**, exit 0, using `node --test --experimental-test-isolation=none tests/stage1-*.test.cjs`.
-- Chromium: actual IndexedDB reload, pending queue recovery, concurrent tabs, same-record conflict preservation, offline edit, aborted transaction, quota failure passed via `tests/stage1-browser.cjs`.
-- Firebase Auth/Firestore emulator: **2 integration checks passed**, exit 0, using Firebase CLI 14.27.0, Java 21, `demo-logbook-stage1`, Auth/Firestore bound to loopback. Includes stale write rejection, anonymous/other-account denial, invalid revisions, and production collection denial.
-- Workbench UI: visible synthetic add, backup, side-by-side conflict resolution, restore preview/confirmation, Undo all passed; screenshot generated at `stage1/artifacts/workbench.png` (local artifact, not committed).
-- iPhone Safari/installed PWA: not run; requires a physical device. No Safari parity claim.
-- GitHub Actions: [first hardening run](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40356870895) passed all three jobs; individual Node, Chromium/workbench and emulator logs reviewed. Latest [run 40359721786](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359721786) also passed all three jobs after the concurrency correction; all job logs reviewed.
+- Reviewed Stage 1 integration CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40375539711 — all three jobs passed; logs reviewed.
+- Current local aggregate: **84 Node checks passed, 3 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **3 integration checks successfully**.
+- Chromium suites passed locally: storage/workbench; visible legacy integration/offline reopen; Training session/substitution/correction/recovery; Training template/superset/units/picker/charts/reduced-motion.
+- Actual browser + local Auth/Firestore suites passed: legacy automatic sync/offline rejoin; Training background-sync typing preservation, explicit conflict choice and resolution persistence.
+- Browser screenshots are generated under ignored `stage1/artifacts/` (legacy integration, Training active/history). No synthetic screenshot values are treated as user records.
+- iPhone Safari and installed-PWA device testing: **not run**. No Safari parity or release-readiness claim.
 
-## Changes under validation
+## Material remaining acceptance work
 
-- Atomic compare-and-swap in a single IndexedDB transaction prevents cross-tab overwrites; store retries independent mutations and preserves competing same-record intentions.
-- Successful upload advances its baseline while keeping newer local edits queued; unrelated records continue syncing during conflict review.
-- Restore creates versioned tombstones rather than physically removing records. Migration preserves raw originals, malformed shapes and approved sidecars; separate durable SHA-256 backup readback precedes synthetic migration. Duplicate identities remain blocked.
-- Emulator rules now require authenticated ownership and sequential revisions; all production collections denied. Browser adapter has no production bypass option.
-
-## Stage 1 outstanding gates
-
-Full legacy-app integration, complete migration/reference mapping and validation, broader browser interruption coverage, extended recovery/retention stress tests, and iPhone validation remain open. Do not use these experimental modules with real data.
+1. Review fresh CI for the complete Stage 2 change (current local results are not a CI claim).
+2. Physical iPhone/Safari/PWA background/install/update behavior and final visual matching.
+3. Formal migration identity mapping/review for ambiguous legacy arrays and real independent backup verification before any authorized future cutover. Opaque arrays remain lossless and flagged, never guessed.
+4. Cloud capacity/load and long-running/interrupted-network stress coverage. The current demo REST transport still stores a whole synchronized snapshot in one Firestore document; large histories require further hardening before production reliance.
+5. Production authentication/rules/token lifecycle and deployment require separate work/authorization. Emulator rules must never be deployed.
 
 ## Requirement traceability
 
-| ID | Code path | Verification | Status | Notes |
+| ID | Code path | Tests/evidence | Status | Notes |
 | --- | --- | --- | --- | --- |
-| G01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| G02 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| G03 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| G04 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| G05 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| G06 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| G07 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| G08 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| G09 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| T01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T03 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T04 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T05 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T06 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T07 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T08 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T09 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T10 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T11 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T12 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T13 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T14 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T15 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T16 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T17 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T18 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| T19 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Stage 2 Training gate. |
-| N01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N03 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N04 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N05 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N06 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N07 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N08 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N09 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N10 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N11 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| N12 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| S01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| S02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| S03 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| S04 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| W01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| W02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| W03 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| U01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| U02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| U03 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| U04 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| H01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| H02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| H03 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| H04 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| X01 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| X02 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
-| X03 | `preview-widget/stage1-*.js`, `safety-core.js`, `stage1/firestore.rules` | Stage 1 Node/browser tests; emulator test passed | Partial | Experimental and isolated; outstanding gates above apply. |
-| X04 | Existing legacy app; replacement pending | Not verified against approved requirements | Pending | Later stage; no completion claim. |
+| G01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| G02 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| G03 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| G04 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| G05 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| G06 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| G07 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| G08 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| G09 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| T01 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T02 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T03 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T04 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T05 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T06 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T07 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T08 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T09 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T10 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T11 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T12 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T13 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T14 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T15 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T16 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T17 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T18 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| T19 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | Fresh CI/device acceptance pending. |
+| N01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N05 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N06 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N07 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N08 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N09 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N10 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N11 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N12 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| S01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| S02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| S03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| S04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| W01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| W02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| W03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| U01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| U02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| U03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| U04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| H01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| H02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| H03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| H04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| X01 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| X02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| X03 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
+| X04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 
-## Acceptance checklist
+## Stage 1 acceptance
 
-- [x] TST01 — native Node suite executed; emulator skipped only in ordinary offline invocation.
-- [x] TST02 — first hardening run green and logs reviewed; latest correction run also green with logs reviewed.
-- [x] TST03 — local demo Auth/Firestore run passed, exit 0.
-- [ ] TST04 — pending full acceptance evidence.
-- [x] TST05 — independent-record concurrency passes in Node and Chromium.
-- [ ] TST06 — pending full acceptance evidence.
-- [ ] TST07 — pending full acceptance evidence.
-- [ ] TST08 — pending full acceptance evidence.
-- [ ] TST09 — pending full acceptance evidence.
-- [ ] TST10 — pending full acceptance evidence.
-- [ ] TST11 — pending full acceptance evidence.
-- [ ] TST12 — pending full acceptance evidence.
-- [x] TST13 — authenticated demo REST transport, owner isolation, other-account/anonymous/production denial tests passed on local emulators; production rules are neither accessed nor changed.
-- [ ] TST14 — pending full acceptance evidence.
-- [ ] TST15 — pending full acceptance evidence.
-- [ ] TRA01 — pending full acceptance evidence.
-- [ ] TRA02 — pending full acceptance evidence.
-- [ ] TRA03 — pending full acceptance evidence.
-- [ ] TRA04 — pending full acceptance evidence.
-- [ ] TRA05 — pending full acceptance evidence.
-- [ ] TRA06 — pending full acceptance evidence.
-- [ ] TRA07 — pending full acceptance evidence.
-- [ ] TRA08 — pending full acceptance evidence.
-- [ ] NUT01 — pending full acceptance evidence.
-- [ ] NUT02 — pending full acceptance evidence.
-- [ ] NUT03 — pending full acceptance evidence.
-- [ ] NUT04 — pending full acceptance evidence.
-- [ ] NUT05 — pending full acceptance evidence.
-- [ ] SWS01 — pending full acceptance evidence.
-- [ ] SWS02 — pending full acceptance evidence.
-- [ ] SWS03 — pending full acceptance evidence.
-- [ ] SWS04 — pending full acceptance evidence.
-- [ ] UI01 — pending full acceptance evidence.
-- [ ] UI02 — pending full acceptance evidence.
-- [ ] UI03 — pending full acceptance evidence.
-- [ ] UI04 — pending full acceptance evidence.
-- [ ] UI05 — pending full acceptance evidence.
-- [ ] HIS01 — pending full acceptance evidence.
-- [ ] HIS02 — pending full acceptance evidence.
+| Gate | Evidence/status |
+| --- | --- |
+| TST01 | Native Node suite executed, verified exit 0. |
+| TST02 | Stage 1 integration CI green/logs reviewed; full Stage 2 CI pending. |
+| TST03 | Demo-only loopback Auth/Firestore integration passed. |
+| TST04 | Chromium reload/offline/IDB/concurrent tabs/quota/abort passed; physical iPhone pending. |
+| TST05 | Independent local/cloud record edits merge in Node, Chromium and actual emulators. |
+| TST06 | Visible side-by-side choice and no repeated conflict after resolution pass. |
+| TST07 | Tombstone/edit stale rejoin preserves explicit conflict; fresh-device deletion recovery passes. |
+| TST08 | Durable queue/restart/failed writes/CAS/offline rejoin covered; expanded interruption/load tests pending. |
+| TST09 | Actual legacy seed/unknown fields/order/sidecars roundtrip; duplicate/missing IDs preserved and flagged/blocked as appropriate. Formal real mapping pending. |
+| TST10 | SHA-256/readback backup, rollback, failed target transaction and stale in-flight restore coverage pass for synthetic data. |
+| TST11 | Inclusive 30-day recovery boundary and indefinite ordinary records tested; large cloud capacity not signed off. |
+| TST12 | Restore preview/confirmation/targeted Undo preserves unrelated records; device-scale restore stress pending. |
+| TST13 | Actual emulator ownership/revision/anonymous/other-user/production-collection denial pass; production security not changed. |
+| TST14 | Main and original app entry points/sync/workers untouched; no deployment workflow invoked. |
+| TST15 | Visible legacy app integration, demo sync, pending, conflicts, restore/Undo, offline reopening pass. |
 
-## Visual requirement tracking
+## Stage 2 acceptance
 
-Brand/icon/splash, 16 named themes, four pages/navigation, 38-widget registry, Training, Food, Check-ins, History and accessibility screenshot matrices are pending. No exact visual fidelity claim.
+| Gate | Evidence/status |
+| --- | --- |
+| TRA01 | Rest/discard/finish/skip/history correction/explicit adjustment covered in core and UI tests. |
+| TRA02 | Permanent template versions and active/completed snapshot isolation covered, including real emulator rename. |
+| TRA03 | All planned/unfinished/omitted sets retained; completed working sets alone drive volume/PR. |
+| TRA04 | Linked original/replacement cards preserve separate exercise IDs and volume/PR attribution. |
+| TRA05 | Timestamp rest, manual pause/active/elapsed, offline Home/Resume and clock reversal covered; physical iPhone pending. |
+| TRA06 | 1-rep actual / 1–15 Epley / 16+ actual-rep records, consolidated celebration and corrected downstream PRs covered. |
+| TRA07 | Unified superset/round rest, 320/390/430px five-column entry and uncompleted prefills covered. |
+| TRA08 | Conservative equivalent-session comparison and separate active/elapsed/paused duration covered. |
 
-## Next work, in order
+All Stage 2 gates above have development test evidence; they are not a blanket release signoff.
 
-1. Review all three GitHub Actions jobs for this milestone; do not equate local tests with CI.
-2. Complete safe legacy data/UI integration in an isolated development path, with every entity and sidecar accounted for and ambiguous mappings reviewed.
-3. Extend interrupted migration/restore and crash scenarios and recovery history stress coverage. Cross-device history and authenticated REST transport now pass both synthetic and actual emulator tests.
-4. Recheck all Stage 1 acceptance items before Stage 2 Training implementation. Physical iPhone checks remain explicitly unverified where unavailable.
+## Visual and later-phase tracking
 
-No further visual assets are needed for the current storage milestone. Exact theme-panel matching is reserved for the later visual phase.
-
-## Follow-up: cross-device recovery history
-
-Recovery entries now merge and travel in the same cloud compare-and-swap as records. A fresh isolated device can recover prior edits and deletions. Added `preview-widget/stage1-rest-transport.js`: explicit loopback endpoints, demo-only project IDs, local anonymous Auth sessions, redirects denied, JSON commit preconditions, authenticated owner document paths. Actual emulator test covers independent-device edits, conflicts, resolution, deletion and fresh-device recovery. No SDK/production configuration is loaded.
-
-`main` rechecked at `278f0936b8a8f8f4b39bd6fbbe2dc72c961b3f32`. Production entry points, legacy app scripts/styles, service workers and Firebase config are unchanged by both milestones.
-
-
-## CI concurrency correction
-
-Follow-up run [40359360769](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359360769) passed Node and browser jobs but failed the real-emulator concurrent-device check. The test had not asserted every intermediate sync result, so a failed request surfaced later as a missing record. Intermediate results are now asserted. The transport now handles the case where revision security rules reject a concurrent stale commit before its precondition: only an authenticated read proving revision advancement permits a retry. Genuine unchanged-revision permission failures still surface. Two deterministic regressions and the actual emulator suite pass locally and in [CI run 40359721786](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359721786).
-
-
-## Verified milestone handoff
-
-Code commit: `635620cfd70f7726de40c2207eb5f083fd5dcbb5` (on development branch only).
-
-Latest reviewed CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40359721786
-
-- Synthetic job: 50 passed, 2 emulator-only checks skipped in this job, zero failures.
-- Emulator job: both integration checks executed and passed, zero skips/failures.
-- Browser job: Chromium persistence/concurrency/storage-failure checks and workbench recovery UI passed.
-- Working source and branch match; main remains unchanged; no deployment was triggered.
-
-**Stage 1 is still incomplete. Stage 2 has not started.** The remaining work includes full isolated integration with the legacy application, full legacy identity mapping/validation, wider interrupted-network/migration/restore tests and iPhone validation. These results validate this storage milestone, not the complete handoff or release readiness. No approval is needed for routine follow-on development within the authorized branch.
-
-
-## Legacy integration milestone (local validation complete; fresh CI pending)
-
-- Added `preview-widget/stage1-legacy-codec.js` and atomic `OfflineStore.applyRecords` for lossless per-entity projection when stable IDs exist. Missing/duplicate IDs stay opaque and flagged. Actual legacy seed roundtrip, ordering, renames, deletion, independent edits and conflicts pass.
-- Added deterministic `stage1/build-dev.cjs` and `stage1/dev/`. Production source is read-only input. Imports/resets/real accounts are disabled; synthetic original-storage-key sentinels remain untouched.
-- Visible legacy UI tests pass: session entry, unfinished set/notes recovery, side-by-side conflict choice, verified backup, restore preview/confirmation and Undo.
-- The isolated development worker/cache passes actual Chromium offline reload. Original workers/caches are unchanged.
-- Actual browser+Auth/Firestore tests pass: demo-only auth, automatic sync, offline edit/rejoin, reload and deleted-version recovery. Cloud calls are serialized; production configuration is never loaded.
-- Added interrupted migration target-commit and in-flight stale-restore regressions.
-
-Local evidence: **58 Node checks passed; 2 emulator checks pass separately; Chromium legacy UI/offline and browser+emulator suites passed**. CI now builds and runs these suites. Legacy Training defects remain Stage 2 work, not fixed by storage integration.
-
-Stage 1 remains a synthetic development implementation with final migration/device acceptance open. Stage 2 is not yet started. This work does not authorize production migration, merge or release.
+Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, Nutrition, Sleep/Weight/Supplements, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.

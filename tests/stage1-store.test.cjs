@@ -161,3 +161,7 @@ test('restore requested during an in-flight edit cannot overwrite an unreviewed 
  const edit=store.edit('x',2);await blocked;const restoration=store.restore(safety.backup({x:safety.record('x',1)}),{confirmed:true});unblock();await edit;
  await assert.rejects(restoration,/stale/);assert.equal(store.snapshot().records.x.value,2);
 });
+test('explicitly reviewed conflict snapshot cannot resolve a changed comparison',async()=>{
+ const one=new OfflineStore(memoryAdapter());await one.init();await one.ingest({x:safety.record('x',1)});await one.edit('x',2);await one.ingest({x:safety.record('x',3)});const reviewed=one.snapshot().conflicts;await one.ingest({x:safety.record('x',4)});
+ await assert.rejects(one.resolve({x:'remote'},{expectedConflicts:reviewed}),/Conflict changed/);assert.equal(one.snapshot().conflicts[0].remote.value,4);
+});

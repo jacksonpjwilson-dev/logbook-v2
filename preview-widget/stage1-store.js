@@ -194,7 +194,7 @@
     const original=OfflineStore.prototype[method];
     OfflineStore.prototype[method]=function(...args){
       const previous=this._mutationTail||Promise.resolve();
-      const conflictObserved=method==='resolve'?this.snapshot().conflicts:null;
+      const conflictObserved=method==='resolve'?s.clone(args[1]?.expectedConflicts??this.snapshot().conflicts):null;
       const restoreObserved=method==='restore'?s.clone(args[1]?.expectedRecords??this.snapshot().records):null;
       const operation=previous.then(async()=>{
         let observed;
