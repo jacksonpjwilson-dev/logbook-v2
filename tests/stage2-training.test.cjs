@@ -87,3 +87,19 @@ test('warm-up rows never inherit a prior working-set weight',()=>{
 test('definition edits retain existing equipment and unknown template metadata',()=>{
  let state=base();state.templates.t1.futurePreference={enabled:true};state=T.putExercise(state,{id:'e1',name:'Renamed Bench',group:'Chest'});assert.equal(state.catalog.e1.equip,'Barbell');state=T.saveTemplate(state,{id:'t1',name:'New name',exercises:state.templates.t1.exercises});assert.deepEqual(state.templates.t1.futurePreference,{enabled:true});
 });
+test('finishing a deliberately resumed already-saved session cannot advance rotation or duplicate its event again',()=>{
+ let state=start(),draft=copy(state.active);state=done(state).state;const original=T.finish(state,{now:4000,confirmedIncomplete:true}),rotation=copy(original.state.rotation);
+ const resumed=copy(original.state);resumed.active=draft;resumed.active.notes='Explicit continued session after peer finished';const result=T.finish(resumed,{now:6000,confirmedIncomplete:true});
+ assert.equal(result.updatedExisting,true);assert.equal(result.sessionId,original.sessionId);assert.equal(Object.keys(result.state.workouts).length,1);assert.deepEqual(result.state.rotation,rotation);assert.equal(result.state.workouts[result.sessionId].version,2);assert.deepEqual(result.state.workouts[result.sessionId].templateSnapshot,original.state.workouts[result.sessionId].templateSnapshot);
+});
+test('equipment changes invalidate prefills and comparable-session summaries',()=>{
+ const original=completed(base());let state=T.putExercise(original.state,{...original.state.catalog.e1,equip:'Smith machine'});state=start(state,'t1',10000,'2026-10-02');assert.equal(state.active.exercises[0].sets[0].previous,null);state=done(state,0,50,8,11000).state;state=done(state,1,50,8,12000).state;assert.equal(T.finish(state,{now:13000}).summary.comparison,null);
+});
+test('workout delete/Undo retains identity/snapshot and recalculates analytics without changing rotation',()=>{
+ const finished=completed(base()),snapshot=copy(finished.state.workouts[finished.sessionId]),rotation=copy(finished.state.rotation);assert.throws(()=>T.deleteWorkout(finished.state,finished.sessionId),/confirmation/);
+ const deleted=T.deleteWorkout(finished.state,finished.sessionId,{confirmed:true});assert.deepEqual(T.exerciseHistory(deleted,'e1'),[]);assert.deepEqual(deleted.rotation,rotation);
+ const restored=T.restoreWorkout(deleted,snapshot,{confirmed:true});assert.equal(restored.workouts[snapshot.id].version,2);assert.deepEqual(restored.workouts[snapshot.id].templateSnapshot,snapshot.templateSnapshot);assert.deepEqual(restored.rotation,rotation);assert.equal(T.exerciseHistory(restored,'e1').length,1);assert.throws(()=>T.restoreWorkout(restored,snapshot,{confirmed:true}),/already present/);
+});
+test('clearing completed measurements clears completion instead of counting an invalid set',()=>{
+ let state=done(start()).state;const entry=state.active.exercises[0];state=T.editSet(state,entry.id,entry.sets[0].id,{weightKg:null});assert.equal(state.active.exercises[0].sets[0].done,false);assert.equal(T.stats(state.active).sets,0);assert.equal(T.completion(state.active).incomplete,2);
+});

@@ -4,7 +4,9 @@ const assert=require('node:assert/strict'),{chromium}=require('playwright-core')
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',headless:true,args:['--no-sandbox']});
  try{
  const context=await browser.newContext(),page=await context.newPage(),namespace='training-cloud-'+Date.now();await context.route('**/*',route=>new URL(route.request().url()).hostname==='127.0.0.1'?route.continue():route.abort());
- await page.goto('http://127.0.0.1:8765/stage2/?fixture='+namespace);await page.waitForFunction(()=>window.stage2Training?.offlineReady);await page.getByRole('button',{name:'Demo sync',exact:true}).click();await page.waitForFunction(()=>stage2Training.store.snapshot().pending.length===0);
+ await page.goto('http://127.0.0.1:8765/stage2/?fixture='+namespace);await page.waitForFunction(()=>window.stage2Training?.offlineReady);
+ const peer=await context.newPage();await peer.goto(page.url());await peer.waitForFunction(()=>window.stage2Training?.offlineReady);const linked=await Promise.all([page.evaluate(()=>stage2Training.connectCloud()),peer.evaluate(()=>stage2Training.connectCloud())]);for(const result of linked)assert.equal(result.status,'synced',JSON.stringify(result));
+ assert.equal(await page.evaluate(()=>stage2Training.store.snapshot().accountId),await peer.evaluate(()=>stage2Training.store.snapshot().accountId));assert.equal(await page.evaluate(()=>stage2Training.store.snapshot().conflicts.length),0);await peer.close();await page.waitForFunction(()=>stage2Training.store.snapshot().pending.length===0);
  await page.getByRole('button',{name:'Start workout',exact:true}).click();await page.locator('[data-field="weightKg"]').first().waitFor();await page.waitForFunction(()=>stage2Training.store.snapshot().pending.length===0);
  await page.locator('[data-field="weightKg"]').first().fill('75');
  await page.evaluate(async namespace=>{

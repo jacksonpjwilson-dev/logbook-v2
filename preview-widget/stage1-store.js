@@ -40,6 +40,12 @@
       }else await this.adapter.write(next);
       this.state=s.clone(next);return this.snapshot();
     }
+    async bindAccount(uid,{newSession=false}={}){
+      assert(typeof uid==='string'&&uid.length>0&&uid.length<=128&&!uid.includes('/'),'Invalid isolated account identity');
+      const next=this.snapshot();if(next.accountId){assert(next.accountId===uid,'Cloud account changed; local data is preserved in its existing workspace');return next}
+      assert(!newSession||!Object.keys(next.baseline).length,'A new cloud account cannot replace an existing link; local data is preserved');
+      next.accountId=uid;return this.commit(next);
+    }
     async edit(id,value,{deleted=false,_observed,_checkObserved=false}={}){
       const next=this.snapshot();
       const previous=next.records[id];const version=previous?previous.version+1:1;
@@ -98,7 +104,11 @@
         if(next.records[id]!==undefined&&!s.equal(next.records[id],v))next.history=s.historyAppend(next.history,id,next.records[id],v,this.clock());
         next.records[id]=s.clone(v);
       }
-      for(const id of Object.keys(next.records))if(!(id in m.merged)&&!blocked.has(id))delete next.records[id];
+      for(const id of Object.keys(next.records))if(!(id in m.merged)&&!blocked.has(id)){
+        const before=next.records[id];if(before.deleted)continue;
+        const tombstone=s.record(id,null,before.version+1,true);next.records[id]=tombstone;
+        next.history=s.historyAppend(next.history,id,before,tombstone,this.clock());next.pending.push({op:'remote-delete-marker',id,sequence:++next.sequence});
+      }
       // A new remote baseline is accepted only for conflict-free items.
       for(const id of new Set([...Object.keys(next.baseline),...Object.keys(remote)])){
         if(blocked.has(id))continue;
@@ -114,9 +124,11 @@
       for(const conflict of next.conflicts){
         if(!(conflict.id in (decisions||{})))continue;
         const before=next.records[conflict.id],selected=res.merged[conflict.id];
-        if(!s.equal(before,selected))next.history=s.historyAppend(next.history,conflict.id,before,selected,this.clock());
-        if(conflict.id in res.merged)next.records[conflict.id]=s.clone(selected);
-        else delete next.records[conflict.id];
+        const version=Math.max(before?.version||0,conflict.local?.version||0,conflict.remote?.version||0,conflict.base?.version||0)+1;
+        const resolved=s.record(conflict.id,selected?.value,version,!selected||selected.deleted);
+        next.history=s.historyAppend(next.history,conflict.id,before,resolved,this.clock());
+        if(conflict.remote!==undefined&&!s.equal(conflict.remote,before))next.history=s.historyAppend(next.history,conflict.id,conflict.remote,resolved,this.clock());
+        next.records[conflict.id]=resolved;
         // The latest remote value becomes the comparison baseline regardless
         // of the user's choice. Choosing local creates an intentional pending
         // change against that baseline, rather than re-triggering the conflict.
@@ -145,11 +157,12 @@
       next.pending=next.pending.filter(op=>op.id?!s.equal(next.records[op.id],uploaded[op.id]):op.sequence>sequence);
       return this.commit(next);
     }
-    async restore(snapshot,{confirmed=false}={}){
+    async restore(snapshot,{confirmed=false,mode='replace'}={}){
       const next=this.snapshot();
       assert(!next.conflicts.length,'Resolve conflicts before restoration');
-      const plan=s.restorePlan(next.records,snapshot);
+      const plan=s.restorePlan(next.records,snapshot,{mode});
       const result=s.commitRestore(plan,confirmed);
+      if(!plan.preview.changes.length)return {snapshot:this.snapshot(),rollback:result.rollback,unchanged:true};
       // Persist rollback independently of the caller so interrupted restores remain reversible.
       const rollback={at:this.clock(),snapshot:s.clone(result.rollback)};
       const ids=new Set([...Object.keys(next.records),...Object.keys(result.records)]);
@@ -168,7 +181,7 @@
       await this.commit(next);
       return {snapshot:this.snapshot(),rollback:result.rollback};
     }
-    previewRestore(snapshot){return s.restorePlan(this.snapshot().records,snapshot).preview}
+    previewRestore(snapshot,options={}){return s.restorePlan(this.snapshot().records,snapshot,options).preview}
     async undoRestore(index,{confirmed=false}={}){
       assert(confirmed,'Explicit restoration Undo confirmation required');
       const next=this.snapshot(),entry=next.rollbackBackups[index];
@@ -191,7 +204,7 @@
   // Every state-changing operation runs against the latest committed snapshot.
   // Without serialization, two asynchronous IndexedDB writes can both read
   // the same snapshot and the slower write can erase the other change.
-  const mutating=['edit','applyRecords','ingest','resolve','acknowledge','confirmUpload','restore','undoRestore'];
+  const mutating=['bindAccount','edit','applyRecords','ingest','resolve','acknowledge','confirmUpload','restore','undoRestore'];
   for(const method of mutating){
     const original=OfflineStore.prototype[method];
     OfflineStore.prototype[method]=function(...args){

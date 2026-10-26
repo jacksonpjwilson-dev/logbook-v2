@@ -4,7 +4,7 @@ Updated 2026-10-26. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 2 CI is green and reviewed; the chunk/retry follow-up requires its fresh CI run. Stages 3–6 remain outside the current requested work.
+Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Earlier Stage 1/2 and chunk/retry CI runs are green and reviewed; final restore/account/Training safeguards await their fresh CI run. Stages 3–6 remain outside the current requested work.
 
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
 - New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
@@ -14,16 +14,18 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 ## Evidence
 
 - Reviewed Stage 1 integration CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40375539711 — all three jobs passed; logs reviewed.
+- Reviewed chunk/retry CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40385066550 — all three jobs passed; logs reviewed.
 - Reviewed Stage 2 CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40382327475 — all jobs passed; logs reviewed.
-- Current local aggregate: **90 Node checks passed, 4 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **4 integration checks successfully**.
+- Current local aggregate: **104 Node checks passed, 6 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **6 integration checks successfully**.
 - Chromium suites passed locally: storage/workbench; visible legacy integration/offline reopen; Training session/substitution/correction/recovery; Training template/superset/units/picker/charts/reduced-motion.
 - Actual browser + local Auth/Firestore suites passed: legacy automatic sync/offline rejoin; Training background-sync typing preservation, explicit conflict choice and resolution persistence.
+- Final local regressions also cover merge restore with preserved indexes, rejected conflict-version recovery, immutable account binding, concurrent first connection, fixed built-in exercise identities, workout deletion/Undo, invalid measurement completion clearing, and HTML injection resistance.
 - Browser screenshots are generated under ignored `stage1/artifacts/` (legacy integration, Training active/history). No synthetic screenshot values are treated as user records.
 - iPhone Safari and installed-PWA device testing: **not run**. No Safari parity or release-readiness claim.
 
 ## Material remaining acceptance work
 
-1. Review fresh CI for the final chunk/retry hardening; Stage 2 is already green in the reviewed run above.
+1. Review fresh CI for the final restore/account/Training safeguards.
 2. Physical iPhone/Safari/PWA background/install/update behavior and final visual matching.
 3. Formal migration identity mapping/review for ambiguous legacy arrays and real independent backup verification before any authorized future cutover. Opaque arrays remain lossless and flagged, never guessed.
 4. Long-running load/operational coverage and production chunk cleanup. The one-document limit is fixed with immutable chunks and a CAS manifest. Actual emulator tests verify >1 MiB snapshots, interrupted staging, lost acknowledgments and integrity rejection. Explicit item/manifest limits fail closed with local data retained.

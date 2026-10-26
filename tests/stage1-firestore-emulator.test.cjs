@@ -42,7 +42,7 @@ test('real emulator transport synchronizes independent devices and recoverable h
  await a.edit('left',1);await b.edit('right',2);const concurrent=await Promise.all([sa.sync(),sb.sync()]);for(const result of concurrent)assert.ok(['synced','retry-needed'].includes(result.status),JSON.stringify(result));await synced(sa);await synced(sb);
  assert.equal(a.snapshot().records.right.value,2);assert.equal(b.snapshot().records.left.value,1);
  await a.edit('x',{note:'device A'});await b.edit('x',{note:'device B'});await sa.sync();assert.equal((await sb.sync()).status,'conflict');
- await b.resolve({x:'remote'});await sb.sync();await a.edit('x',null,{deleted:true});await sa.sync();
+ await b.resolve({x:'remote'});await synced(sb);await synced(sa);await a.edit('x',null,{deleted:true});await synced(sa);
  const fresh=new OfflineStore(memoryAdapter());await fresh.init();await createCoordinator(fresh,other).sync();
  assert.equal(fresh.snapshot().records.x.deleted,true);
  assert.ok(fresh.recoverableHistory().some(e=>e.previous?.value?.note==='first'));
@@ -76,4 +76,19 @@ test('chunked snapshots exceed 1 MiB safely and interrupted staging cannot publi
   const response=await fetch(url,request);if(url.includes('/chunks/')&&response.ok){const body=await response.json();body.fields.payload.stringValue='[]';return new Response(JSON.stringify(body),{status:200})}return response;
  }});
  await assert.rejects(tampered.pullVersioned(),/integrity/);
+});
+test('restoring another device backup with merge and Undo preserves unrelated cloud records',async t=>{
+ if(!HOST&&!process.env.LOGBOOK_REQUIRE_EMULATORS){t.skip('Emulators not running');return}assert.ok(HOST&&AUTH);assert.match(process.env.GCLOUD_PROJECT||'',/^demo-/);
+ const {createTransport}=require('../preview-widget/stage1-rest-transport.js'),{OfflineStore,memoryAdapter}=require('../preview-widget/stage1-store.js'),{createCoordinator}=require('../preview-widget/stage1-sync-controller.js'),s=require('../preview-widget/safety-core.js');
+ const [host,port]=HOST.split(':'),[authHost,authPort]=AUTH.split(':'),options={pageHostname:'localhost',host,port:+port,authHost,authPort:+authPort,projectId:process.env.GCLOUD_PROJECT},cloud=await createTransport(options),other=await createTransport({...options,session:cloud.session});
+ const a=new OfflineStore(memoryAdapter()),b=new OfflineStore(memoryAdapter());await a.init();await b.init();const sa=createCoordinator(a,cloud),sb=createCoordinator(b,other),sync=async c=>{const result=await c.sync();assert.equal(result.status,'synced',JSON.stringify(result))};
+ await a.edit('x',1);await sync(sa);await sync(sb);const backup=s.backup(a.snapshot().records);await a.edit('later-device-a',4);
+ await b.edit('x',2);await b.edit('unrelated-device-b',3);await b.restore(backup,{confirmed:true,mode:'merge'});assert.equal(b.snapshot().records['unrelated-device-b'].value,3);await sync(sb);await sync(sa);
+ await b.undoRestore(0,{confirmed:true});await sync(sb);const state=await cloud.pullVersioned();assert.equal(state.records.x.value,2);assert.equal(state.records['unrelated-device-b'].value,3);assert.equal(state.records['later-device-a'].value,4);
+});
+test('a different demo account cannot silently replace a linked local dataset',async t=>{
+ if(!HOST&&!process.env.LOGBOOK_REQUIRE_EMULATORS){t.skip('Emulators not running');return}assert.ok(HOST&&AUTH);assert.match(process.env.GCLOUD_PROJECT||'',/^demo-/);
+ const {createTransport}=require('../preview-widget/stage1-rest-transport.js'),{OfflineStore,memoryAdapter}=require('../preview-widget/stage1-store.js'),{createCoordinator}=require('../preview-widget/stage1-sync-controller.js');
+ const [host,port]=HOST.split(':'),[authHost,authPort]=AUTH.split(':'),options={pageHostname:'localhost',host,port:+port,authHost,authPort:+authPort,projectId:process.env.GCLOUD_PROJECT},first=await createTransport(options),second=await createTransport(options),store=new OfflineStore(memoryAdapter());await store.init();await store.edit('private-fixture',{note:'Synthetic owner-only record'});
+ assert.equal((await createCoordinator(store,first).sync()).status,'synced');const before=store.snapshot(),result=await createCoordinator(store,second).sync();assert.equal(result.status,'offline');assert.match(result.error,/account changed/);assert.deepEqual(store.snapshot(),before);assert.deepEqual((await second.pullVersioned()).records,{});
 });

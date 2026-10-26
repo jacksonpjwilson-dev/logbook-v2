@@ -170,3 +170,26 @@ test('remote history is deduplicated and deterministically ordered across device
  const a=new OfflineStore(memoryAdapter()),b=new OfflineStore(memoryAdapter());await a.init();await b.init();await a.ingest({},events);await b.ingest({},events.slice().reverse());await a.ingest({},events);
  assert.deepEqual(a.snapshot().history,b.snapshot().history);assert.equal(a.snapshot().history.length,2);
 });
+test('merge restoration preserves unrelated current records and targeted Undo preserves later records',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('x',1);const backup=safety.backup(store.snapshot().records);await store.edit('x',2);await store.edit('unrelated',3);
+ assert.equal(store.previewRestore(backup,{mode:'merge'}).changes.some(change=>change.id==='unrelated'),false);
+ await store.restore(backup,{confirmed:true,mode:'merge'});assert.equal(store.snapshot().records.unrelated.value,3);await store.edit('later',4);await store.undoRestore(0,{confirmed:true});assert.equal(store.snapshot().records.x.value,2);assert.equal(store.snapshot().records.unrelated.value,3);assert.equal(store.snapshot().records.later.value,4);
+});
+test('repeating a completed restore does not create a new version or hide the meaningful Undo',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('x',1);const backup=safety.backup(store.snapshot().records);await store.edit('x',2);await store.restore(backup,{confirmed:true,mode:'merge'});const state=store.snapshot();
+ assert.equal((await store.restore(backup,{confirmed:true,mode:'merge'})).unchanged,true);assert.deepEqual(store.snapshot(),state);await store.undoRestore(0,{confirmed:true});assert.equal(store.snapshot().records.x.value,2);
+});
+test('conflict choice creates a new version and preserves the rejected remote state for recovery',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.ingest({x:safety.record('x','original',1)});await store.edit('x','local');await store.ingest({x:safety.record('x','remote',8)});await store.resolve({x:'base'});
+ assert.equal(store.snapshot().records.x.value,'original');assert.equal(store.snapshot().records.x.version,9);assert.ok(store.recoverableHistory().some(entry=>entry.previous?.value==='local'));assert.ok(store.recoverableHistory().some(entry=>entry.previous?.value==='remote'));
+});
+test('choosing absence for an inserted-record conflict publishes a durable tombstone',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('new','local');await store.ingest({new:safety.record('new','remote',1)});await store.resolve({new:'base'});assert.equal(store.snapshot().records.new.deleted,true);assert.equal(store.snapshot().records.new.version,2);
+});
+test('a physical remote deletion retains a recovery version and publishes a tombstone',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.ingest({x:safety.record('x',{note:'preserve'})});await store.ingest({});assert.equal(store.snapshot().records.x.deleted,true);assert.ok(store.recoverableHistory().some(entry=>entry.previous?.value?.note==='preserve'));assert.equal(store.snapshot().pending[0].op,'remote-delete-marker');
+});
+test('cloud account binding survives reload and rejects silent account replacement',async()=>{
+ const adapter=memoryAdapter(),store=new OfflineStore(adapter);await store.init();await store.bindAccount('synthetic-owner',{newSession:true});const reopened=new OfflineStore(adapter);await reopened.init();await assert.rejects(reopened.bindAccount('synthetic-other'),/account changed/);assert.equal(reopened.snapshot().accountId,'synthetic-owner');
+ const legacy=new OfflineStore(memoryAdapter());await legacy.init();await legacy.ingest({x:safety.record('x','existing')});await assert.rejects(legacy.bindAccount('synthetic-new',{newSession:true}),/new cloud account/);assert.equal(legacy.snapshot().records.x.value,'existing');
+});

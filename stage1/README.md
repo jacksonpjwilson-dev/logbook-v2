@@ -12,7 +12,7 @@ firebase emulators:exec --project demo-logbook-stage1 --config stage1/firebase.j
 ```
 
 The Firestore emulator test checks revision-precondition failure on stale writes using HTTP REST.
-The in-memory and disk tests check the app's three-way merge, persisted synthetic queue, version history, and rollback primitives. The emulator transport is experimental and not yet attached to an application sign-in flow. Emulator rules allow synthetic data for local testing **only**; do not deploy them.
+The in-memory and disk tests check the app's three-way merge, persisted synthetic queue, version history, and rollback primitives. The isolated development UI connects to local demo authentication; production sign-in is outside this build. Emulator rules allow synthetic data for local testing **only**; do not deploy them.
 
 ## Local browser persistence smoke test
 
@@ -26,7 +26,7 @@ Open `http://127.0.0.1:8765/stage1/harness.html` and run the IndexedDB persisten
 
 ## Acceptance limits
 
-These are **experimental modules**, not yet wired into the existing `preview-widget/index.html`. Do not migrate real browser data using this build. No production service worker, Firestore project, or live deployment was modified. The emulators:exec CI result and iPhone PWA behavior must be validated before Stage 1 signoff.
+These are **experimental modules**, not yet wired into the existing `preview-widget/index.html`. Do not migrate real browser data using this build. No production service worker, Firestore project, or live deployment was modified. Reviewed emulator CI is recorded in IMPLEMENTATION_STATUS.md; physical iPhone PWA behavior still needs validation.
 
 ## Hardening milestone (2026-10-26)
 
@@ -51,14 +51,14 @@ firebase emulators:exec --project demo-logbook-stage1 --config stage1/firebase.j
 
 The emulator REST test uses a JSON `documents:commit` write precondition. The earlier query-string PATCH test failed against the actual emulator and was replaced; the passing result covers the exercised commit API.
 
-`stage1-migration.js` accepts only explicitly supplied fixtures; it does not discover/read user browser storage. It writes a separate full-source backup and verifies SHA-256 plus exact readback before migration. Duplicate identities remain blocked for review. Local rollback histories are durable, and recoverable versions now synchronize atomically with records. Full migration mapping/integration and broader interruption/retention stress coverage still need acceptance work. See `IMPLEMENTATION_STATUS.md` before proceeding to Training or any cutover.
+`stage1-migration.js` accepts only explicitly supplied fixtures; it does not discover/read user browser storage. It writes a separate full-source backup and verifies SHA-256 plus exact readback before migration. Duplicate identities remain blocked for review. Local rollback histories are durable, and recoverable versions now synchronize atomically with records. Full migration mapping/integration and broader interruption/retention stress coverage still need acceptance work. See `IMPLEMENTATION_STATUS.md` for current Training progress and remaining cutover gates.
 
 
 ## Demo-only authenticated REST transport
 
-`preview-widget/stage1-rest-transport.js` creates anonymous users only against the explicitly selected loopback Auth emulator. It uses no Firebase SDK or production config, rejects non-demo projects and non-loopback endpoints before any request, and rejects redirects. Devices can explicitly share the returned synthetic session in emulator tests. Do not log the session token. Tokens remain in memory and production authentication is unsupported.
+`preview-widget/stage1-rest-transport.js` creates anonymous users only against the explicitly selected loopback Auth emulator. It uses no Firebase SDK or production config, rejects non-demo projects and non-loopback endpoints before any request, and rejects redirects. Devices can explicitly share the returned synthetic session in emulator tests. Do not log the session token. The isolated UI persists its synthetic demo session in its own namespace; production authentication is unsupported.
 
-Records and recovery history share one JSON Firestore commit with an update-time/existence precondition. The integration test runs two independent local stores against this real emulator transport, resolves a same-record conflict, deletes a record, and checks that a fresh third store recovers its prior versions.
+Records and recovery history use immutable verified chunks with an update-time/existence precondition on the manifest publication. The integration test runs two independent local stores against this real emulator transport, resolves a same-record conflict, deletes a record, and checks that a fresh third store recovers its prior versions.
 
 ## Isolated integration with the existing application
 
@@ -79,3 +79,7 @@ The REST transport stages immutable, SHA-256-verified record/history chunks and 
 Actual emulator tests cover >1 MiB records plus history, interrupted staging/reuse, loss of the root acknowledgment after server commit, unchanged revision on acknowledgment retry, anonymous/other-account chunk denial, and tampering rejection. Root CAS is the publication boundary. Canonical ordering prevents redundant writes/history duplication. Initial mirrored records do not manufacture arrival-history entries.
 
 Unused chunks are deliberately not deleted by this client. Production cleanup/quota/load operation and authentication lifecycle remain release work. Recovery availability uses the tested 30-day filter; ordinary records persist indefinitely. Browser/memory adapters support CAS; plain read/write fallback adapters are single-instance test fixtures, not a concurrent production backend.
+
+## Final restore and account safeguards
+
+The workbench defaults to merge restore and offers explicit replacement; the legacy integration always merges. Preview shows restored/resurrected records, preserves omitted records and legacy indexes, and checks the preview is current before applying. Undo preserves unrelated later edits. Conflict choices retain both rejected preimages and advance the record version. Linked demo datasets reject account switching; simultaneous first connections use one atomically saved synthetic session.

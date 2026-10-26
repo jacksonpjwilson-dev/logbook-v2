@@ -9,8 +9,10 @@ function createCoordinator(store,transport){
   if(running)return {status:'busy'};
   running=true;
   try{
+   if(transport.session?.uid&&store.snapshot().accountId&&store.snapshot().accountId!==transport.session.uid)throw Error('Cloud account changed; local records remain in their existing workspace');
    for(let attempt=0;attempt<maxRetries;attempt++){
     const remote=await transport.pullVersioned();
+    if(transport.session?.uid&&store.bindAccount)await store.bindAccount(transport.session.uid,{newSession:transport.createdSession===true});
     await store.ingest(remote.records||{},remote.history||[]);
     let state=store.snapshot();
     const conflicts=state.conflicts;

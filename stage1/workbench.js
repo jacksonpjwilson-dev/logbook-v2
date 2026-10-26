@@ -41,11 +41,12 @@ $('conflict').onclick=run(async()=>{
 $('backup').onclick=run(async()=>{await backup.write(s.backup(store.snapshot().records,{synthetic:true}));draw('Synthetic backup saved')});
 $('preview').onclick=run(async()=>{
  const incoming=await backup.read();if(!incoming)throw Error('Save a synthetic backup first');
- preview={incoming,expected:store.snapshot().records};$('restore-preview').textContent=JSON.stringify(store.previewRestore(incoming),null,2);$('restore').hidden=false;
+ preview={incoming,expected:store.snapshot().records,mode:$('restore-mode').value};const plan=store.previewRestore(incoming,{mode:preview.mode}),resurrects=plan.changes.filter(change=>change.resurrects).length;$('restore-preview').textContent=(resurrects?resurrects+' deleted records would be restored. Review before confirming.\n':'')+JSON.stringify(plan,null,2);$('restore').hidden=false;
 });
+$('restore-mode').onchange=()=>{preview=null;$('restore').hidden=true;$('restore-preview').textContent='Preview the selected mode before restoring'};
 $('restore').onclick=run(async()=>{
  if(!preview||!s.equal(store.snapshot().records,preview.expected))throw Error('Preview is stale; preview again');
- await store.restore(preview.incoming,{confirmed:true,expectedRecords:preview.expected});preview=null;$('restore').hidden=true;draw('Restore saved; Undo available');
+ await store.restore(preview.incoming,{confirmed:true,expectedRecords:preview.expected,mode:preview.mode});preview=null;$('restore').hidden=true;draw('Restore saved; Undo available');
 });
 $('undo').onclick=run(async()=>{const entries=store.snapshot().rollbackBackups;let i=entries.length-1;while(i>=0&&entries[i].undone)i--;await store.undoRestore(i,{confirmed:true});draw('Restore undone')});
 window.stage1Workbench={store,coordinator};draw('Isolated workbench ready');

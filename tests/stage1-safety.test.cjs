@@ -77,3 +77,6 @@ test('migration excludes authentication and sync metadata sidecars',()=>{
 test('canonical equality retains literal prototype-named unknown fields',()=>{
  const value=JSON.parse('{"__proto__":{"unknown":true},"ordinary":1}');assert.equal(s.equal(value,{ordinary:1}),false);assert.equal(s.equal(s.clone(value),value),true);assert.equal(Object.hasOwn(s.clone(value),'__proto__'),true);
 });
+test('identical record content with different version counters merges without a spurious choice',()=>{
+ const base={x:s.record('x',{note:'old'},1)},local={x:s.record('x',{note:'same'},4)},remote={x:s.record('x',{note:'same'},3)},result=s.threeWay(base,local,remote);assert.equal(result.blocked,false);assert.equal(result.merged.x.version,4);
+});

@@ -44,6 +44,14 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage1-legacy-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage2-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage2-editing-browser.cjs
+      - name: Save synthetic browser previews
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: synthetic-logbook-previews
+          path: stage1/artifacts/*.png
+          if-no-files-found: warn
+          retention-days: 14
   firestore-emulator:
     runs-on: ubuntu-latest
     steps:

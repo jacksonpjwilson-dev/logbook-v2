@@ -32,6 +32,9 @@
       else if(lc&&!rc){if(l!==undefined)merged[id]=clone(l)}
       else if(!lc&&rc){if(r!==undefined)merged[id]=clone(r)}
       else if(equal(l,r)){if(l!==undefined)merged[id]=clone(l)}
+      else if(l&&r&&l.id===id&&r.id===id&&Number.isSafeInteger(l.version)&&Number.isSafeInteger(r.version)&&equal((({version,...content})=>content)(l),(({version,...content})=>content)(r))){
+        merged[id]=clone(l.version>=r.version?l:r);
+      }
       else {
         conflicts.push({id,base:clone(b),local:clone(l),remote:clone(r),kind:(l===undefined||r===undefined||l&&l.deleted||r&&r.deleted)?'delete-edit':'edit-edit'});
         // Do not choose a winner or silently overwrite either side.
@@ -64,18 +67,26 @@
     const s={schema:SCHEMA,createdAt:new Date().toISOString(),records:clone(records),metadata:clone(metadata)};
     validateSnapshot(s);return s;
   }
-  function restorePlan(current,snapshot){
-    validateSnapshot(snapshot);
+  function restorePlan(current,snapshot,{mode='replace'}={}){
+    validateSnapshot(snapshot);assert(['merge','replace'].includes(mode),'Invalid restoration mode');
+    const incoming=mode==='merge'?{...clone(current),...clone(snapshot.records)}:clone(snapshot.records);
+    if(mode==='merge')for(const [id,before] of Object.entries(current)){
+      const after=incoming[id],left=before?.value,right=after?.value;
+      if(!id.startsWith('legacy.root.')||before.deleted||after?.deleted||typeof left?.field!=='string'||left.field!==right?.field)continue;
+      if(left?.kind==='array'&&right?.kind==='array'&&Array.isArray(left.ids)&&Array.isArray(right.ids))right.ids=[...right.ids,...left.ids.filter(key=>!right.ids.includes(key))];
+      if(left?.kind==='map'&&right?.kind==='map'&&Array.isArray(left.ids)&&Array.isArray(right.ids)&&Array.isArray(left.keys)&&Array.isArray(right.keys))for(let i=0;i<left.keys.length;i++)if(!right.keys.includes(left.keys[i])){right.keys.push(left.keys[i]);right.ids.push(left.ids[i])}
+    }
+    for(const [id,after] of Object.entries(incoming)){const before=current[id];if(before&&before.deleted===after.deleted&&equal(before.value,after.value))incoming[id]=clone(before)}
     const categories={},changes=[];
-    for(const id of new Set([...Object.keys(current||{}),...Object.keys(snapshot.records)])){
-      const before=current[id],after=snapshot.records[id];if(equal(before,after))continue;
+    for(const id of new Set([...Object.keys(current||{}),...Object.keys(incoming)])){
+      const before=current[id],after=incoming[id];if(equal(before,after))continue;
       const kind=!after||after.deleted?'delete':!before||before.deleted?'add':'update';
       const category=id.split(':')[0];categories[category]??={add:0,update:0,delete:0};categories[category][kind]++;
       changes.push({id,kind,resurrects:!!before?.deleted&&!!after&&!after.deleted});
     }
-    return {preview:{existing:Object.keys(current||{}).length,incoming:Object.keys(snapshot.records).length,categories,changes},
+    return {preview:{mode,existing:Object.keys(current||{}).length,incoming:Object.keys(snapshot.records).length,resulting:Object.keys(incoming).length,categories,changes},
       before:backup(current,{reason:'pre-restore rollback'}),
-      incoming:clone(snapshot.records)};
+      incoming};
   }
   function commitRestore(plan,explicit){
     assert(explicit===true,'Explicit restoration confirmation required');

@@ -8,7 +8,9 @@ test('Training sync preserves snapshots, rotation events, concurrent corrections
  await apply(a,s=>T.start(s,'t1',{now:1000,localDate:'2026-10-01'}));await sync(sa);await sync(sb);
  const snapshot=R.materialize(a.snapshot().records).active.templateSnapshot;await apply(b,s=>T.putExercise(s,{...s.catalog.e1,name:'Renamed exercise'}));await sync(sb);await sync(sa);assert.deepEqual(R.materialize(a.snapshot().records).active.templateSnapshot,snapshot);
  await apply(a,s=>{const e=s.active.exercises[0];return T.toggleComplete(s,e.id,e.sets[0].id,2000).state});let sessionId;
- await apply(a,s=>{const result=T.finish(s,{now:3000,confirmedIncomplete:true});sessionId=result.sessionId;return result.state});await sync(sa);await sync(sb);
+ await apply(a,s=>{const result=T.finish(s,{now:3000,confirmedIncomplete:true});sessionId=result.sessionId;return result.state});await sync(sa);
+ await apply(b,s=>{s.active.notes='Offline continuation after peer finish';return s});assert.equal((await sb.sync()).status,'conflict');await b.resolve({'training.active':'local'});await sync(sb);
+ await apply(b,s=>T.finish(s,{now:4000,confirmedIncomplete:true}).state);await sync(sb);await sync(sa);
  const baseline=R.materialize(b.snapshot().records);assert.equal(baseline.workouts[sessionId].exercises[0].sets.length,2);assert.equal(baseline.rotation.events.length,1);
  await apply(a,s=>T.correct(s,sessionId,{notes:'Device A correction'},{confirmed:true}).state);await apply(b,s=>T.correct(s,sessionId,{notes:'Device B correction'},{confirmed:true}).state);await sync(sa);
  assert.equal((await sb.sync()).status,'conflict');const conflict=b.snapshot().conflicts.find(c=>c.id==='training.workout:'+sessionId);assert.equal(conflict.local.value.notes,'Device B correction');assert.equal(conflict.remote.value.notes,'Device A correction');

@@ -12,7 +12,7 @@ if(!Object.keys(store.snapshot().records).some(id=>id.startsWith('legacy.root.')
  // Independent verified full-source backup before the first projection.
  const envelope={synthetic:true,source:fixture,sha256:await LogbookMigration.digest(fixture)};const prior=await seedBackup.read();
  if(prior&&!s.equal(prior,envelope))throw Error('An earlier seed backup exists; choose a new synthetic namespace');
- if(!prior&&!await seedBackup.compareAndSwap(null,envelope))throw Error('Concurrent seed backup; reopen');
+ if(!prior&&!await seedBackup.compareAndSwap(null,envelope)&&!s.equal(await seedBackup.read(),envelope))throw Error('Concurrent seed backup differs; use a new synthetic namespace');
  if(!s.equal(await seedBackup.read(),envelope))throw Error('Synthetic seed backup readback failed');
  await store.applyRecords(store.snapshot().records,codec.project(fixture).records);
 }
@@ -52,13 +52,13 @@ function drawConflicts(state){
 document.getElementById('development-backup').onclick=run(async()=>{await tail;const snapshot=s.backup(store.snapshot().records,{synthetic:true});await backup.write({synthetic:true,snapshot});if(!s.equal((await backup.read()).snapshot,snapshot))throw Error('Backup verification failed');refresh('Synthetic backup verified')});
 document.getElementById('development-restore').onclick=run(async()=>{
  await tail;const saved=await backup.read();if(!saved?.snapshot)throw Error('Create a synthetic backup first');const expected=store.snapshot().records;
- review.replaceChildren();const text=document.createElement('pre');text.textContent=JSON.stringify(store.previewRestore(saved.snapshot),null,2);const button=document.createElement('button');button.textContent='Confirm synthetic restore';button.onclick=run(async()=>{if(!s.equal(store.snapshot().records,expected))throw Error('Preview changed; review again');await store.restore(saved.snapshot,{confirmed:true,expectedRecords:expected});redrawLegacy();refresh('Synthetic restore complete')});review.append(text,button);
+ review.replaceChildren();const plan=s.restorePlan(store.snapshot().records,saved.snapshot,{mode:'merge'});codec.materialize(plan.incoming);const text=document.createElement('pre');text.textContent=JSON.stringify(plan.preview,null,2);const button=document.createElement('button');button.textContent='Confirm synthetic restore';button.onclick=run(async()=>{if(!s.equal(store.snapshot().records,expected))throw Error('Preview changed; review again');await store.restore(saved.snapshot,{confirmed:true,expectedRecords:expected,mode:'merge'});redrawLegacy();refresh('Synthetic restore complete')});review.append(text,button);
 });
 document.getElementById('development-undo').onclick=run(async()=>{const entries=store.snapshot().rollbackBackups;let i=entries.length-1;while(i>=0&&entries[i].undone)i--;await store.undoRestore(i,{confirmed:true});redrawLegacy();refresh('Restore undone')});
 async function connectEmulators(){
  const sessions=adapter('demo-auth-session'),saved=await sessions.read();
- const transport=await LogbookStage1Rest.createTransport({pageHostname:location.hostname,session:saved||undefined});
- if(!saved)await sessions.write(transport.session);
+ let transport=await LogbookStage1Rest.createTransport({pageHostname:location.hostname,session:saved||undefined});
+ if(!saved&&!await sessions.compareAndSwap(null,transport.session))transport=await LogbookStage1Rest.createTransport({pageHostname:location.hostname,session:await sessions.read()});
  coordinator=LogbookStage1Sync.createCoordinator(store,transport);return syncCloud();
 }
 function syncCloud(){

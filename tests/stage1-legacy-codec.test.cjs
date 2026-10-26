@@ -35,3 +35,8 @@ test('every field in the actual legacy seed roundtrips through the development b
  const original=s.clone(context.window.DB.init()),plan=codec.project(original);
  assert.deepEqual(codec.materialize(plan.records),original);assert.equal(original.lib.length>100,true);
 });
+test('merge restore keeps new legacy array/map entities visible through their indexes',async()=>{
+ const original={workouts:[{id:'a',date:'2026-10-01'}],food:{'2026-10-01':[{fid:'f1'}]}},before=codec.project(original).records;
+ const current={workouts:[...original.workouts,{id:'b',date:'2026-10-02'}],food:{...original.food,'2026-10-02':[{fid:'f2'}]}},records=codec.project(current,before).records;
+ const plan=s.restorePlan(records,s.backup(before),{mode:'merge'}),result=s.commitRestore(plan,true);assert.deepEqual(codec.materialize(result.records),current);
+});
