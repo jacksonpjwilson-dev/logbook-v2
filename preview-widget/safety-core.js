@@ -113,6 +113,21 @@
     for(const k of ['profile','active','split','splitMarks','supplements','mealSlots','pantry']){
       if(own(legacy,k))add('field',k,legacy[k]);
     }
+    // Preserve previously unrecognized legacy fields rather than dropping them
+    // during a forward migration. Keep session/auth and sync bookkeeping out of
+    // migrated health records; those must be re-established on sign-in.
+    const handled=new Set(['version','demo','lib','workouts','foods','sleep','weight','templates',
+      'savedMeals','food','schedule','profile','active','split','splitMarks','supplements',
+      'mealSlots','pantry']);
+    for(const [key,value] of Object.entries(legacy)){
+      if(!handled.has(key))add('field',key,value);
+    }
+    // These approved non-main-DB keys contain user settings/logs. The caller
+    // must explicitly supply test fixtures (never read browser storage here).
+    const extras=options.auxiliary||{};
+    for(const key of ['lb2w:water','lb2w:pages6','lb2w:theme']){
+      if(own(extras,key))add('aux',key,extras[key]);
+    }
     const visit=(ex,context)=>{
       if(!ex||typeof ex.name!=='string')return;
       const candidates=names.get(ex.name.trim().toLowerCase())||[];
