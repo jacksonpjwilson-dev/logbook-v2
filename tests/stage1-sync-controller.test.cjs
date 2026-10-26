@@ -38,3 +38,31 @@ test('network failure leaves pending local edits durable',async()=>{
  const out=await createCoordinator(store,{mode:'emulator-only',async pullVersioned(){throw Error('offline')}}).sync();
  assert.equal(out.status,'offline');assert.equal(store.snapshot().pending.length,1);
 });
+
+test('edit during successful upload remains pending without false next-sync conflict',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('x',1);
+ const cloud=transport(),cas=cloud.compareAndSwap;
+ cloud.compareAndSwap=async(...args)=>{await store.edit('x',2);return cas(...args)};
+ const coordinator=createCoordinator(store,cloud);
+ assert.equal((await coordinator.sync()).status,'pending');
+ assert.equal(store.snapshot().baseline.x.value,1);
+ cloud.compareAndSwap=cas;
+ assert.equal((await coordinator.sync()).status,'synced');
+ assert.equal(cloud.state().records.x.value,2);assert.equal(store.snapshot().conflicts.length,0);
+});
+test('unrelated edits sync while another record awaits conflict review',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('x',1);await store.edit('y',4);
+ const cloud=transport();cloud.setInject(x=>{x.revision++;x.records.x=record('x',2)});
+ assert.equal((await createCoordinator(store,cloud).sync()).status,'conflict');
+ assert.equal(cloud.state().records.y.value,4);assert.equal(cloud.state().records.x.value,2);
+ await store.resolve({x:'local'});
+ assert.equal((await createCoordinator(store,cloud).sync()).status,'synced');
+});
+test('tombstone survives stale offline rejoin, edit-versus-delete requires choice',async()=>{
+ const cloud=transport(),a=new OfflineStore(memoryAdapter()),b=new OfflineStore(memoryAdapter());await a.init();await b.init();
+ const sa=createCoordinator(a,cloud),sb=createCoordinator(b,cloud);
+ await a.edit('x',1);await sa.sync();await sb.sync();
+ await a.edit('x',null,{deleted:true});await sa.sync();await b.edit('x',2);
+ assert.equal((await sb.sync()).status,'conflict');assert.equal(cloud.state().records.x.deleted,true);
+ await b.resolve({x:'remote'});assert.equal((await sb.sync()).status,'synced');assert.equal(b.snapshot().records.x.deleted,true);
+});

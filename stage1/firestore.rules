@@ -1,8 +1,16 @@
 rules_version = '2';
 service cloud.firestore {
  match /databases/{database}/documents {
-  match /syntheticLogbookV2/{id} {
-   allow read, write: if true; // EMULATOR ONLY: never deploy these rules!
+  // Isolated emulator rules only. Never deploy this file.
+  match /syntheticLogbookV2/{uid} {
+   allow read: if request.auth != null && request.auth.uid == uid;
+   allow create, update: if request.auth != null && request.auth.uid == uid
+     && request.resource.data.keys().hasOnly(['revision', 'records', 'synthetic'])
+     && request.resource.data.synthetic == true
+     && request.resource.data.records is map
+     && request.resource.data.revision is int
+     && ((!exists(/databases/$(database)/documents/syntheticLogbookV2/$(uid)) && request.resource.data.revision == 1)
+       || (exists(/databases/$(database)/documents/syntheticLogbookV2/$(uid)) && request.resource.data.revision == resource.data.revision + 1));
   }
   match /{document=**} {allow read, write: if false;}
  }

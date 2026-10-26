@@ -16,7 +16,7 @@
   };
   const equal=(a,b)=>JSON.stringify(sorted(a))===JSON.stringify(sorted(b));
   const assert=(ok,msg)=>{if(!ok)throw new Error(msg)};
-  const validId=x=>typeof x==='string'&&/^[a-zA-Z0-9_:@.-]{1,160}$/.test(x);
+  const validId=x=>!['__proto__','constructor','prototype'].includes(x)&&typeof x==='string'&&/^[a-zA-Z0-9_:@.-]{1,160}$/.test(x);
   const record=(id,value,version=1,deleted=false)=>{assert(validId(id),'Invalid record ID');assert(Number.isSafeInteger(version)&&version>0,'Invalid record version');return {id,version,deleted:!!deleted,value:deleted?null:clone(value)}};
   const has=(r,id)=>own(r,id);
   function threeWay(base,local,remote){
@@ -65,13 +65,20 @@
   }
   function restorePlan(current,snapshot){
     validateSnapshot(snapshot);
-    return {preview:{existing:Object.keys(current||{}).length,incoming:Object.keys(snapshot.records).length},
+    const categories={},changes=[];
+    for(const id of new Set([...Object.keys(current||{}),...Object.keys(snapshot.records)])){
+      const before=current[id],after=snapshot.records[id];if(equal(before,after))continue;
+      const kind=!after||after.deleted?'delete':!before||before.deleted?'add':'update';
+      const category=id.split(':')[0];categories[category]??={add:0,update:0,delete:0};categories[category][kind]++;
+      changes.push({id,kind,resurrects:!!before?.deleted&&!!after&&!after.deleted});
+    }
+    return {preview:{existing:Object.keys(current||{}).length,incoming:Object.keys(snapshot.records).length,categories,changes},
       before:backup(current,{reason:'pre-restore rollback'}),
       incoming:clone(snapshot.records)};
   }
   function commitRestore(plan,explicit){
     assert(explicit===true,'Explicit restoration confirmation required');
-    validateSnapshot(plan.before);
+    validateSnapshot(plan.before);validateSnapshot({schema:SCHEMA,records:plan.incoming});
     return {records:clone(plan.incoming),rollback:clone(plan.before)};
   }
   function historyAppend(log,id,previous,now,at){
@@ -125,7 +132,7 @@
     // These approved non-main-DB keys contain user settings/logs. The caller
     // must explicitly supply test fixtures (never read browser storage here).
     const extras=options.auxiliary||{};
-    for(const key of ['lb2w:water','lb2w:pages6','lb2w:theme']){
+    for(const key of ['lb2w:water','lb2w:pages6','lb2w:theme','lb2w:layout']){
       if(own(extras,key))add('aux',key,extras[key]);
     }
     const visit=(ex,context)=>{
@@ -133,9 +140,9 @@
       const candidates=names.get(ex.name.trim().toLowerCase())||[];
       if(candidates.length!==1)ambiguous.push({type:'exercise-identity',context,name:ex.name,candidates:clone(candidates)});
     };
-    (legacy.workouts||[]).forEach((w,i)=>(w.exercises||[]).forEach(e=>visit(e,'workouts/'+i)));
-    (legacy.templates||[]).forEach((t,i)=>(t.exercises||[]).forEach(e=>visit(typeof e==='string'?{name:e}:e,'templates/'+i)));
-    return {snapshot:backup(records,{legacyVersion:legacy.version??null,source:'legacy-preview',verified:false}),
+    (Array.isArray(legacy.workouts)?legacy.workouts:[]).forEach((w,i)=>(Array.isArray(w?.exercises)?w.exercises:[]).forEach(e=>visit(e,'workouts/'+i)));
+    (Array.isArray(legacy.templates)?legacy.templates:[]).forEach((t,i)=>(Array.isArray(t?.exercises)?t.exercises:[]).forEach(e=>visit(typeof e==='string'?{name:e}:e,'templates/'+i)));
+    return {snapshot:backup(records,{legacyOriginal:previous,auxiliaryOriginal:clone(Object.fromEntries(Object.entries(extras).filter(([k])=>['lb2w:water','lb2w:pages6','lb2w:theme','lb2w:layout'].includes(k)))),legacyVersion:legacy.version??null,source:'legacy-preview',verified:false}),
       original:previous,ambiguous,ready:ambiguous.length===0};
   }
   function migrationCommit(plan,reviewed,backupVerified){

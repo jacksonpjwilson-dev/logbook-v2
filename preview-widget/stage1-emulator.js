@@ -6,12 +6,15 @@ function assertLocal(page,host,port){
  if(!LOOPBACK.has(page)||!LOOPBACK.has(host))throw Error('Stage 1 refuses non-loopback page or endpoint');
  if(!Number.isSafeInteger(port)||port<1024||port>65535)throw Error('Invalid local port');
 }
-function createTransport({pageHostname,host='127.0.0.1',port=8080,db,collection='syntheticLogbookV2'}={}){
+function createTransport({pageHostname,host='127.0.0.1',port=8080,db,projectId='demo-logbook-stage1',uid='synthetic-stage1',collection='syntheticLogbookV2'}={}){
  assertLocal(pageHostname,host,port);
+ if(!/^demo-[a-z0-9-]+$/.test(projectId))throw Error('Demo project required');
+ if(db?.app?.options?.projectId&&db.app.options.projectId!==projectId)throw Error('SDK project does not match isolated demo');
+ if(typeof uid!=='string'||!uid||uid.includes('/'))throw Error('Explicit isolated user ID required');
  if(!/^synthetic[A-Za-z0-9_-]*$/.test(collection))throw Error('Synthetic collection required');
  if(!db||typeof db.useEmulator!=='function'||typeof db.collection!=='function')throw Error('Firestore emulator SDK required');
  db.useEmulator(host,port);
- const ref=()=>db.collection(collection).doc('synthetic-stage1');
+ const ref=()=>db.collection(collection).doc(uid);
  return {mode:'emulator-only',
  async pullVersioned(){const s=await ref().get();return s.exists?s.data():{revision:0,records:{}}},
  async compareAndSwap(expected,desired){

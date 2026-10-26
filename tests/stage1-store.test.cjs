@@ -55,8 +55,8 @@ test('restore records removal, persists rollback across reload',async()=>{
  const reopened=new OfflineStore(adapter,()=>10000000001);await reopened.init();
  assert.equal(reopened.snapshot().rollbackBackups.length,1);
  assert.equal(reopened.rollbackHistory()[0].snapshot.records['remove-me'].value.reps,8);
- assert.equal(reopened.snapshot().records['remove-me'],undefined);
- const deletion=reopened.recoverableHistory().find(e=>e.id==='remove-me'&&e.next===undefined);
+ assert.equal(reopened.snapshot().records['remove-me'].deleted,true);
+ const deletion=reopened.recoverableHistory().find(e=>e.id==='remove-me'&&e.next?.deleted===true);
  assert.ok(deletion);
 });
 test('unresolved conflict prevents restore',async()=>{
@@ -106,4 +106,50 @@ test('a rejected write does not poison subsequent updates',async()=>{
  await one.edit('b',2);
  assert.equal(one.snapshot().records.a,undefined);
  assert.equal(one.snapshot().records.b.value,2);
+});
+
+test('two store instances retain independent concurrent edits',async()=>{
+ const adapter=memoryAdapter(),a=new OfflineStore(adapter),b=new OfflineStore(adapter);
+ await Promise.all([a.init(),b.init()]);
+ await Promise.all([a.edit('a',1),b.edit('b',2)]);
+ const reopened=new OfflineStore(adapter);await reopened.init();
+ assert.equal(reopened.snapshot().records.a.value,1);assert.equal(reopened.snapshot().records.b.value,2);
+ assert.equal(reopened.snapshot().pending.length,2);
+});
+test('stale tab same-record edit preserves both intentions for review',async()=>{
+ const adapter=memoryAdapter(),a=new OfflineStore(adapter),b=new OfflineStore(adapter);
+ await a.init();await a.edit('x',0);await b.init();
+ await a.edit('x',1);await b.edit('x',2);
+ const c=b.snapshot().conflicts[0];assert.equal(c.local.value,2);assert.equal(c.remote.value,1);assert.equal(c.base.value,0);
+ await b.ingest({});assert.equal(b.snapshot().conflicts.length,1);
+});
+test('retention includes exactly 30 days and retains ordinary history records',async()=>{
+ let time=10000000000;const store=new OfflineStore(memoryAdapter(),()=>time);await store.init();
+ await store.edit('x',1);time+=safety.RETENTION_MS;
+ assert.equal(store.recoverableHistory().length,1);time++;
+ assert.equal(store.recoverableHistory().length,0);assert.equal(store.snapshot().records.x.value,1);
+});
+
+test('restore Undo preserves unrelated records created after restore',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('x',1);
+ await store.restore(safety.backup({x:safety.record('x',2)}),{confirmed:true});
+ await store.edit('unrelated',7);await store.undoRestore(0,{confirmed:true});
+ assert.equal(store.snapshot().records.x.value,1);assert.equal(store.snapshot().records.unrelated.value,7);
+});
+test('restore Undo refuses to overwrite later edits of affected records',async()=>{
+ const store=new OfflineStore(memoryAdapter());await store.init();await store.edit('x',1);
+ await store.restore(safety.backup({x:safety.record('x',2)}),{confirmed:true});await store.edit('x',3);
+ await assert.rejects(store.undoRestore(0,{confirmed:true}),/changed after/);assert.equal(store.snapshot().records.x.value,3);
+});
+test('stale-tab restore cannot overwrite another tab edit',async()=>{
+ const adapter=memoryAdapter(),a=new OfflineStore(adapter),b=new OfflineStore(adapter);await a.init();await b.init();
+ await a.edit('x',1);
+ await assert.rejects(b.restore(safety.backup({}),{confirmed:true}),/stale/);
+ assert.equal((await adapter.read()).records.x.value,1);
+});
+test('stale conflict choice cannot select a newer unreviewed version',async()=>{
+ const adapter=memoryAdapter(),a=new OfflineStore(adapter);await a.init();await a.ingest({x:safety.record('x',1)});await a.edit('x',2);await a.ingest({x:safety.record('x',3)});
+ const b=new OfflineStore(adapter);await b.init();await b.ingest({x:safety.record('x',4)});
+ await assert.rejects(a.resolve({x:'remote'}),/Conflict changed/);
+ assert.equal((await adapter.read()).conflicts[0].remote.value,4);
 });

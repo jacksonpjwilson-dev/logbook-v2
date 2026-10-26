@@ -4,48 +4,42 @@ on:
     branches: [logbook-v2-upgrade]
     paths:
       - 'preview-widget/safety-core.js'
-      - 'preview-widget/stage1-store.js'
-      - 'preview-widget/stage1-indexeddb.js'
-      - 'preview-widget/stage1-emulator.js'
-      - 'preview-widget/stage1-sync-controller.js'
+      - 'preview-widget/stage1-*.js'
       - 'stage1/**'
-      - 'tests/stage1-safety.test.cjs'
-      - 'tests/stage1-store.test.cjs'
-      - 'tests/stage1-isolation.test.cjs'
-      - 'tests/stage1-sync-controller.test.cjs'
-      - 'tests/stage1-firestore-emulator.test.cjs'
-      - 'tests/support/stage1-node-adapter.cjs'
+      - 'tests/stage1-*'
+      - 'tests/support/**'
       - '.github/workflows/stage1-synthetic.yml'
   workflow_dispatch:
+permissions:
+  contents: read
 jobs:
   synthetic:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Static safety check
+      - name: Run individual synthetic migration and conflict tests
+        run: node --test --experimental-test-isolation=none tests/stage1-*.test.cjs
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --prefix "$RUNNER_TEMP/logbook-tools" playwright-core@1.64.1
+      - name: Test actual Chromium persistence and concurrent tabs
+        env:
+          CHROMIUM_PATH: /usr/bin/google-chrome
         run: |
-          node --check preview-widget/safety-core.js
-          node --check preview-widget/stage1-store.js
-          node --check preview-widget/stage1-indexeddb.js
-          node --check preview-widget/stage1-emulator.js
-          node --check preview-widget/stage1-sync-controller.js
-          node --check tests/stage1-safety.test.cjs
-          node --check tests/stage1-store.test.cjs
-          node --check tests/stage1-isolation.test.cjs
-          node --check tests/stage1-sync-controller.test.cjs
-          node --check tests/stage1-firestore-emulator.test.cjs
-      - name: Run synthetic migration and conflict tests
-        run: node --test tests/stage1-*.test.cjs
-
+          python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/logbook-http.log" 2>&1 &
+          for i in 1 2 3 4 5; do curl --fail --silent http://127.0.0.1:8765/stage1/harness.html > /dev/null && break; sleep 1; done
+          NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage1-browser.cjs
   firestore-emulator:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -55,8 +49,5 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - name: Isolated demo project Firestore emulator verification
-        env:
-          GCLOUD_PROJECT: demo-logbook-stage1
-        run: |
-          npx --yes firebase-tools@14 emulators:exec --project demo-logbook-stage1 --config stage1/firebase.json --only firestore,auth "node --test tests/stage1-firestore-emulator.test.cjs"
+      - name: Verify Auth isolation and Firestore compare-and-swap
+        run: npx --yes firebase-tools@14.27.0 emulators:exec --project demo-logbook-stage1 --config stage1/firebase.json --only firestore,auth "LOGBOOK_REQUIRE_EMULATORS=1 node --test --experimental-test-isolation=none tests/stage1-firestore-emulator.test.cjs"

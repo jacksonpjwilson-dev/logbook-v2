@@ -1,9 +1,9 @@
 /* Experimental Stage 1 atomic browser adapter: test namespace only, never loaded by existing app. */
 (function(root,factory){const api=factory();if(typeof module==='object'&&module.exports)module.exports=api;else root.LogbookIndexedDB=api;})(typeof globalThis!=='undefined'?globalThis:this,function(){
 'use strict';
-function createAdapter({indexedDB,dbName='logbook-v2-stage1-test',key='synthetic',allowProduction=false}={}){
+function createAdapter({indexedDB,dbName='logbook-v2-stage1-test',key='synthetic'}={}){
  if(!indexedDB||typeof indexedDB.open!=='function')throw Error('IndexedDB unavailable');
- if(!allowProduction&&(!dbName.startsWith('logbook-v2-stage1-')||!key.startsWith('synthetic')))throw Error('Stage 1 test-only database and synthetic key required');
+ if(!dbName.startsWith('logbook-v2-stage1-')||!key.startsWith('synthetic'))throw Error('Stage 1 test-only database and synthetic key required');
  let promise;
  function db(){if(!promise)promise=new Promise((resolve,reject)=>{
   const req=indexedDB.open(dbName,1);
@@ -19,7 +19,23 @@ function createAdapter({indexedDB,dbName='logbook-v2-stage1-test',key='synthetic
   transaction.onabort=()=>reject(transaction.error||Error('Transaction aborted'));
   try{const request=action(transaction.objectStore('snapshots'));request.onsuccess=()=>{result=request.result}}catch(e){try{transaction.abort()}catch(_){}reject(e)}
  })}
- return {read:()=>tx('readonly',s=>s.get(key)),write:async v=>{await tx('readwrite',s=>s.put(JSON.parse(JSON.stringify(v)),key))},async close(){if(promise)(await promise).close();promise=null}};
+ async function compareAndSwap(expected,next){
+  const database=await db();
+  return new Promise((resolve,reject)=>{
+   const transaction=database.transaction('snapshots','readwrite');
+   const store=transaction.objectStore('snapshots');let accepted=false;
+   transaction.oncomplete=()=>resolve(accepted);
+   transaction.onerror=()=>reject(transaction.error||Error('Transaction failed'));
+   transaction.onabort=()=>reject(transaction.error||Error('Transaction aborted'));
+   const request=store.get(key);
+   request.onsuccess=()=>{
+    // The read and conditional write share one IDB transaction across tabs.
+    if(JSON.stringify(request.result??null)!==JSON.stringify(expected??null))return;
+    store.put(JSON.parse(JSON.stringify(next)),key);accepted=true;
+   };
+  });
+ }
+ return {compareAndSwap,read:()=>tx('readonly',s=>s.get(key)),write:async v=>{await tx('readwrite',s=>s.put(JSON.parse(JSON.stringify(v)),key))},async close(){if(promise)(await promise).close();promise=null}};
 }
 return {createAdapter};
 });
