@@ -59,3 +59,18 @@ test('duplicate legacy IDs cannot replace data silently',()=>{
  assert.equal(p.snapshot.records['foods:f1'].value.legacy.name,'A');
  assert.equal(p.ambiguous[0].type,'record-id');
 });
+
+test('migration retains unknown fields and explicitly supplied water/layout data',()=>{
+ const legacy={version:1,customFutureSetting:{enabled:true},workouts:[]};
+ const aux={'lb2w:water':{'2026-10-25':500},'lb2w:pages6':[{name:'Daily'}],'lb2w:theme':'premium-glass'};
+ const plan=s.migrateLegacy(legacy,{auxiliary:aux});
+ assert.deepEqual(plan.snapshot.records['field:customFutureSetting'].value.legacy,{enabled:true});
+ assert.equal(plan.snapshot.records['aux:lb2w:water'].value.legacy['2026-10-25'],500);
+ assert.equal(plan.snapshot.records['aux:lb2w:pages6'].value.legacy[0].name,'Daily');
+ assert.equal(plan.snapshot.records['aux:lb2w:theme'].value.legacy,'premium-glass');
+ assert.deepEqual(plan.original,legacy);
+});
+test('migration excludes authentication and sync metadata sidecars',()=>{
+ const plan=s.migrateLegacy({version:1},{auxiliary:{'lb2w:sync':{uid:'fake'},'lb2w:signedin':'1','lb2w:session':'owner'}});
+ assert.ok(!Object.keys(plan.snapshot.records).some(k=>k.includes('sync')||k.includes('signedin')||k.includes('session')));
+});
