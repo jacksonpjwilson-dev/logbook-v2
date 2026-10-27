@@ -4,7 +4,7 @@ Updated 2026-10-27. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, Stage 4 Sleep/Check-ins, Stage 5 Home/Appearance and Stage 6 History/calendar now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Combined Stage 1–5 CI is green; all three job logs have been reviewed. Stage 5 functionality is implemented. Exact visual approval and physical iPhone acceptance remain open. Stage 6 functional History is implemented; its fresh combined CI is pending. Physical iPhone, exact visual, migration and production release gates remain open.
+Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, Stage 4 Sleep/Check-ins, Stage 5 Home/Appearance and Stage 6 History/calendar now have isolated development implementations. Combined Stage 1–6 CI is green; all three job logs have been reviewed. These are **not a production release or authorization for real-data migration**. Exact visual approval, physical iPhone acceptance, migration review and production release gates remain open.
 
 - Home development shell: `/stage5/`. Four stable pages, five-app dock, 38 canonical widget IDs plus explicit approved display variants, long-press/cross-page drag, gallery, Tidy/Undo, 16 named theme candidates, Settings and verified synthetic restore. Embedded modules share a new opt-in synthetic store; no standalone fixture is migrated.
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
@@ -16,9 +16,11 @@ Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, St
 
 ## Evidence
 
-- Stage 6 local aggregate: **157 Node checks passed, nine emulator-only checks skipped** in ordinary execution; fresh combined CI pending. Eight new History domain tests cover date ranges, comparisons, stable exercise IDs, calendar skips, source corrections and read-only reports.
+- Stage 6 final code commit: `f97b2bf6f500b4056828a66c5c5addf4ee158079`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40557602575 — all three jobs passed; all job logs reviewed.
+- Stage 6 screenshot artifact: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40557602575/artifacts/12757177981 (14-day GitHub retention; includes five new category previews and 16 themed calendars, plus the existing 96 theme/section matrix and earlier module previews).
+- Stage 6 local/CI aggregate: **157 Node checks passed, nine emulator-only checks skipped** in ordinary execution. All nine actual emulator integration checks and all 15 browser scripts passed in combined CI. Eight new History domain tests cover date ranges, comparisons, stable exercise IDs, calendar skips, source corrections and read-only reports.
 - Stage 6 Chromium interface suite passed for five categories, three calendar modes, 7D/All/custom validation, dated Food navigation, selected-date details, shared-store correction refresh, 320/390/430px, all five categories in all 16 themes and offline reload. Five category screenshots and 16 themed calendar screenshots are generated.
-- Separate Chromium worker v1→v2 update passed: History available offline, record snapshot/theme unchanged, unrelated cache preserved. This is **not physical iPhone update evidence**. Combined CI runs both new browser scripts plus all previous suites and actual emulators.
+- Separate Chromium worker v1→v2 update passed: History available offline, record snapshot/theme unchanged, unrelated cache preserved. This is **not physical iPhone update evidence**. Combined CI passed both new browser scripts plus all previous suites and actual emulators.
 - Development release recommendation, rollback baseline and unresolved user/device acceptance: `stage6/RELEASE_VALIDATION.md`. **Do not deploy this development candidate.**
 
 - Stage 5 code commit: `2aab713baa457ba5c94ac0916d7c00cc668a402d`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40553386376 — all three jobs passed; all job logs reviewed.
@@ -108,10 +110,10 @@ Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, St
 | U02 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Combined CI passed/logs reviewed; physical-device acceptance pending. |
 | U03 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Combined CI passed/logs reviewed; physical-device acceptance pending. |
 | U04 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Combined CI passed/logs reviewed; physical-device acceptance pending. |
-| H01 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local tests pass | Fresh combined CI pending; physical device/final release gates open. |
-| H02 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local tests pass | Fresh combined CI pending; physical device/final release gates open. |
-| H03 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local tests pass | Fresh combined CI pending; physical device/final release gates open. |
-| H04 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local tests pass | Fresh combined CI pending; physical device/final release gates open. |
+| H01 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local/CI tests pass | Combined CI passed/logs reviewed; physical device/final release gates open. |
+| H02 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local/CI tests pass | Combined CI passed/logs reviewed; physical device/final release gates open. |
+| H03 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local/CI tests pass | Combined CI passed/logs reviewed; physical device/final release gates open. |
+| H04 | `stage6/history-core.js`, `history-view.js`, Stage 5 shared-store integration | `stage6-history.test.cjs`, `stage6-browser.cjs`, prior module correction suites | Implemented in isolated development; local/CI tests pass | Combined CI passed/logs reviewed; physical device/final release gates open. |
 | X01 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
 | X02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | X03 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
@@ -197,11 +199,11 @@ The 96 `stage5-theme-<theme>-<section>.png` screenshots cover Home / Training / 
 
 | Gate | Evidence/status |
 | --- | --- |
-| HIS01 | Five categories, four Overview cards, actual-only metric chart, dated-value table, optional equal-period comparison, activity heatmap and three-mode calendar implemented; Node/Chromium checks pass locally. |
-| HIS02 | Reports use current shared source snapshots; Training corrections preserve rotation, Food corrections preserve label snapshots, weight corrections refresh selected-date detail, and missing dates produce no graph points. Local domain/browser checks pass. |
+| HIS01 | Five categories, four Overview cards, actual-only metric chart, dated-value table, optional equal-period comparison, activity heatmap and three-mode calendar implemented; Node/Chromium checks pass locally and in combined CI. |
+| HIS02 | Reports use current shared source snapshots; Training corrections preserve rotation, Food corrections preserve label snapshots, weight corrections refresh selected-date detail, and missing dates produce no graph points. Local and CI domain/browser checks pass. |
 | E2E01 | Chromium offline/reload and scoped worker update pass. Physical iPhone/Safari/installed PWA, OS lifecycle/VoiceOver and device update acceptance **unverified**. |
-| E2E02 | Local 157 Node checks pass; nine emulator-only tests skipped in ordinary execution. Five categories tested in all 16 themes; prior full combined CI regression pending for this increment. |
-| E2E03 | `stage6/RELEASE_VALIDATION.md` records limitations, diff scope, rollback and recommendation. Final CI links follow log review. |
+| E2E02 | Local 157 Node checks pass; nine emulator-only tests skipped in ordinary execution. Five categories tested in all 16 themes; all 15 browser scripts and nine actual emulator checks passed in the reviewed combined CI. |
+| E2E03 | `stage6/RELEASE_VALIDATION.md` records limitations, diff scope, rollback and recommendation. Final CI run 40557602575 passed; all three job logs reviewed and linked above. |
 | E2E04 | No merge/deployment requested or performed. Explicit authorization remains required after a reviewable release candidate and applicable acceptance gates. |
 
 ## Visual and later-phase tracking
