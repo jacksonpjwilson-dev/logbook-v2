@@ -1,0 +1,178 @@
+[
+  {
+    "path": "01_ORIGINAL_USER_REFERENCES/IMG_2202.jpeg",
+    "sha256": "06be337388f4c84717e6af42f2fcab923134b6b00e161cb1364ab401654dba5b",
+    "bytes": 414083,
+    "width": 1290,
+    "height": 1156,
+    "authority": "original"
+  },
+  {
+    "path": "01_ORIGINAL_USER_REFERENCES/IMG_2203(1).jpeg",
+    "sha256": "134eb22a24a1a7997e18ea601e6875670167cd1f7e6b1c5b1860dbcfc58ffa1d",
+    "bytes": 464798,
+    "width": 1290,
+    "height": 1135,
+    "authority": "original"
+  },
+  {
+    "path": "01_ORIGINAL_USER_REFERENCES/IMG_2204(1).jpeg",
+    "sha256": "2f16b960d62f6c15af90fc60769060c87e955f752f26233f81b82a6ed2d26e6d",
+    "bytes": 411040,
+    "width": 1290,
+    "height": 1159,
+    "authority": "original"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_grid_showcase_graphic_on_a_dark_background.png",
+    "sha256": "f1031cd0ab18589edf8135c1188ce36d9c010cae17237e9effdeb28ec61decc5",
+    "bytes": 2123516,
+    "width": 1312,
+    "height": 1199,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_high_resolution_modern_ui_ux_mockup_pres.png",
+    "sha256": "98091c60fbcd122fbc80e8326fc6f56ed5221c1448366573302966d4e40eb85b",
+    "bytes": 1723808,
+    "width": 1312,
+    "height": 1199,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_high_resolution_ui_concept_art_app_desi.png",
+    "sha256": "dd1cb82eba78185b06ecf127fceff7b1823b7cd28c173db5b5fb0a296707203f",
+    "bytes": 1861402,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_high_resolution_ui_concept_showcase_on_a.png",
+    "sha256": "c2c570404e1656a0a1854816ee56360946aac58a705fb24e543515dbb10853e0",
+    "bytes": 1641453,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_high_resolution_ui_design_board_mockup.png",
+    "sha256": "db38eff80145fcf81ea6f8810a958ca2b4455b4fa17fa5aa4e2a9f0995230001",
+    "bytes": 1724225,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_infographic_style_grid_image_showing_multi.png",
+    "sha256": "ee80f8da0b7f12960b2ffb784f81f30c66111f0411082077aa8aa6b64af750c9",
+    "bytes": 2120183,
+    "width": 1312,
+    "height": 1199,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_modern_mobile_app_ui_screenshot_mockup.png",
+    "sha256": "35a6273c163186a6da365176b13246e7d413e737c677167ec2ca94292740df6b",
+    "bytes": 1405818,
+    "width": 1024,
+    "height": 1536,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_polished_ui_design_presentation_mockup_on.png",
+    "sha256": "048146fe81a38dcbcea92410a58871db89fa9008b4dd0d9f0fba8c8a0a30128f",
+    "bytes": 1730798,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_clean_ui_concept_board_collage_image_a_dark_b.png",
+    "sha256": "3b38fd1c341e4c53b54a39459b9ee8948b3048d06578bd07c4a4310db6398dde",
+    "bytes": 1986807,
+    "width": 1312,
+    "height": 1199,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_high_resolution_grid_style_design_mockup_image.png",
+    "sha256": "2aa68bebf1e015c19ec5909affd216b0594a5b50344e0ef5bfa27569c4547c9f",
+    "bytes": 2322395,
+    "width": 1312,
+    "height": 1199,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_high_resolution_ui_design_concept_board_in_a_cle.png",
+    "sha256": "7eb0d9dff5a1000ce0bced65ecfe4b09adf1a610a5f53a7e81e063952f212719",
+    "bytes": 1870637,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_wide_dark_modern_ui_design_mockup_collage_for.png",
+    "sha256": "1daf9d7fe45453468c5cb6149a1fb1122258c8a7564bea112c428ea9d2fb0916",
+    "bytes": 1837436,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_wide_high_resolution_apple_style_ui_concept_po.png",
+    "sha256": "7b81242ba3c7f21ce57cde6f435d6c460b593782857da2b17b57fd4c253fc59f",
+    "bytes": 1884099,
+    "width": 1536,
+    "height": 1024,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/a_wide_high_resolution_grid_of_10_stylized_ipho.png",
+    "sha256": "fc41967ebb7c9ee5a2cc8e031df729367340313836dd65ad0f899a3d428906bc",
+    "bytes": 2079129,
+    "width": 1312,
+    "height": 1199,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/logbook_actual_icon_concepts.png",
+    "sha256": "227d3e80bef62880bb827aaedb10d35af5113cf7e696a0d619557a76d10bc601",
+    "bytes": 112252,
+    "width": 1900,
+    "height": 1300,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/logbook_dock_icon_mockups.png",
+    "sha256": "292729e4da4e659e54f28547015d06bead8168f0424a224068e24f46136130ea",
+    "bytes": 129598,
+    "width": 1800,
+    "height": 1100,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/logbook_icon_styles_clean_board.png",
+    "sha256": "eb462ecb27f5a42c226b7cd0c120af57df763e4626d4298b26c6cfaa9dd5fec3",
+    "bytes": 113970,
+    "width": 1800,
+    "height": 1400,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/logbook_symbol_choices_board.png",
+    "sha256": "45ccca38d53902948dbdd07092acf1bbc08036c984a222aeff86b1afff6b99e9",
+    "bytes": 105039,
+    "width": 1900,
+    "height": 1500,
+    "authority": "supporting"
+  },
+  {
+    "path": "02_SUPPORTING_DESIGN_MOCKUPS/logbook_v3_test.png",
+    "sha256": "32ba3025c7ce03d9dc79b3b9645fdf17ae98edbf6d09c093b8763c1ecb98d719",
+    "bytes": 295460,
+    "width": 390,
+    "height": 844,
+    "authority": "supporting"
+  }
+]

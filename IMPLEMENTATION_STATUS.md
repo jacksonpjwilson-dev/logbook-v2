@@ -1,17 +1,20 @@
 # Implementation status
 
-Updated 2026-10-26. Authorized branch: **logbook-v2-upgrade only**. No main changes, deployment, production Firebase, real account login or real personal records.
+Updated 2026-10-27. Authorized branch: **logbook-v2-upgrade only**. No main changes, deployment, production Firebase, real account login or real personal records.
 
 ## Current result
 
-Stage 1 storage/legacy integration and Stage 2 Training now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Final Stage 1/2 CI is green and all three job logs have been reviewed. Stages 3–6 remain outside the current requested work.
+Stage 1 storage/legacy integration, Stage 2 Training and Stage 3 Food/Nutrition now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 1/2 CI is green and reviewed. Stage 3 local checks pass; its combined CI is pending. Following the newly authorized next phase, Stage 3 is the current development milestone; Stages 4–6 remain upcoming.
 
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
 - New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
 - Original `preview-widget/index.html`, `app.js`, `data.js`, `sync.js`, `styles.css`, `sw.js`, root entry points and main are unchanged. New workers/cache names are scoped to their development paths and never delete production caches.
-- The supplied Markdown handoff is preserved in `docs/handoff/`. Three original reference sheets are available in the session. Exact visual/theme work is deferred as requested; the development UI is not an exact visual-fidelity claim.
+- Nutrition implementation: `/stage3/`. Quantity-confirmed food logging, immutable snapshots, safe conversions, saved/copy meals, effective targets/adherence, water events/Undo, corrections and demo sync.
+- The supplied Markdown handoff is preserved in `docs/handoff/`. All nine new archives were reviewed: three original sheets plus 19 supporting images. See `docs/handoff/VISUAL_REVIEW.md` and the SHA-256 asset manifest. Stage 3 applies the Food hierarchy with frosted surfaces; final 16-theme/Home appearance remains Stage 5, with no exact-fidelity claim.
 
 ## Evidence
+
+- Stage 3 local aggregate: **116 Node checks passed, seven emulator-only checks skipped** in ordinary execution. All seven emulator integration checks passed in the combined run; the new Nutrition browser + emulator test also passed after correcting its script dependency. The ordinary Nutrition Chromium workflow passed; external API responses are synthetic mocked fixtures. Combined GitHub CI is pending.
 
 - Final code commit: `ccfa5e38f8165c624219e59f1d3a106c3d665bcb`. Reviewed final CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40393997855 — all three jobs passed (104 ordinary Node checks, six actual emulator checks, all six browser scripts).
 - Downloadable synthetic previews: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40393997855/artifacts/12685531689 (GitHub artifact retention: 14 days).
@@ -19,7 +22,7 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 - Reviewed Stage 1 integration CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40375539711 — all three jobs passed; logs reviewed.
 - Reviewed chunk/retry CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40385066550 — all three jobs passed; logs reviewed.
 - Reviewed Stage 2 CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40382327475 — all jobs passed; logs reviewed.
-- Final local/CI aggregate: **104 Node checks passed, 6 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **6 integration checks successfully**.
+- Previous Stage 1/2 local/CI aggregate: **104 Node checks passed, 6 emulator-only checks skipped** in the ordinary offline invocation. The separate real emulator run executes all **6 integration checks successfully**.
 - Chromium suites passed locally: storage/workbench; visible legacy integration/offline reopen; Training session/substitution/correction/recovery; Training template/superset/units/picker/charts/reduced-motion.
 - Actual browser + local Auth/Firestore suites passed: legacy automatic sync/offline rejoin; Training background-sync typing preservation, explicit conflict choice and resolution persistence.
 - Final local regressions also cover merge restore with preserved indexes, rejected conflict-version recovery, immutable account binding, concurrent first connection, fixed built-in exercise identities, workout deletion/Undo, invalid measurement completion clearing, and HTML injection resistance.
@@ -65,18 +68,18 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 | T17 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
 | T18 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
 | T19 | `stage2/training-core.js`, `training-records.js`, `app.js` | `tests/stage2-training.test.cjs`, `stage2-records.test.cjs`, Stage 2 Chromium/emulator suites | Implemented in development; local tests pass | CI passed/logs reviewed; physical-device acceptance pending. |
-| N01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N05 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N06 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N07 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N08 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N09 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N10 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N11 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| N12 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| N01 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N02 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N03 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N04 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N05 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N06 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N07 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N08 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N09 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N10 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N11 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
+| N12 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Fresh combined CI and physical-device acceptance pending. |
 | S01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | S02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | S03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
@@ -132,9 +135,21 @@ Stage 1 storage/legacy integration and Stage 2 Training now have isolated develo
 
 All Stage 2 gates above have development test evidence; they are not a blanket release signoff.
 
+## Stage 3 acceptance
+
+| Gate | Evidence/status |
+| --- | --- |
+| NUT01 | All picker routes open explicit quantity review. Saved/copy meals require each ingredient; cancellation is atomic. Chromium covers recent/favorites/manual/saved/copy/external/barcode paths. |
+| NUT02 | Exact mass/volume families only; cross-family/count needs explicit food factors. Missing external macros and unreviewed per-100 basis rejected. |
+| NUT03 | Catalog/saved-meal edits preserve old snapshots; explicit corrections recalculate totals. Unit, UI and actual emulator evidence. |
+| NUT04 | Exact bulk/cut/maintenance boundaries, effective dates, missing/provisional days and corrected streaks covered. Target identities are deterministic by effective date to retain concurrent conflict choices. |
+| NUT05 | Water uses permanent mL events/local dates, duplicate guard, deletion/restore and no nutrition streak contribution. UI/offline/emulator coverage. |
+
+The development Food screen includes calorie/macro summary, shortcuts, meal disclosures, top/meal/floating Add, search, live previews and source detail. Its screenshot is `stage1/artifacts/stage3-food.png` (synthetic). No live external product lookup, physical iPhone or real-data migration was used for testing.
+
 ## Visual and later-phase tracking
 
-Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, Nutrition, Sleep/Weight/Supplements, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
+Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, Sleep/Weight/Supplements, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
 
 
 ## Verified final hardening
