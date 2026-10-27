@@ -11,6 +11,7 @@ All widgets derive from recorded Training, Nutrition and Check-in entities. Fini
 ## Home interaction
 
 - Four exact defaults: Daily, Training, Food, Progress & History; fixed Training/Food/History/Sleep & Check-ins/Settings dock. Two equally prominent large Training widgets. No vertical Home scrolling at tested 320×568, 390×844 and 430×932 sizes. Detail screens scroll inside their own area.
+- Dense lists show an explicit “+N more” continuation rather than a partially clipped row; their detail destination retains the full data, including eight-position splits.
 - Four-row/two-column stable layout. Intentional spaces persist until explicit Smart Tidy. Pages can be added, renamed and reordered. Widget identities survive placement changes; adding to a full page creates an explicit overflow page rather than moving existing items.
 - Long press enters glass wiggle editing; pointer dragging supports page-edge dwell and cross-page movement. Placement/size dialogs offer the keyboard-accessible alternative. Invalid/occupied drops fail without discarding the old placement. Gallery supports categories, search, live recorded previews and Small/Medium/Large selection.
 - Smart Tidy previews its count, requires Apply, stores Undo, and refuses to erase a layout changed since its action. Widget/page deletion also has exact layout Undo.
