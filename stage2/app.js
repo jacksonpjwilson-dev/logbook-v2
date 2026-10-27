@@ -3,7 +3,7 @@
 const T=LogbookTraining,R=LogbookTrainingRecords,S=LogbookSafety,$=id=>document.getElementById(id),esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])),id=()=>crypto.randomUUID();
 if(!['localhost','127.0.0.1','::1','[::1]'].includes(location.hostname)){document.body.textContent='Synthetic Training development is available on loopback only';return}
 const namespace=new URLSearchParams(location.search).get('fixture')||'training';if(!/^[A-Za-z0-9_-]{1,60}$/.test(namespace))throw Error('Synthetic namespace required');
-const adapter=key=>LogbookIndexedDB.createAdapter({indexedDB,dbName:'logbook-v2-stage1-training-development',key:'synthetic-'+namespace+'-'+key});
+const adapter=key=>LogbookIndexedDB.createAdapter({indexedDB,dbName:new URLSearchParams(location.search).get('workspace')==='home'?'logbook-v2-stage1-home-development':'logbook-v2-stage1-training-development',key:'synthetic-'+namespace+'-'+key});
 const store=new LogbookOfflineStore.OfflineStore(adapter('records'));await store.init();
 if(!store.snapshot().records['training.settings']){
  let seeded=T.seedBuiltins(T.empty(),window.EXLIB||[],LogbookBuiltinIDs);
@@ -152,8 +152,9 @@ document.addEventListener('change',run(async event=>{const input=event.target,ds
 async function connectCloud(){if(coordinator)return syncCloud();if(!connection)connection=(async()=>{const sessions=adapter('demo-session'),saved=await sessions.read();let transport=await LogbookStage1Rest.createTransport({pageHostname:location.hostname,session:saved||undefined});if(!saved&&!await sessions.compareAndSwap(null,transport.session))transport=await LogbookStage1Rest.createTransport({pageHostname:location.hostname,session:await sessions.read()});coordinator=LogbookStage1Sync.createCoordinator(store,transport);return syncCloud()})().finally(()=>{connection=null});return connection}
 function syncCloud(){const operation=cloudTail.then(async()=>{await tail;const result=await coordinator.sync(),incoming=R.materialize(store.snapshot().records);if(!S.equal(incoming.active,state.active))activeGeneration++;state=incoming;status('Demo cloud: '+result.status+(result.error?' · '+result.error:''));render();return result});cloudTail=operation.catch(()=>{});return operation}
 addEventListener('online',()=>{if(coordinator)syncCloud().catch(error=>status(error.message))});setInterval(()=>{if(coordinator)syncCloud().catch(error=>status(error.message))},30000);
-window.stage2Training={store,getState:()=>S.clone(state),flush:()=>tail,connectCloud,syncCloud,offlineReady:false};
+async function refreshFromShell(){await tail;await store.init();const incoming=R.materialize(store.snapshot().records);if(!S.equal(incoming.active,state.active))activeGeneration++;state=incoming;render()}
+window.stage2Training={navigate:async request=>{if(['home','history','active'].includes(request.target)){route(request.target);return}if(request.target==='resume'){route(state.active?'active':'home');return}if(request.target==='summary'&&state.workouts[request.id]){view.sessionId=request.id;route('summary');return}if(request.target==='new-template'){openTemplate();return}if(request.target==='preferences'){route('home');const e=document.querySelector('[data-setting]')?.closest('details');if(e){e.open=true;e.scrollIntoView()}return}route('home')},refresh:refreshFromShell,store,getState:()=>S.clone(state),flush:()=>tail,connectCloud,syncCloud,offlineReady:false};
 render();status('Synthetic Training ready');setInterval(tick,500);document.addEventListener('visibilitychange',tick);
 if('serviceWorker'in navigator){await navigator.serviceWorker.register('sw.js',{scope:'./'});await navigator.serviceWorker.ready;window.stage2Training.offlineReady=true}
-if(await adapter('demo-session').read())connectCloud().catch(error=>status('Demo sync paused: '+error.message));
+if(new URLSearchParams(location.search).get('workspace')!=='home'&&await adapter('demo-session').read())connectCloud().catch(error=>status('Demo sync paused: '+error.message));
 })().catch(error=>{document.getElementById('status').textContent='Training stopped: '+error.message});

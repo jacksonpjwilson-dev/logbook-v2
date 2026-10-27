@@ -4,16 +4,19 @@ Updated 2026-10-27. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition and Stage 4 Sleep/Check-ins now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Combined Stage 1–4 CI is green; all three job logs have been reviewed. Stages 5–6 remain upcoming.
+Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, Stage 4 Sleep/Check-ins and Stage 5 Home/Appearance now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 1–4 CI is green and reviewed. Stage 5 functionality and local checks are implemented; combined CI is pending. Exact visual approval and physical iPhone acceptance remain open. Stage 6 is upcoming.
 
+- Home development shell: `/stage5/`. Four stable pages, five-app dock, 38 canonical widget IDs plus explicit approved display variants, long-press/cross-page drag, gallery, Tidy/Undo, 16 named theme candidates, Settings and verified synthetic restore. Embedded modules share a new opt-in synthetic store; no standalone fixture is migrated.
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
 - New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
 - Original `preview-widget/index.html`, `app.js`, `data.js`, `sync.js`, `styles.css`, `sw.js`, root entry points and main are unchanged. New workers/cache names are scoped to their development paths and never delete production caches.
 - Sleep/check-in implementation: `/stage4/`. Wake-date sleep/offsets/override, forward-only goals, official weight/trends, versioned supplement schedules/doses, daily overlay/follow-up and optional reminder fallback. Same-fixture Training records are shared for actual completed-workout-day eligibility.
 - Nutrition implementation: `/stage3/`. Quantity-confirmed food logging, immutable snapshots, safe conversions, saved/copy meals, effective targets/adherence, water events/Undo, corrections and demo sync.
-- The supplied Markdown handoff is preserved in `docs/handoff/`. All nine new archives were reviewed: three original sheets plus 19 supporting images. See `docs/handoff/VISUAL_REVIEW.md` and the SHA-256 asset manifest. Stage 3 applies the Food hierarchy with frosted surfaces; final 16-theme/Home appearance remains Stage 5, with no exact-fidelity claim.
+- The supplied Markdown handoff is preserved in `docs/handoff/`. All nine new archives were reviewed: three original sheets plus 19 supporting images. See `docs/handoff/VISUAL_REVIEW.md` and the SHA-256 asset manifest. Stage 5 implements all 16 names and a reconstructed wallpaper atlas from those references. Automated screenshots cover every theme/section. Exact scenic artwork and human visual acceptance are not claimed complete; see `stage5/assets/PROVENANCE.md`.
 
 ## Evidence
+
+- Stage 5 local aggregate: **149 Node checks passed, nine emulator-only checks skipped** in ordinary execution. Focused actual emulator domain/browser checks passed for independent theme/layout sync, explicit conflicting layouts, preserved typed drafts, immutable Food snapshots and offline rejoin. The functional Chromium suite and visual suite passed: **96 theme/section screenshots**, native swipe, long-press/cross-page pointer movement, **126 widget variants** (38 canonical + four explicit display modes × S/M/L) at 320/390/430px, cold-session splash, reduced motion, and standalone module compatibility is included in the forthcoming combined CI.
 
 - Stage 4 code commit: `a64d5ced0754e173793cf2def90607371b3df503`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40443987506 — all three jobs passed, including all ten browser scripts and eight actual emulator checks.
 - Updated synthetic screenshots: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40443987506/artifacts/12707468655 (14-day GitHub retention; includes all five Stage 4 previews).
@@ -105,7 +108,7 @@ Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition and
 | X01 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
 | X02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | X03 | `preview-widget/safety-core.js`, `stage1-*.js`, `stage1/dev/`, `stage1/firestore.rules`, `stage2/` | Stage 1/2 Node, Chromium and demo emulator suites | Development coverage; final acceptance partial | Capacity, physical-device and real-data/production gates remain. |
-| X04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| X04 | `stage5/app.js`, Settings and module bridge | Stage 5 UI search/deep navigation plus standalone regression suites | Implemented in development | Data & Backup snapshot restore retains current recovery history; archived metadata is preserved independently. |
 
 ## Stage 1 acceptance
 
@@ -165,9 +168,27 @@ The development Food screen includes calorie/macro summary, shortcuts, meal disc
 
 The combined overview has a large Sleep section and side-by-side Weight/Supplements cards with dedicated dashboards. Synthetic screenshots: `stage1/artifacts/stage4-overview.png`, `stage4-sleep.png`, `stage4-sleep-timeline.png`, `stage4-weight.png`, `stage4-supplements.png`. Runtime notifications are optional; tests send none.
 
+## Stage 5 acceptance
+
+| Gate | Code / evidence | Status / limits |
+| --- | --- | --- |
+| UI01 | `stage5/home-core.js`, `app.js`, `styles.css`; four exact pages, five dock destinations, native touch swipe, page editing and no Home overflow at 320×568/390×844/430×932 | Local automated checks pass; physical iPhone pending. |
+| UI02 | `stage5/widgets.js`, `legacy-widget-inventory.json`, `docs/handoff/WIDGET_INVENTORY_STAGE5.md`; all 38 original IDs and 10/10/9/8/1 families, 126 size/display variants rendered | Canonical absent fibre/clocks/circumference/HealthKit sources remain explicitly unknown/unconnected; approved default variants use actual data. No fake substitutes. |
+| UI03 | Long press, wiggle, pointer edge-dwell/cross-page move; keyboard placement dialog; searchable categorized gallery, size picker, Tidy preview/Apply and guarded exact Undo | Local Node/Chromium/emulator checks pass; fresh combined CI pending. |
+| UI04 | `stage5/themes.js`, generated reference wallpaper atlas; exact 16 names, Premium Glass default, Preview/Cancel/Apply, propagation to embedded apps, contrast checks, 96 screenshots | Runtime implementation tested. Atlas is a reconstruction, not original wallpaper files; exact reference matching/human visual approval remains **open**. |
+| UI05 | SVG/180/192/512 icons, manifest/scoped workers, prepared offline module opening; 3-second cold tab-session splash, no reload replay, reduced-motion suppression | Chromium tested. Physical iPhone install/update/cold-process signals, full OS accessibility and device acceptance remain **unverified**. |
+
+### Settings and data boundaries
+
+Appearance / Home Screen / Fitness & Nutrition / Tracking Preferences / Data & Backup have search and meaningful deep actions. All Home data comes from a new opt-in shared synthetic store; existing standalone Stage 2/3/4 fixtures keep their separate data. No automatic migration occurs. The original root/preview production entry points are unchanged.
+
+Verified backup archives include record snapshots plus independent archived recovery/conflict metadata, never session/account tokens. Snapshot restore previews merge/replace category changes and resurrection counts, validates against current records, requires confirmation and provides persistent targeted Undo. It retains the current store's recovery history; it does **not** automatically import archived history/conflict metadata. This limitation is shown in the restore UI and README.
+
+The 96 `stage5-theme-<theme>-<section>.png` screenshots cover Home / Training / Food / Check-ins / History / Settings. They contain explicitly synthetic QA records created through the same domain operations, not user data or invented analytics points. Detailed source/asset provenance and widget source gaps are documented. Human reference approval is still required before claiming exact visual fidelity.
+
 ## Visual and later-phase tracking
 
-Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
+Complete cross-feature History/calendar, release validation, final exact visual acceptance and physical iPhone testing remain Stage 6. Home/icon/splash/theme runtime, widget inventory/gallery/editing and the automated screenshot matrix are implemented; none is a production release or exact-fidelity certificate. No approved requirement was removed or narrowed to an MVP.
 
 
 ## Verified final hardening
