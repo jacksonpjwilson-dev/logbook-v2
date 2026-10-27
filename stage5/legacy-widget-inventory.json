@@ -1,0 +1,352 @@
+[
+  {
+    "id": "kcal",
+    "name": "Calories left",
+    "category": "food",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "macros",
+    "name": "Macros",
+    "category": "food",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "protein",
+    "name": "Protein goal",
+    "category": "food",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "water",
+    "name": "Water",
+    "category": "food",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "meals",
+    "name": "Today\u2019s meals",
+    "category": "food",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "favs",
+    "name": "Quick log",
+    "category": "food",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "timing",
+    "name": "Meal timing",
+    "category": "food",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "fibre",
+    "name": "Fibre",
+    "category": "food",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "kcalavg",
+    "name": "Weekly calories",
+    "category": "food",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "split",
+    "name": "Workout split",
+    "category": "train",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "easynext",
+    "name": "Easy next",
+    "category": "food",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "today",
+    "name": "Today",
+    "category": "home",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "next",
+    "name": "Next workout",
+    "category": "train",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "week",
+    "name": "This week",
+    "category": "train",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "last",
+    "name": "Last workout",
+    "category": "train",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "prs",
+    "name": "Personal records",
+    "category": "train",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "volume",
+    "name": "Volume trend",
+    "category": "train",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "streak",
+    "name": "Streak",
+    "category": "train",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "muscles",
+    "name": "Muscle groups",
+    "category": "train",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "rest",
+    "name": "Rest timer",
+    "category": "train",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "plan",
+    "name": "Upcoming plan",
+    "category": "train",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "sleeplast",
+    "name": "Last night",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "sleep7",
+    "name": "Sleep chart",
+    "category": "body",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "consist",
+    "name": "Sleep consistency",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "weight",
+    "name": "Weight",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "wtrend",
+    "name": "Weight trend",
+    "category": "body",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "measure",
+    "name": "Measurements",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "supps",
+    "name": "Supplements",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "vitals",
+    "name": "Steps & resting HR",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "bedtime",
+    "name": "Bedtime target",
+    "category": "body",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "graph",
+    "name": "Graph",
+    "category": "hist",
+    "legacySizes": [
+      "S",
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "calheat",
+    "name": "Calendar heatmap",
+    "category": "hist",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "month",
+    "name": "Month summary",
+    "category": "hist",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "bestweek",
+    "name": "Best week",
+    "category": "hist",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "compare",
+    "name": "Compare",
+    "category": "hist",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  },
+  {
+    "id": "milestones",
+    "name": "Milestones",
+    "category": "hist",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "journal",
+    "name": "Journal",
+    "category": "hist",
+    "legacySizes": [
+      "M",
+      "L"
+    ]
+  },
+  {
+    "id": "totals",
+    "name": "All-time totals",
+    "category": "hist",
+    "legacySizes": [
+      "S",
+      "M"
+    ]
+  }
+]
