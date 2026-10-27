@@ -10,6 +10,8 @@ on:
       - 'stage3/**'
       - 'stage4/**'
       - 'stage5/**'
+      - 'stage6/**'
+      - 'tests/stage6-*'
       - 'tests/stage5-*'
       - 'tests/stage4-*'
       - 'tests/stage3-*'
@@ -52,6 +54,8 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage2-editing-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage3-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage4-browser.cjs
+          NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage6-browser.cjs
+          NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage6-update-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage5-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage5-visual-browser.cjs
       - name: Save synthetic browser previews
