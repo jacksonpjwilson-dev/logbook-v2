@@ -4,7 +4,7 @@ Updated 2026-10-27. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, Stage 4 Sleep/Check-ins and Stage 5 Home/Appearance now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 1–4 CI is green and reviewed. Stage 5 functionality and local checks are implemented; combined CI is pending. Exact visual approval and physical iPhone acceptance remain open. Stage 6 is upcoming.
+Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, Stage 4 Sleep/Check-ins and Stage 5 Home/Appearance now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Combined Stage 1–5 CI is green; all three job logs have been reviewed. Stage 5 functionality is implemented. Exact visual approval and physical iPhone acceptance remain open. Stage 6 is upcoming.
 
 - Home development shell: `/stage5/`. Four stable pages, five-app dock, 38 canonical widget IDs plus explicit approved display variants, long-press/cross-page drag, gallery, Tidy/Undo, 16 named theme candidates, Settings and verified synthetic restore. Embedded modules share a new opt-in synthetic store; no standalone fixture is migrated.
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
@@ -16,7 +16,9 @@ Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, St
 
 ## Evidence
 
-- Stage 5 local aggregate: **149 Node checks passed, nine emulator-only checks skipped** in ordinary execution. Focused actual emulator domain/browser checks passed for independent theme/layout sync, explicit conflicting layouts, preserved typed drafts, immutable Food snapshots and offline rejoin. The functional Chromium suite and visual suite passed: **96 theme/section screenshots**, native swipe, long-press/cross-page pointer movement, **126 widget variants** (38 canonical + four explicit display modes × S/M/L) at 320/390/430px, cold-session splash, reduced motion, and standalone module compatibility is included in the forthcoming combined CI.
+- Stage 5 code commit: `2aab713baa457ba5c94ac0916d7c00cc668a402d`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40553386376 — all three jobs passed; all job logs reviewed.
+- Stage 5 synthetic previews: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40553386376/artifacts/12754484880 (14-day GitHub retention).
+- Stage 5 local/CI aggregate: **149 Node checks passed, nine emulator-only checks skipped** in ordinary execution. All nine actual emulator integration checks and all 13 browser scripts passed in combined CI. Focused emulator domain/browser checks passed for independent theme/layout sync, explicit conflicting layouts, preserved typed drafts, immutable Food snapshots and offline rejoin. The functional Chromium suite and visual suite passed: **96 theme/section screenshots**, native swipe, long-press/cross-page pointer movement, **126 widget variants** (38 canonical + four explicit display modes × S/M/L) at 320/390/430px, cold-session splash, reduced motion, and standalone module compatibility passed in combined CI.
 
 - Stage 4 code commit: `a64d5ced0754e173793cf2def90607371b3df503`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40443987506 — all three jobs passed, including all ten browser scripts and eight actual emulator checks.
 - Updated synthetic screenshots: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40443987506/artifacts/12707468655 (14-day GitHub retention; includes all five Stage 4 previews).
@@ -172,9 +174,9 @@ The combined overview has a large Sleep section and side-by-side Weight/Suppleme
 
 | Gate | Code / evidence | Status / limits |
 | --- | --- | --- |
-| UI01 | `stage5/home-core.js`, `app.js`, `styles.css`; four exact pages, five dock destinations, native touch swipe, page editing and no Home overflow at 320×568/390×844/430×932 | Local automated checks pass; physical iPhone pending. |
+| UI01 | `stage5/home-core.js`, `app.js`, `styles.css`; four exact pages, five dock destinations, native touch swipe, page editing and no Home overflow at 320×568/390×844/430×932 | Local and combined CI automated checks pass; physical iPhone pending. |
 | UI02 | `stage5/widgets.js`, `legacy-widget-inventory.json`, `docs/handoff/WIDGET_INVENTORY_STAGE5.md`; all 38 original IDs and 10/10/9/8/1 families, 126 size/display variants rendered | Canonical absent fibre/clocks/circumference/HealthKit sources remain explicitly unknown/unconnected; approved default variants use actual data. No fake substitutes. |
-| UI03 | Long press, wiggle, pointer edge-dwell/cross-page move; keyboard placement dialog; searchable categorized gallery, size picker, Tidy preview/Apply and guarded exact Undo | Local Node/Chromium/emulator checks pass; fresh combined CI pending. |
+| UI03 | Long press, wiggle, pointer edge-dwell/cross-page move; keyboard placement dialog; searchable categorized gallery, size picker, Tidy preview/Apply and guarded exact Undo | Local and combined CI Node/Chromium/emulator checks pass; all job logs reviewed. |
 | UI04 | `stage5/themes.js`, generated reference wallpaper atlas; exact 16 names, Premium Glass default, Preview/Cancel/Apply, propagation to embedded apps, contrast checks, 96 screenshots | Runtime implementation tested. Atlas is a reconstruction, not original wallpaper files; exact reference matching/human visual approval remains **open**. |
 | UI05 | SVG/180/192/512 icons, manifest/scoped workers, prepared offline module opening; 3-second cold tab-session splash, no reload replay, reduced-motion suppression | Chromium tested. Physical iPhone install/update/cold-process signals, full OS accessibility and device acceptance remain **unverified**. |
 
@@ -195,4 +197,4 @@ Complete cross-feature History/calendar, release validation, final exact visual 
 
 Content-addressed record/history staging uses SHA-256 verification and one root-manifest CAS. Interrupted staging never publishes partial state. Actual emulator tests verify >1 MiB snapshots, lost post-commit acknowledgment/no duplicate revision, immutable reuse, chunk ownership and corruption rejection. Canonical equality/order avoids redundant writes/history duplication. Literal prototype-named unknown fields remain data; definition edits retain unknown metadata/equipment. Demo sync failures show context and retain local queues.
 
-No production deployment, real account access, merge or real-data migration occurred. Physical iPhone and formal migration/release gates remain open; later theme/visual phases are not claimed complete.
+No production deployment, real account access, merge or real-data migration occurred. Physical iPhone and formal migration/release gates remain open; exact visual and physical iPhone acceptance are not claimed complete.
