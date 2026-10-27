@@ -11,6 +11,8 @@ on:
       - 'stage4/**'
       - 'stage5/**'
       - 'stage6/**'
+      - 'preview/**'
+      - 'tests/preview-*'
       - 'tests/stage6-*'
       - 'tests/stage5-*'
       - 'tests/stage4-*'
@@ -54,6 +56,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage2-editing-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage3-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage4-browser.cjs
+          NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/preview-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage6-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage6-update-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage5-browser.cjs

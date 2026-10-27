@@ -14,6 +14,14 @@ Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition, St
 - Nutrition implementation: `/stage3/`. Quantity-confirmed food logging, immutable snapshots, safe conversions, saved/copy meals, effective targets/adherence, water events/Undo, corrections and demo sync.
 - The supplied Markdown handoff is preserved in `docs/handoff/`. All nine new archives were reviewed: three original sheets plus 19 supporting images. See `docs/handoff/VISUAL_REVIEW.md` and the SHA-256 asset manifest. Stage 5 implements all 16 names and a reconstructed wallpaper atlas from those references. Automated screenshots cover every theme/section. Exact scenic artwork and human visual acceptance are not claimed complete; see `stage5/assets/PROVENANCE.md`.
 
+## Isolated review preview
+
+A separate owner-private Sites preview has been prepared from the Stage 6 development baseline: https://logbook-v2-isolated-preview.jacksonpjwilson.chatgpt.site . Its own artifact repository is separate from the original GitHub repository. No original main merge, production Logbook deployment or real-data access occurred.
+
+The whitelisted static package uses a distinct origin/database, fictional sample records initialized once, no Firebase/emulator transports, disabled cloud entrypoints and `connect-src 'none'`. Manual edits remain local to each device; cloud sync and live external food lookup are intentionally unavailable in this review build. Original development loopback guards and original application files remain intact. `preview/README.md` contains iPhone review steps and package details.
+
+Focused fictional-seed and Chromium preview checks passed locally, including shared module/History navigation, no external requests, theme persistence, offline reload/module opening and 320/390/430px layout. Native private publication and fresh combined CI evidence will be recorded after verification. Physical iPhone/private-auth lifecycle acceptance and exact visual approval remain open.
+
 ## Evidence
 
 - Stage 6 final code commit: `f97b2bf6f500b4056828a66c5c5addf4ee158079`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40557602575 — all three jobs passed; all job logs reviewed.
