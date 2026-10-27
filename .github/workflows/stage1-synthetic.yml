@@ -8,6 +8,8 @@ on:
       - 'stage1/**'
       - 'stage2/**'
       - 'stage3/**'
+      - 'stage4/**'
+      - 'tests/stage4-*'
       - 'tests/stage3-*'
       - 'tests/stage2-*'
       - 'tests/stage1-*'
@@ -47,6 +49,7 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage2-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage2-editing-browser.cjs
           NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage3-browser.cjs
+          NODE_PATH="$RUNNER_TEMP/logbook-tools/node_modules" node tests/stage4-browser.cjs
       - name: Save synthetic browser previews
         if: always()
         uses: actions/upload-artifact@v4
@@ -76,4 +79,4 @@ jobs:
           node stage1/build-dev.cjs
           python3 -m http.server 8765 --bind 127.0.0.1 > "$RUNNER_TEMP/logbook-emulator-http.log" 2>&1 &
           for i in 1 2 3 4 5; do curl --fail --silent http://127.0.0.1:8765/stage1/harness.html > /dev/null && break; sleep 1; done
-          npx --yes firebase-tools@14.27.0 emulators:exec --project demo-logbook-stage1 --config stage1/firebase.json --only firestore,auth "LOGBOOK_REQUIRE_EMULATORS=1 node --test --experimental-test-isolation=none tests/*firestore-emulator.test.cjs && node tests/stage1-legacy-emulator-browser.cjs && node tests/stage2-emulator-browser.cjs && node tests/stage3-emulator-browser.cjs"
+          npx --yes firebase-tools@14.27.0 emulators:exec --project demo-logbook-stage1 --config stage1/firebase.json --only firestore,auth "LOGBOOK_REQUIRE_EMULATORS=1 node --test --experimental-test-isolation=none tests/*firestore-emulator.test.cjs && node tests/stage1-legacy-emulator-browser.cjs && node tests/stage2-emulator-browser.cjs && node tests/stage3-emulator-browser.cjs && node tests/stage4-emulator-browser.cjs"

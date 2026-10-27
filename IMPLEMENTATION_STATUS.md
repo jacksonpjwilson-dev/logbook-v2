@@ -4,15 +4,18 @@ Updated 2026-10-27. Authorized branch: **logbook-v2-upgrade only**. No main chan
 
 ## Current result
 
-Stage 1 storage/legacy integration, Stage 2 Training and Stage 3 Food/Nutrition now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Combined Stage 1–3 CI is green; all three job logs have been reviewed. Following the newly authorized next phase, Stage 3 is the current development milestone; Stages 4–6 remain upcoming.
+Stage 1 storage/legacy integration, Stage 2 Training, Stage 3 Food/Nutrition and Stage 4 Sleep/Check-ins now have isolated development implementations. They are **not a production release or authorization for real-data migration**. Stage 1–3 CI is green and reviewed. Stage 4 is implemented with local checks passing; fresh combined CI is pending. Stages 5–6 remain upcoming.
 
 - Existing application integration: `/stage1/dev/` (build with `node stage1/build-dev.cjs`). Lossless raw legacy projection, per-entity batches, verified separate seed archive, visible conflict/restore/Undo and offline reopening.
 - New Training implementation: `/stage2/`. Stable identities, template/session snapshots, rotation/events, timers, substitutions, supersets, complete plan history, PRs, corrections, recoverable versions and real-data-only exercise charts.
 - Original `preview-widget/index.html`, `app.js`, `data.js`, `sync.js`, `styles.css`, `sw.js`, root entry points and main are unchanged. New workers/cache names are scoped to their development paths and never delete production caches.
+- Sleep/check-in implementation: `/stage4/`. Wake-date sleep/offsets/override, forward-only goals, official weight/trends, versioned supplement schedules/doses, daily overlay/follow-up and optional reminder fallback. Same-fixture Training records are shared for actual completed-workout-day eligibility.
 - Nutrition implementation: `/stage3/`. Quantity-confirmed food logging, immutable snapshots, safe conversions, saved/copy meals, effective targets/adherence, water events/Undo, corrections and demo sync.
 - The supplied Markdown handoff is preserved in `docs/handoff/`. All nine new archives were reviewed: three original sheets plus 19 supporting images. See `docs/handoff/VISUAL_REVIEW.md` and the SHA-256 asset manifest. Stage 3 applies the Food hierarchy with frosted surfaces; final 16-theme/Home appearance remains Stage 5, with no exact-fidelity claim.
 
 ## Evidence
+
+- Stage 4 local aggregate: **132 Node checks passed, eight emulator-only checks skipped** in ordinary execution. Focused actual emulator domain and browser checks passed for concurrent weights, recovery, schedule snapshots, preserved open drafts and offline rejoin. The new Chromium suite passed for sleep/weight/supplements/daily reminders and actual Training integration. Fresh combined CI is pending.
 
 - Stage 3 code commit: `873acc6988fe5fe225f38fab79eed019f0d0732d`. Reviewed combined CI: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40440107824 — all three jobs passed, including all eight browser scripts.
 - Updated synthetic screenshots: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/40440107824/artifacts/12705937662 (14-day GitHub retention; includes Nutrition).
@@ -82,17 +85,17 @@ Stage 1 storage/legacy integration, Stage 2 Training and Stage 3 Food/Nutrition 
 | N10 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Combined CI passed/logs reviewed; physical-device acceptance pending. |
 | N11 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Combined CI passed/logs reviewed; physical-device acceptance pending. |
 | N12 | `stage3/nutrition-core.js`, `nutrition-records.js`, `app.js` | `stage3-nutrition.test.cjs`, Nutrition Chromium and demo emulator tests | Implemented in isolated development; local tests pass | Combined CI passed/logs reviewed; physical-device acceptance pending. |
-| S01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| S02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| S03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| S04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| W01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| W02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| W03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| U01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| U02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| U03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
-| U04 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
+| S01 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| S02 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| S03 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| S04 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| W01 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| W02 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| W03 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| U01 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| U02 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| U03 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
+| U04 | `stage4/checkins-core.js`, `checkins-records.js`, `app.js`, `sw.js` | `stage4-checkins.test.cjs`, Stage 4 Chromium/demo emulator suites | Implemented in isolated development; local checks pass | Fresh combined CI and physical-device acceptance pending. |
 | H01 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | H02 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
 | H03 | Existing legacy application remains intact | Approved replacement behavior not yet fully validated | Pending later phase | No completion claim. |
@@ -149,9 +152,20 @@ All Stage 2 gates above have development test evidence; they are not a blanket r
 
 The development Food screen includes calorie/macro summary, shortcuts, meal disclosures, top/meal/floating Add, search, live previews and source detail. Its screenshot is `stage1/artifacts/stage3-food.png` (synthetic). No live external product lookup, physical iPhone or real-data migration was used for testing.
 
+## Stage 4 acceptance
+
+| Gate | Evidence/status |
+| --- | --- |
+| SWS01 | Explicit bed/wake UTC offsets, DST fall/spring and travel, wake-date attribution, elapsed versus explicit override, correction/recovery, actual-only chart and permanent forward goals tested. Synced overlapping episodes are retained/flagged and excluded until reviewed. |
+| SWS02 | Date-based official identity, exact lb/kg conversion and original unit retention, explicit replacement, stale conflicting values preserved, deletion/Undo, >=3 actual trailing-week trend, keyboard chart and offline entry tested. |
+| SWS03 | Permanent effective schedule IDs and original label/slot snapshots; real Stage 2 completion enables workout-day doses, rest/skip does not. Explicit Taken only, dose denominator, historical correction and zero-scheduled satisfaction tested. |
+| SWS04 | Atomic initial overlay claim across tabs, persisted dismissal, one nonmodal midday follow-up, optional local-time/quiet/once reminder, explicit permission request and denied-notification in-app fallback tested. Physical OS/iPhone delivery remains unverified; no background guarantee. |
+
+The combined overview has a large Sleep section and side-by-side Weight/Supplements cards with dedicated dashboards. Synthetic screenshots: `stage1/artifacts/stage4-overview.png`, `stage4-sleep.png`, `stage4-sleep-timeline.png`, `stage4-weight.png`, `stage4-supplements.png`. Runtime notifications are optional; tests send none.
+
 ## Visual and later-phase tracking
 
-Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, Sleep/Weight/Supplements, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
+Brand/icon/splash, exact 16 themes, four Home pages/dock, 38-widget inventory/gallery/editing, full cross-feature History and final iPhone/visual matrices remain later-phase work. No approved requirement was removed or narrowed to an MVP.
 
 
 ## Verified final hardening
