@@ -1,0 +1,1463 @@
+[
+  {
+    "id": "builtin-0",
+    "name": "Incline dumbbell press",
+    "group": "Chest",
+    "secondary": [
+      "Shoulders",
+      "Triceps"
+    ],
+    "equipment": "Dumbbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-1",
+    "name": "Flat dumbbell press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-2",
+    "name": "Flat barbell bench press",
+    "group": "Chest",
+    "secondary": [
+      "Triceps",
+      "Shoulders"
+    ],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-3",
+    "name": "Incline Smith press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-4",
+    "name": "Flat Smith press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-5",
+    "name": "Flat machine press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-6",
+    "name": "Incline machine press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-7",
+    "name": "Cable fly",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-8",
+    "name": "Cable chest press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-9",
+    "name": "Single-arm cable chest fly",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-10",
+    "name": "Pec deck #1",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-11",
+    "name": "Pec deck #2",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-12",
+    "name": "Flat dumbbell fly",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-13",
+    "name": "Incline dumbbell fly",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-14",
+    "name": "Seated dumbbell shoulder press",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-15",
+    "name": "Machine shoulder press",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-16",
+    "name": "Smith machine shoulder press",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-17",
+    "name": "Dumbbell lateral raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Raise the arms out to the sides to shoulder height, leading with the elbows.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-18",
+    "name": "Machine lateral raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Raise the arms out to the sides to shoulder height, leading with the elbows.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-19",
+    "name": "Cable lateral raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Raise the arms out to the sides to shoulder height, leading with the elbows.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-20",
+    "name": "Leaning dumbbell lateral raise on a bench",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Raise the arms out to the sides to shoulder height, leading with the elbows.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-21",
+    "name": "Cable front raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Raise the weight in front to shoulder height without swinging.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-22",
+    "name": "Dumbbell front raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Raise the weight in front to shoulder height without swinging.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-23",
+    "name": "Upright row",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Pull the bar up along the body to chest height, elbows high.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-24",
+    "name": "Rear-delt dumbbell fly",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Arms stay slightly bent and sweep together to squeeze the shoulders; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-25",
+    "name": "Machine rear-delt fly",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Arms stay slightly bent and sweep together to squeeze the shoulders; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-26",
+    "name": "Cable rear-delt fly",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Arms stay slightly bent and sweep together to squeeze the shoulders; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-27",
+    "name": "Face pull",
+    "group": "Shoulders",
+    "secondary": [
+      "Back"
+    ],
+    "equipment": "Cable",
+    "description": "Pull a rope towards the face with elbows high, spreading the ends apart.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-28",
+    "name": "Pull-up",
+    "group": "Back",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "Bodyweight",
+    "description": "Hang from the bar and pull your chest up towards it, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-29",
+    "name": "Lat pulldown",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Pull the bar or handle down to the upper chest, driving the elbows down.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-30",
+    "name": "Straight-arm pulldown",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Pull the bar or handle down to the upper chest, driving the elbows down.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-31",
+    "name": "Machine lat pullover",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Keep the arms long and sweep the weight from overhead down to the hips using the lats.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-32",
+    "name": "Dumbbell lat pullover",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Keep the arms long and sweep the weight from overhead down to the hips using the lats.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-33",
+    "name": "Chest-supported row #1",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-34",
+    "name": "Chest-supported row #2",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-35",
+    "name": "Single-arm dumbbell row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-36",
+    "name": "Seated cable row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-37",
+    "name": "Barbell row",
+    "group": "Back",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "Barbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-38",
+    "name": "Smith machine barbell row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-39",
+    "name": "Smith machine barbell row (reverse grip)",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-40",
+    "name": "T-bar row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Landmine",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-41",
+    "name": "Back extension",
+    "group": "Back",
+    "secondary": [
+      "Glutes",
+      "Hamstrings"
+    ],
+    "equipment": "Bodyweight",
+    "description": "Hinge at the hips over the pad and raise the torso until in line with the legs.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-42",
+    "name": "Deadlift",
+    "group": "Back",
+    "secondary": [
+      "Hamstrings",
+      "Glutes"
+    ],
+    "equipment": "Barbell",
+    "description": "Lift the bar from the floor by driving through the legs and extending the hips.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-43",
+    "name": "EZ-bar curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "EZ bar",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-44",
+    "name": "Incline dumbbell curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-45",
+    "name": "Bayesian curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-46",
+    "name": "Hammer curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-47",
+    "name": "Preacher curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-48",
+    "name": "Standing cable curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-49",
+    "name": "Standing cable rope curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-50",
+    "name": "Seated machine curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-51",
+    "name": "Rope pushdown",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Push the attachment down until the elbows lock out, keeping the elbows pinned.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-52",
+    "name": "Bar pushdown",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Push the attachment down until the elbows lock out, keeping the elbows pinned.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-53",
+    "name": "Single-arm cable pushdown",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Push the attachment down until the elbows lock out, keeping the elbows pinned.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-54",
+    "name": "Overhead cable extension",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Straighten the elbows against resistance, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-55",
+    "name": "Overhead dumbbell extension",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Straighten the elbows against resistance, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-56",
+    "name": "Overhead EZ-bar extension",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "EZ bar",
+    "description": "Straighten the elbows against resistance, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-57",
+    "name": "Skull crusher (bar)",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lower the weight towards the forehead by bending the elbows, then extend.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-58",
+    "name": "Skull crusher (dumbbell)",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Lower the weight towards the forehead by bending the elbows, then extend.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-59",
+    "name": "Triceps dip",
+    "group": "Triceps",
+    "secondary": [
+      "Chest"
+    ],
+    "equipment": "Bodyweight",
+    "description": "Lower the body between the bars by bending the elbows, then press up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-60",
+    "name": "Machine triceps dip",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Lower the body between the bars by bending the elbows, then press up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-61",
+    "name": "Kneeling cable kickback",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Extend the arm or leg back against resistance and squeeze at the end.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-62",
+    "name": "Hack squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-63",
+    "name": "Barbell squat",
+    "group": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "Barbell",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-64",
+    "name": "Smith machine squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-65",
+    "name": "Smith machine front squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-66",
+    "name": "Leg press #1",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Press the platform away with the legs, stopping short of locking the knees.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-67",
+    "name": "Leg press #2",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Press the platform away with the legs, stopping short of locking the knees.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-68",
+    "name": "Machine leg press",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Press the platform away with the legs, stopping short of locking the knees.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-69",
+    "name": "Bulgarian split squat",
+    "group": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "Barbell",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-70",
+    "name": "Smith machine Bulgarian",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Rear foot elevated; lower straight down on the front leg.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-71",
+    "name": "Smith machine lunge",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Smith machine",
+    "description": "Step into a long stride and lower the back knee towards the floor, then drive up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-72",
+    "name": "Leg extension #1",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Straighten the knees against the pad to work the quads.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-73",
+    "name": "Leg extension #2",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Straighten the knees against the pad to work the quads.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-74",
+    "name": "Romanian deadlift",
+    "group": "Hamstrings",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "Barbell",
+    "description": "Hinge at the hips with soft knees, lowering the weight along the legs to stretch the hamstrings.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-75",
+    "name": "Dumbbell Romanian deadlift",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Hinge at the hips with soft knees, lowering the weight along the legs to stretch the hamstrings.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-76",
+    "name": "Seated leg curl",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Curl the pad towards your glutes by bending the knees.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-77",
+    "name": "Lying leg curl",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Curl the pad towards your glutes by bending the knees.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-78",
+    "name": "Cable pull-through",
+    "group": "Hamstrings",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "Cable",
+    "description": "Facing away from a cable, hinge and drive the hips forward.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-79",
+    "name": "Leg press (high foot position)",
+    "group": "Hamstrings",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "Machine",
+    "description": "Press the platform away with the legs, stopping short of locking the knees.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-80",
+    "name": "Standing calf raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Rise up onto the balls of the feet and lower into a full stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-81",
+    "name": "Seated calf raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Rise up onto the balls of the feet and lower into a full stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-82",
+    "name": "Machine calf raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Rise up onto the balls of the feet and lower into a full stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-83",
+    "name": "Push-up",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lower the chest to the floor with a straight body, then push back up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-84",
+    "name": "Weighted dip (chest)",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lower the body between the bars by bending the elbows, then press up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-85",
+    "name": "Decline barbell bench press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-86",
+    "name": "Incline barbell bench press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-87",
+    "name": "Machine chest fly",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-88",
+    "name": "Low-to-high cable fly",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Arms stay slightly bent and sweep together to squeeze the chest; control the stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-89",
+    "name": "Dumbbell squeeze press",
+    "group": "Chest",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-90",
+    "name": "Chin-up",
+    "group": "Back",
+    "secondary": [
+      "Biceps"
+    ],
+    "equipment": "Bodyweight",
+    "description": "Underhand-grip pull-up; pull the chest to the bar.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-91",
+    "name": "Neutral-grip lat pulldown",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Pull the bar or handle down to the upper chest, driving the elbows down.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-92",
+    "name": "Single-arm lat pulldown",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Pull the bar or handle down to the upper chest, driving the elbows down.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-93",
+    "name": "Machine row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-94",
+    "name": "Inverted row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-95",
+    "name": "Rack pull",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Deadlift from pins at knee height to load the upper back and hips.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-96",
+    "name": "Meadows row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-97",
+    "name": "Seal row",
+    "group": "Back",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-98",
+    "name": "Standing overhead press",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-99",
+    "name": "Arnold press",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-100",
+    "name": "Landmine press",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Landmine",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-101",
+    "name": "Cable Y-raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Raise the legs or knees by curling the pelvis up, without swinging.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-102",
+    "name": "Behind-the-back cable lateral raise",
+    "group": "Shoulders",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Raise the arms out to the sides to shoulder height, leading with the elbows.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-103",
+    "name": "Barbell curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-104",
+    "name": "Concentration curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-105",
+    "name": "Spider curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-106",
+    "name": "Cable hammer curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-107",
+    "name": "Reverse curl",
+    "group": "Biceps",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-108",
+    "name": "Close-grip bench press",
+    "group": "Triceps",
+    "secondary": [
+      "Chest"
+    ],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-109",
+    "name": "JM press",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-110",
+    "name": "Diamond push-up",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lower the chest to the floor with a straight body, then push back up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-111",
+    "name": "Cable cross-body extension",
+    "group": "Triceps",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Straighten the elbows against resistance, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-112",
+    "name": "Front squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-113",
+    "name": "Goblet squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-114",
+    "name": "Walking lunge",
+    "group": "Quads",
+    "secondary": [
+      "Glutes"
+    ],
+    "equipment": "Bodyweight",
+    "description": "Step into a long stride and lower the back knee towards the floor, then drive up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-115",
+    "name": "Step-up",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Step onto a box and drive up through the front leg.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-116",
+    "name": "Sissy squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-117",
+    "name": "Pendulum squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-118",
+    "name": "Belt squat",
+    "group": "Quads",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Sit down between the hips with the chest up, then drive back up through the whole foot.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-119",
+    "name": "Stiff-leg deadlift",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Hinge with nearly straight legs to load the hamstrings.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-120",
+    "name": "Nordic curl",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Kneel with ankles anchored and lower the body forward slowly using the hamstrings.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-121",
+    "name": "Good morning",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "With the bar on the back, hinge forward at the hips and stand back up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-122",
+    "name": "Single-leg Romanian deadlift",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Hinge at the hips with soft knees, lowering the weight along the legs to stretch the hamstrings.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-123",
+    "name": "Glute-ham raise",
+    "group": "Hamstrings",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lower and raise the body on a GHD using the hamstrings.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-124",
+    "name": "Barbell hip thrust",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "With the upper back on a bench, drive the hips up and squeeze the glutes.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-125",
+    "name": "Machine hip thrust",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "With the upper back on a bench, drive the hips up and squeeze the glutes.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-126",
+    "name": "Glute bridge",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lying on your back, drive the hips up and squeeze the glutes.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-127",
+    "name": "Cable kickback",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Extend the arm or leg back against resistance and squeeze at the end.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-128",
+    "name": "Hip abduction machine",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Push the knees or leg outward against resistance to work the side glutes.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-129",
+    "name": "Sumo deadlift",
+    "group": "Glutes",
+    "secondary": [
+      "Quads",
+      "Back"
+    ],
+    "equipment": "Barbell",
+    "description": "Lift the bar from the floor by driving through the legs and extending the hips.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-130",
+    "name": "Reverse lunge",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Step into a long stride and lower the back knee towards the floor, then drive up.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-131",
+    "name": "Cable abduction",
+    "group": "Glutes",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Push the knees or leg outward against resistance to work the side glutes.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-132",
+    "name": "Leg press calf raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "On the leg press, push the platform with the balls of the feet through a full calf stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-133",
+    "name": "Single-leg calf raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Rise up onto the balls of the feet and lower into a full stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-134",
+    "name": "Donkey calf raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Rise up onto the balls of the feet and lower into a full stretch.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-135",
+    "name": "Tibialis raise",
+    "group": "Calves",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lift the toes towards the shins to train the front of the lower leg.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-136",
+    "name": "Hanging knee raise",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Raise the legs or knees by curling the pelvis up, without swinging.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-137",
+    "name": "Cable crunch",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Cable",
+    "description": "Curl the ribcage towards the pelvis to contract the abs.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-138",
+    "name": "Plank",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Hold a straight line from head to heels on the forearms; brace the core.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-139",
+    "name": "Hanging leg raise",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Raise the legs or knees by curling the pelvis up, without swinging.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-140",
+    "name": "Ab wheel rollout",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Ab wheel",
+    "description": "Roll the wheel forward with a braced core, then pull back.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-141",
+    "name": "Decline sit-up",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Curl up from lying to sitting on a decline bench.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-142",
+    "name": "Pallof press",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Barbell",
+    "description": "Press the weight away from the body until the arms are straight, then lower under control.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-143",
+    "name": "Russian twist",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Rotate the torso side to side while seated with feet raised.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-144",
+    "name": "Dead bug",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Lying on your back, extend opposite arm and leg while keeping the lower back down.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-145",
+    "name": "Side plank",
+    "group": "Core",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Hold a straight line from head to heels on the forearms; brace the core.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-146",
+    "name": "Treadmill walk (incline)",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Cardio machine",
+    "description": "Steady-state cardio; incline walking is easy on the joints.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-147",
+    "name": "Stationary bike",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Cardio machine",
+    "description": "Steady or interval cardio on the bike.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-148",
+    "name": "Rowing machine",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Machine",
+    "description": "Pull the weight towards the torso, squeezing the shoulder blades together.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-149",
+    "name": "Stair climber",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Cardio machine",
+    "description": "Climb at a steady pace without leaning on the rails.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-150",
+    "name": "Elliptical",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Cardio machine",
+    "description": "Low-impact steady cardio.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-151",
+    "name": "Jump rope",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Jump rope",
+    "description": "Skip rope for conditioning intervals.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-152",
+    "name": "Sled push",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Sled",
+    "description": "Push the sled with a forward lean and short, powerful steps.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-153",
+    "name": "Assault bike",
+    "group": "Cardio",
+    "secondary": [],
+    "equipment": "Cardio machine",
+    "description": "Steady or interval cardio on the bike.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-154",
+    "name": "Wrist curl",
+    "group": "Forearms",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-155",
+    "name": "Reverse wrist curl",
+    "group": "Forearms",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Curl the weight up by bending the elbows, keeping the upper arms still.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-156",
+    "name": "Farmer's carry",
+    "group": "Forearms",
+    "secondary": [],
+    "equipment": "Dumbbell",
+    "description": "Walk with heavy weights at your sides; stay tall.",
+    "isCustom": false
+  },
+  {
+    "id": "builtin-157",
+    "name": "Dead hang",
+    "group": "Forearms",
+    "secondary": [],
+    "equipment": "Bodyweight",
+    "description": "Hang from a bar for time to build grip.",
+    "isCustom": false
+  }
+]

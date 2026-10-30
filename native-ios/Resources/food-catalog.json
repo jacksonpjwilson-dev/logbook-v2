@@ -1,0 +1,112 @@
+[
+  {
+    "id": "seed-food-0",
+    "name": "Greek yogurt",
+    "basisAmount": 1,
+    "basisUnit": "cup",
+    "calories": 150,
+    "protein": 20,
+    "carbohydrates": 9,
+    "fat": 4,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-1",
+    "name": "Oats",
+    "basisAmount": 60,
+    "basisUnit": "g",
+    "calories": 228,
+    "protein": 8,
+    "carbohydrates": 40,
+    "fat": 4,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-2",
+    "name": "Chicken breast",
+    "basisAmount": 150,
+    "basisUnit": "g",
+    "calories": 248,
+    "protein": 46,
+    "carbohydrates": 0,
+    "fat": 5,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-3",
+    "name": "Rice, cooked",
+    "basisAmount": 1,
+    "basisUnit": "cup",
+    "calories": 205,
+    "protein": 4,
+    "carbohydrates": 45,
+    "fat": 0,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-4",
+    "name": "Banana",
+    "basisAmount": 1,
+    "basisUnit": "item",
+    "calories": 105,
+    "protein": 1,
+    "carbohydrates": 27,
+    "fat": 0,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-5",
+    "name": "Eggs",
+    "basisAmount": 2,
+    "basisUnit": "large",
+    "calories": 144,
+    "protein": 12,
+    "carbohydrates": 1,
+    "fat": 10,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-6",
+    "name": "Protein shake",
+    "basisAmount": 1,
+    "basisUnit": "serving",
+    "calories": 160,
+    "protein": 30,
+    "carbohydrates": 4,
+    "fat": 2,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-7",
+    "name": "Salmon",
+    "basisAmount": 150,
+    "basisUnit": "g",
+    "calories": 310,
+    "protein": 34,
+    "carbohydrates": 0,
+    "fat": 19,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-8",
+    "name": "Broccoli",
+    "basisAmount": 1,
+    "basisUnit": "cup",
+    "calories": 55,
+    "protein": 4,
+    "carbohydrates": 11,
+    "fat": 1,
+    "source": "Starter catalog; verify against your package label"
+  },
+  {
+    "id": "seed-food-9",
+    "name": "Almonds",
+    "basisAmount": 28,
+    "basisUnit": "g",
+    "calories": 164,
+    "protein": 6,
+    "carbohydrates": 6,
+    "fat": 14,
+    "source": "Starter catalog; verify against your package label"
+  }
+]
