@@ -160,7 +160,7 @@ enum WidgetKind: String, Codable, CaseIterable, Identifiable, Equatable {
     var icon: String {
         switch self {
         case .calories, .weeklyCalories: "flame.fill"
-        case .macros, .protein, .meals, .quickLog, .fibre, .easyNext: "fork.knife"
+        case .macros, .protein, .meals, .quickLog, .mealTiming, .fibre, .easyNext: "fork.knife"
         case .water: "drop.fill"
         case .workoutSplit, .nextWorkout, .lastWorkout, .upcomingPlan: "dumbbell.fill"
         case .thisWeek, .calendarHeatmap, .monthSummary: "calendar"

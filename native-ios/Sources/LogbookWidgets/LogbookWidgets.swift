@@ -110,16 +110,18 @@ private struct TrainingWidgetView: View {
     @ViewBuilder var body: some View {
         switch family {
         case .accessoryCircular:
-            if let active {
-                Gauge(value: workoutProgress) {
-                    Image(systemName: "dumbbell.fill")
-                } currentValueLabel: {
-                    Text("\(active.exercises.flatMap(\.sets).filter(\.completed).count)")
-                        .font(.system(.caption2, design: .rounded).bold())
+            Group {
+                if let active {
+                    Gauge(value: workoutProgress) {
+                        Image(systemName: "dumbbell.fill")
+                    } currentValueLabel: {
+                        Text("\(active.exercises.flatMap(\.sets).filter(\.completed).count)")
+                            .font(.system(.caption2, design: .rounded).bold())
+                    }
+                    .gaugeStyle(.accessoryCircularCapacity)
+                } else {
+                    VStack(spacing: 1) { Image(systemName: "dumbbell.fill"); Text("\(sessions.count)").font(.system(.caption2, design: .rounded).bold()) }
                 }
-                .gaugeStyle(.accessoryCircularCapacity)
-            } else {
-                VStack(spacing: 1) { Image(systemName: "dumbbell.fill"); Text("\(sessions.count)").font(.system(.caption2, design: .rounded).bold()) }
             }
             .widgetURL(URL(string: "logbook://training"))
         case .accessoryInline:
