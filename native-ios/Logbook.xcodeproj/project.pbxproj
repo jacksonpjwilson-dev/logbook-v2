@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1A1111111111111111111111 /* LogbookAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222222 /* LogbookAssets.xcassets */; };
+		1A1111111111111111111112 /* exercise-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222223 /* exercise-catalog.json */; };
+		1A1111111111111111111113 /* food-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222224 /* food-catalog.json */; };
 		03A53D4E466B32FD2E649287 /* LogbookStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */; };
 		049EF6B80F772C3CD6861582 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
 		11FD8DE3F0DFF2AD7A22A22B /* LogbookWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D768DBB0C87D0B21E1A30A88 /* LogbookWatchApp.swift */; };
@@ -81,6 +84,9 @@
 		E53AF4C63550141DCFC86C18 /* LogbookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookStore.swift; sourceTree = "<group>"; };
 		F2B70F6228C3CA91357AA565 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
 		FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+		1A2222222222222222222222 /* LogbookAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = LogbookAssets.xcassets; sourceTree = "<group>"; };
+		1A2222222222222222222223 /* exercise-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-catalog.json"; sourceTree = "<group>"; };
+		1A2222222222222222222224 /* food-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "food-catalog.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -110,6 +116,7 @@
 		26FA94A0FE4A162D33B7DC0E = {
 			isa = PBXGroup;
 			children = (
+				1A3333333333333333333333 /* Resources */,
 				CBEFA84B7EF53663171F6E17 /* Shared */,
 				4B01441FC1EAE042DBABEA5E /* Sources */,
 				F7189BF1BE2C454986E3AAA3 /* Tests */,
@@ -173,6 +180,7 @@
 			path = Tests;
 			sourceTree = "<group>";
 		};
+		1A3333333333333333333333 /* Resources */ = {isa = PBXGroup; children = (1A2222222222222222222222 /* LogbookAssets.xcassets */, 1A2222222222222222222223 /* exercise-catalog.json */, 1A2222222222222222222224 /* food-catalog.json */, ); path = Resources; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -216,6 +224,7 @@
 			buildConfigurationList = C40AF4A55C9F8036AD8DF72A /* Build configuration list for PBXNativeTarget "Logbook" */;
 			buildPhases = (
 				4E02F5D04B39C010513237BF /* Sources */,
+				1A4444444444444444444444 /* Resources */,
 				A53C433B6F0A4F0B1C46C4FF /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -291,6 +300,19 @@
 			);
 		};
 /* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		1A4444444444444444444444 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				1A1111111111111111111111 /* LogbookAssets.xcassets in Resources */,
+				1A1111111111111111111112 /* exercise-catalog.json in Resources */,
+				1A1111111111111111111113 /* food-catalog.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1BB1516D97E2243A81D38ADF /* Sources */ = {

@@ -43,7 +43,7 @@ struct HomeScreen: View {
                     .padding(.horizontal, 14)
                     // Keep the dock above the home-indicator safe area. The
                     // screen background already extends edge-to-edge.
-                    .padding(.bottom, 8)
+                    .padding(.bottom, 28)
             }
         }
         .toolbar(.hidden, for: .navigationBar)
