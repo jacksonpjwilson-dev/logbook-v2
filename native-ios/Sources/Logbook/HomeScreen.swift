@@ -258,7 +258,7 @@ private struct HomeWidgetCard: View {
             return (widget.variant ?? "Training activity", "Habits appear as you log them")
         case .vitals:
             return (widget.variant ?? "Check-ins", "Sleep, weight and doses")
-        case .fibre, .mealTiming, .weeklyCalories, .easyNext, .quickLog, .bedtimeTarget:
+        case .fibre, .mealTiming, .weeklyCalories, .easyNext, .quickLog, .bedtimeTarget, .today:
             return (widget.variant ?? widget.kind.title, "Open to view details")
         }
     }
