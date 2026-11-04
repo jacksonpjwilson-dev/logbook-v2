@@ -48,7 +48,6 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
     dependencies:
       - target: LogbookWidgets
-      - target: LogbookWatch
 
   LogbookWidgets:
     type: app-extension
