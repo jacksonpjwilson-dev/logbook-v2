@@ -2,7 +2,18 @@
   "images": [
     {
       "filename": "slate-glass.jpg",
-      "idiom": "universal"
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "slate-glass@2x.jpg",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "slate-glass@3x.jpg",
+      "idiom": "universal",
+      "scale": "3x"
     }
   ],
   "info": {

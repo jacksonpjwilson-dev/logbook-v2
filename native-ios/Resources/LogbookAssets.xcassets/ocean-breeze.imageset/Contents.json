@@ -2,7 +2,18 @@
   "images": [
     {
       "filename": "ocean-breeze.jpg",
-      "idiom": "universal"
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "ocean-breeze@2x.jpg",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "ocean-breeze@3x.jpg",
+      "idiom": "universal",
+      "scale": "3x"
     }
   ],
   "info": {

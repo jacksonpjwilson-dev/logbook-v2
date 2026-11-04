@@ -2,7 +2,18 @@
   "images": [
     {
       "filename": "modern-clean.jpg",
-      "idiom": "universal"
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "modern-clean@2x.jpg",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "modern-clean@3x.jpg",
+      "idiom": "universal",
+      "scale": "3x"
     }
   ],
   "info": {

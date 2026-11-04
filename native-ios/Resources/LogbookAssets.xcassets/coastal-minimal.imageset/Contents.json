@@ -2,7 +2,18 @@
   "images": [
     {
       "filename": "coastal-minimal.jpg",
-      "idiom": "universal"
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "coastal-minimal@2x.jpg",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "coastal-minimal@3x.jpg",
+      "idiom": "universal",
+      "scale": "3x"
     }
   ],
   "info": {

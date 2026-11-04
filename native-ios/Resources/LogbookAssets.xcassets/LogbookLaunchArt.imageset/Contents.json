@@ -1,8 +1,19 @@
 {
   "images": [
     {
-      "filename": "LogbookLaunchArt.png",
-      "idiom": "universal"
+      "filename": "LogbookLaunchArt.jpg",
+      "idiom": "universal",
+      "scale": "1x"
+    },
+    {
+      "filename": "LogbookLaunchArt@2x.jpg",
+      "idiom": "universal",
+      "scale": "2x"
+    },
+    {
+      "filename": "LogbookLaunchArt@3x.jpg",
+      "idiom": "universal",
+      "scale": "3x"
     }
   ],
   "info": {

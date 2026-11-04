@@ -38,13 +38,12 @@ struct HomeScreen: View {
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                LogbookDock(path: $path, palette: palette)
-                    .padding(.horizontal, 14)
-                    // Keep the dock above the home-indicator safe area. The
-                    // screen background already extends edge-to-edge.
-                    .padding(.bottom, 28)
-            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            LogbookDock(path: $path, palette: palette)
+                .frame(height: 58)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 8)
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showEditor) {
@@ -67,10 +66,8 @@ struct HomeScreen: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 10) {
-                Image("LogbookMark").resizable().frame(width: 34, height: 34).clipShape(RoundedRectangle(cornerRadius: 9))
-                Text("LOGBOOK").font(.system(size: 12, weight: .bold, design: .rounded)).tracking(2.4)
                 Spacer()
-                if store.state.training.activeSession != nil {
+                if !isEditing, store.state.training.activeSession != nil {
                     Button { path = [.training] } label: {
                         Label("Resume", systemImage: "play.fill")
                             .font(.system(size: 12, weight: .semibold))
@@ -80,18 +77,36 @@ struct HomeScreen: View {
                     }
                     .accessibilityLabel("Resume active workout")
                 }
-                Button {
-                    isEditing.toggle()
-                    if isEditing { showEditor = true }
-                } label: {
-                    Text(isEditing ? "Done" : "Edit")
-                        .font(.system(size: 14, weight: .semibold))
-                        .padding(.horizontal, 13).padding(.vertical, 8)
-                        .background(.ultraThinMaterial, in: Capsule())
-                        .overlay(Capsule().stroke(.white.opacity(0.34), lineWidth: 0.7))
+                if isEditing {
+                    Button { showEditor = true } label: {
+                        Label("Add", systemImage: "plus")
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 13).padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.34), lineWidth: 0.7))
+                    }
+                    .accessibilityLabel("Add or customize widgets")
+                    .foregroundStyle(palette.textColor)
+                    Button { isEditing = false } label: {
+                        Text("Done")
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 13).padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.34), lineWidth: 0.7))
+                    }
+                    .accessibilityLabel("Finish editing Home Screen")
+                    .foregroundStyle(palette.textColor)
+                } else {
+                    Button { isEditing = true } label: {
+                        Text("Edit")
+                            .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 13).padding(.vertical, 8)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .overlay(Capsule().stroke(.white.opacity(0.34), lineWidth: 0.7))
+                    }
+                    .accessibilityLabel("Edit Home Screen")
+                    .foregroundStyle(palette.textColor)
                 }
-                .foregroundStyle(palette.textColor)
-                .accessibilityLabel("Edit Home Screen")
             }
             Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
                 .font(.system(size: 10, weight: .medium, design: .rounded)).tracking(1.1)
@@ -150,29 +165,31 @@ private struct HomePageGrid: View {
                     let rows = widget.size == .large ? 2 : 1
                     let width = columnWidth * CGFloat(columns) + gap * CGFloat(columns - 1)
                     let height = rowHeight * CGFloat(rows) + gap * CGFloat(rows - 1)
-                    Button {
-                        guard !editing else { return }
-                        open(route(for: widget.kind))
-                    } label: {
-                        HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
-                            .frame(width: width, height: height)
-                            .overlay(alignment: .topTrailing) {
-                                if editing {
-                                    Button { remove(widget.id) } label: {
-                                        Image(systemName: "minus")
-                                            .font(.system(size: 11, weight: .bold))
-                                            .foregroundStyle(.white)
-                                            .frame(width: 25, height: 25)
-                                            .background(Color.red, in: Circle())
-                                            .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1))
-                                    }
-                                    .offset(x: 8, y: -7)
-                                    .accessibilityLabel("Remove \(widget.kind.title) widget")
-                                }
+                    ZStack(alignment: .topTrailing) {
+                        Button {
+                            guard !editing else { return }
+                            open(route(for: widget.kind))
+                        } label: {
+                            HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
+                                .frame(width: width, height: height)
+                        }
+                        .buttonStyle(WidgetPressStyle())
+                        .disabled(editing)
+
+                        if editing {
+                            Button { remove(widget.id) } label: {
+                                Image(systemName: "minus")
+                                    .font(.system(size: 11, weight: .bold))
+                                    .foregroundStyle(.white)
+                                    .frame(width: 25, height: 25)
+                                    .background(Color.red, in: Circle())
+                                    .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1))
                             }
+                            .offset(x: 8, y: -7)
+                            .accessibilityLabel("Remove \(widget.kind.title) widget")
+                        }
                     }
-                    .buttonStyle(WidgetPressStyle())
-                    .disabled(editing)
+                    .frame(width: width, height: height)
                     .position(
                         x: CGFloat(widget.column) * (columnWidth + gap) + width / 2,
                         y: CGFloat(widget.row) * (rowHeight + gap) + height / 2
@@ -286,10 +303,10 @@ private struct HomeWidgetCard: View {
         }
         .padding(widget.size == .small ? 12 : 15)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        // A light tint keeps labels readable without hiding the theme artwork.
-        .background(palette.surfaceColor.opacity(palette.light ? 0.18 : 0.08), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 25, style: .continuous).stroke(.white.opacity(palette.light ? 0.62 : 0.38), lineWidth: 0.8))
-        .shadow(color: .black.opacity(0.13), radius: 12, x: 0, y: 7)
+        // A tinted glass surface keeps the theme visible while protecting text contrast.
+        .background(palette.surfaceColor.opacity(palette.light ? 0.86 : 0.78), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 25, style: .continuous).stroke(palette.light ? palette.accentColor.opacity(0.30) : .white.opacity(0.42), lineWidth: 0.9))
+        .shadow(color: .black.opacity(0.22), radius: 12, x: 0, y: 7)
         .contentShape(RoundedRectangle(cornerRadius: 25))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(widget.variant ?? widget.kind.title), \(summary.0), \(summary.1). Open details.")
@@ -595,26 +612,54 @@ struct WidgetGalleryScreen: View {
             List {
                 Section {
                     Picker("Category", selection: $family) { ForEach(families, id: \.self) { Text($0).tag($0) } }
-                    Picker("Size", selection: $size) { ForEach(WidgetSize.allCases) { Text($0.title).tag($0) } }
+                    Text("Choose a size preview, then tap Add.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
-                Section("Available widgets · \(matches.count)") {
+                Section("Widget previews · \(matches.count)") {
                     ForEach(matches) { kind in
-                        Button {
-                            guard let pageID else { return }
-                            guard store.addHomeWidget(kind, size: size, pageID: pageID) else {
-                                errorMessage = "This page has no open position for a \(size.title.lowercased()) widget. Choose a smaller size or add another page."
-                                return
+                        VStack(alignment: .leading, spacing: 11) {
+                            HStack(spacing: 9) {
+                                Image(systemName: kind.icon)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(store.state.home.theme.palette.accentColor)
+                                    .frame(width: 30, height: 30)
+                                    .background(store.state.home.theme.palette.accentColor.opacity(0.13), in: RoundedRectangle(cornerRadius: 9))
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(kind.title).font(.subheadline.weight(.semibold))
+                                    Text(kind.family).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer(minLength: 4)
+                                Button { add(kind) } label: {
+                                    Label("Add", systemImage: "plus.circle.fill")
+                                        .font(.system(size: 12, weight: .semibold))
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .tint(store.state.home.theme.palette.accentColor)
+                                .disabled(pageID == nil)
                             }
-                            dismiss()
-                        } label: {
-                            HStack(spacing: 12) {
-                                Image(systemName: kind.icon).frame(width: 34, height: 34).background(.thinMaterial, in: RoundedRectangle(cornerRadius: 10))
-                                VStack(alignment: .leading, spacing: 3) { Text(kind.title).font(.headline); Text(kind.family).font(.caption).foregroundStyle(.secondary) }
-                                Spacer()
-                                Image(systemName: "plus.circle.fill").foregroundStyle(store.state.home.theme.palette.accentColor)
+
+                            HStack(alignment: .bottom, spacing: 7) {
+                                ForEach(WidgetSize.allCases) { previewSize in
+                                    Button { size = previewSize } label: {
+                                        VStack(spacing: 4) {
+                                            WidgetSizePreview(
+                                                kind: kind,
+                                                size: previewSize,
+                                                palette: store.state.home.theme.palette,
+                                                selected: size == previewSize
+                                            )
+                                            Text(previewSize.title)
+                                                .font(.system(size: 9, weight: size == previewSize ? .bold : .medium, design: .rounded))
+                                                .foregroundStyle(size == previewSize ? store.state.home.theme.palette.accentColor : store.state.home.theme.palette.mutedColor)
+                                        }
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("Preview \(previewSize.title) \(kind.title) widget")
+                                }
                             }
                         }
-                        .foregroundStyle(.primary)
+                        .padding(.vertical, 8)
                     }
                 }
             }
@@ -626,5 +671,69 @@ struct WidgetGalleryScreen: View {
             } message: { Text(errorMessage ?? "") }
         }
         .searchable(text: $search, prompt: "Find a widget")
+    }
+
+    private func add(_ kind: WidgetKind) {
+        guard let pageID else { return }
+        guard store.addHomeWidget(kind, size: size, pageID: pageID) else {
+            errorMessage = "This page has no open position for a \(size.title.lowercased()) widget. Choose a smaller size or add another page."
+            return
+        }
+        dismiss()
+    }
+}
+
+private struct WidgetSizePreview: View {
+    let kind: WidgetKind
+    let size: WidgetSize
+    let palette: ThemePalette
+    let selected: Bool
+
+    private var previewWidth: CGFloat { size == .small ? 58 : 120 }
+    private var previewHeight: CGFloat { size == .large ? 100 : 48 }
+
+    private var previewMetric: String {
+        switch kind.family {
+        case "Food": "1,450 kcal"
+        case "Training": "4 / 5 sets"
+        case "Body": "7.5 hours"
+        case "History": "This week"
+        default: "Today"
+        }
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 3) {
+                Image(systemName: kind.icon).font(.system(size: 6, weight: .bold))
+                Text(kind.title.uppercased())
+                    .font(.system(size: 5, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(palette.accentColor)
+            Text(previewMetric)
+                .font(.system(size: size == .large ? 10 : 8, weight: .bold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .foregroundStyle(palette.textColor)
+            if size != .small {
+                HStack(alignment: .bottom, spacing: 3) {
+                    ForEach(0..<4, id: \.self) { index in
+                        RoundedRectangle(cornerRadius: 2)
+                            .fill(index == 3 ? palette.accentColor.opacity(0.32) : palette.accentColor.opacity(0.8))
+                            .frame(height: CGFloat([8, 13, 10, 6][index]))
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(6)
+        .frame(width: previewWidth, height: previewHeight, alignment: .topLeading)
+        .background(palette.surfaceColor.opacity(palette.light ? 0.88 : 0.82), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(selected ? palette.accentColor : palette.textColor.opacity(0.22), lineWidth: selected ? 2 : 0.8))
+        .shadow(color: .black.opacity(selected ? 0.15 : 0.06), radius: 4, x: 0, y: 2)
     }
 }
