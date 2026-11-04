@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		41B99FC3478A4197B5648296 /* LaunchSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 626A650B077B40FE90CD4E0E /* LaunchSplashView.swift */; };
 		1A1111111111111111111111 /* LogbookAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222222 /* LogbookAssets.xcassets */; };
 		1A1111111111111111111112 /* exercise-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222223 /* exercise-catalog.json */; };
 		1A1111111111111111111113 /* food-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222224 /* food-catalog.json */; };
@@ -87,6 +88,7 @@
 		1A2222222222222222222222 /* LogbookAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = LogbookAssets.xcassets; sourceTree = "<group>"; };
 		1A2222222222222222222223 /* exercise-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-catalog.json"; sourceTree = "<group>"; };
 		1A2222222222222222222224 /* food-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "food-catalog.json"; sourceTree = "<group>"; };
+		626A650B077B40FE90CD4E0E /* LaunchSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSplashView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -97,6 +99,7 @@
 				4C05CE8E1E6D633923697B61 /* CoreScreens.swift */,
 				1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */,
 				353638D52BCBF0B6A2449B92 /* LogbookApp.swift */,
+				626A650B077B40FE90CD4E0E /* LaunchSplashView.swift */,
 				E53AF4C63550141DCFC86C18 /* LogbookStore.swift */,
 				B39E1D175BFDFB76BB290D92 /* ReminderService.swift */,
 				F2B70F6228C3CA91357AA565 /* WatchBridge.swift */,
@@ -333,6 +336,7 @@
 				9B874B7DD8F6F51B2B726701 /* CoreScreens.swift in Sources */,
 				2F8C337E96A17E091D3E56A7 /* HomeScreen.swift in Sources */,
 				A4916B143D435336940EC253 /* LogbookApp.swift in Sources */,
+				41B99FC3478A4197B5648296 /* LaunchSplashView.swift in Sources */,
 				A4EC8E95B985BB2F7A46F723 /* LogbookModels.swift in Sources */,
 				581F74784C76530D1C80B371 /* LogbookStore.swift in Sources */,
 				5B85E9D4CDC93FBE6C426AFC /* ReminderService.swift in Sources */,
