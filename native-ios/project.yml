@@ -106,6 +106,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.logbook.tests
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
 
 schemes:
   Logbook:
