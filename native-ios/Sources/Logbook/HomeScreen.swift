@@ -152,6 +152,7 @@ private struct HomePageGrid: View {
     let editing: Bool
     let open: (LogbookRoute) -> Void
     let remove: (UUID) -> Void
+    @State private var wigglePhase = false
 
     private let gap: CGFloat = 9
 
@@ -185,7 +186,7 @@ private struct HomePageGrid: View {
                                     .background(Color.red, in: Circle())
                                     .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1))
                             }
-                            .offset(x: 8, y: -7)
+                            .offset(x: -7, y: 7)
                             .accessibilityLabel("Remove \(widget.kind.title) widget")
                         }
                     }
@@ -194,8 +195,10 @@ private struct HomePageGrid: View {
                         x: CGFloat(widget.column) * (columnWidth + gap) + width / 2,
                         y: CGFloat(widget.row) * (rowHeight + gap) + height / 2
                     )
-                    .rotationEffect(.degrees(editing ? (widget.row + widget.column).isMultiple(of: 2) ? -0.6 : 0.6 : 0))
-                    .animation(.easeInOut(duration: 0.14).repeatForever(autoreverses: true), value: editing)
+                    .rotationEffect(.degrees(editing ? ((widget.row + widget.column).isMultiple(of: 2) ? -1 : 1) * (wigglePhase ? 0.6 : -0.6) : 0))
+                    .transaction { transaction in
+                        if !editing { transaction.animation = nil }
+                    }
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -206,6 +209,20 @@ private struct HomePageGrid: View {
                         Text("This page is ready for your widgets.").font(.system(size: 14, weight: .medium))
                     }
                     .foregroundStyle(store.state.home.theme.palette.textColor.opacity(0.78))
+                }
+            }
+        }
+        .task(id: editing) {
+            guard editing else {
+                wigglePhase = false
+                return
+            }
+            while !Task.isCancelled {
+                withAnimation(.easeInOut(duration: 0.14)) { wigglePhase.toggle() }
+                do {
+                    try await Task.sleep(for: .milliseconds(140))
+                } catch {
+                    break
                 }
             }
         }
