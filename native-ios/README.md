@@ -4,13 +4,13 @@ This is a separate SwiftUI implementation in `native-ios/`. It does not alter th
 
 ## Generate and open the Xcode project
 
-On macOS with Xcode 15 or newer:
+On macOS with Xcode 15 or newer, open the checked-in generated project:
 
-1. Install XcodeGen once with `brew install xcodegen`.
-2. Run `./native-ios/generate-project.sh` from the repository root.
-3. Open `native-ios/Logbook.xcodeproj`, choose the `Logbook` scheme, and set your signing team.
-4. Replace the sample bundle identifiers and App Group `group.com.example.logbook` with identifiers registered for your Apple Developer account. Keep the same App Group value in the app and widget entitlements.
-5. Build and run on an iPhone simulator or device. To run unit tests, select an iPhone simulator destination in Xcode.
+1. Open `native-ios/Logbook.xcodeproj` and choose the `Logbook` scheme.
+2. Replace the sample bundle identifiers and App Group `group.com.example.logbook` with identifiers registered for your Apple Developer account. Keep the same App Group value in the app and widget entitlements.
+3. Build and run on an iPhone simulator or device. To run unit tests, select an iPhone simulator destination in Xcode and choose Product → Test.
+
+To regenerate the Xcode project after changing `project.yml`, install XcodeGen with `brew install xcodegen` and run `./native-ios/generate-project.sh` from the repository root.
 
 The Watch app and WidgetKit extension are separate targets included by the project spec. The project uses local JSON persistence in the shared App Group container so widgets and the Watch companion can read the same snapshot. If the App Group is not configured, the iPhone app falls back to its private Application Support directory; extensions will not share that fallback.
 
