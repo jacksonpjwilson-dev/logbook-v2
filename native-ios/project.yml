@@ -114,7 +114,6 @@ schemes:
       targets:
         Logbook: all
         LogbookWidgets: all
-        LogbookWatch: all
         LogbookTests: [test]
     test:
       config: Debug
