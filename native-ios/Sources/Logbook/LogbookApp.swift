@@ -2,9 +2,44 @@ import SwiftUI
 
 @main
 struct LogbookApp: App {
-    @StateObject private var store = LogbookStore()
+    @StateObject private var store = Self.makeStore()
     @State private var path: [LogbookRoute] = []
-    @State private var showLaunchScreen = true
+    @State private var showLaunchScreen = !Self.isUITesting
+
+    private static var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("--ui-testing")
+    }
+
+    private static func makeStore() -> LogbookStore {
+        guard isUITesting else { return LogbookStore() }
+
+        let url = FileManager.default.temporaryDirectory
+            .appendingPathComponent("Logbook-QA-\(ProcessInfo.processInfo.processIdentifier).json")
+        try? FileManager.default.removeItem(at: url)
+        let store = LogbookStore(repository: LogbookRepository(url: url))
+        if let themeArgument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--qa-theme=") }),
+           let theme = LogbookTheme(rawValue: String(themeArgument.dropFirst("--qa-theme=".count))) {
+            store.setTheme(theme)
+        }
+        store.setNutritionTargets(calories: 2_000, protein: 150, carbohydrates: 220, fat: 65)
+        if let meal = store.state.nutrition.meals.first {
+            let fixture = FoodDefinition(
+                id: "qa-breakfast",
+                name: "QA breakfast",
+                basisAmount: 1,
+                basisUnit: "serving",
+                calories: 450,
+                protein: 35,
+                carbohydrates: 50,
+                fat: 12,
+                source: "Synthetic QA fixture"
+            )
+            store.addFoodDefinition(fixture)
+            _ = store.logFood(fixture, meal: meal, quantity: 1, unit: "serving", confirmed: true)
+        }
+        _ = store.addTemplate(name: "Upper Body")
+        return store
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -59,6 +94,7 @@ struct LogbookApp: App {
                 }
             }
             .task {
+                guard !Self.isUITesting else { return }
                 try? await Task.sleep(for: .seconds(3))
                 withAnimation(.easeOut(duration: 0.35)) { showLaunchScreen = false }
             }

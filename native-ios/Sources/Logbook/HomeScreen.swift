@@ -108,7 +108,7 @@ struct HomeScreen: View {
                     .foregroundStyle(palette.textColor)
                 }
             }
-            Text(Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased())
+            Text(displayDate)
                 .font(.system(size: 10, weight: .medium, design: .rounded)).tracking(1.1)
                 .foregroundStyle(palette.mutedColor)
             HStack(alignment: .firstTextBaseline) {
@@ -127,6 +127,11 @@ struct HomeScreen: View {
     private var currentPageName: String {
         guard store.state.home.pages.indices.contains(pageIndex) else { return "Daily overview" }
         return store.state.home.pages[pageIndex].name
+    }
+
+    private var displayDate: String {
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") { return "WEDNESDAY, NOVEMBER 4" }
+        return Date.now.formatted(.dateTime.weekday(.wide).month(.wide).day()).uppercased()
     }
 
     private var pageIndicator: some View {
@@ -174,6 +179,7 @@ private struct HomePageGrid: View {
                             HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
                                 .frame(width: width, height: height)
                         }
+                        .accessibilityIdentifier("home-widget-\(widget.kind.rawValue)")
                         .buttonStyle(WidgetPressStyle())
                         .disabled(editing)
 

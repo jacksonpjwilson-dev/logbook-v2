@@ -1,0 +1,36 @@
+# Logbook native app issue register
+
+Central register for findings from the static audit. Statuses change only after the listed verification is run. “Static audit” means source/documentation review; it does not establish simulator or device behavior.
+
+| ID | Severity / category | Expected | Current finding / evidence | Root cause / recommendation | Dependencies / verification | Status |
+|---|---|---|---|---|---|---|
+| LQA-01 | Major / Missing Feature | Each of the 38 Home widgets shows its specified data and visualization. | Several IDs use shared generic summaries in `HomeWidgetCard`; audit of `HomeScreen.swift`. | Add data-bound views from the widget inventory; test each size and empty/populated data. | Data model; widget UI tests. | Open |
+| LQA-02 | Major / Functional | Widgets can be reordered and moved between pages through approved gestures. | Editor controls exist; long-press and cross-page drag are not verified in source. | Verify interaction against requirements, then add gesture support if absent. | Home editor; UI tests. | Open |
+| LQA-03 | Major / Visual | Home cards, indicator, and dock fit without clipping on supported iPhones. | Earlier user simulator screenshot showed bottom dock clipping; current safe-area fix lacks a confirming screenshot. | Run Daily Home screenshots on iPhone 18 Pro and a smaller simulator. | Xcode simulator; screenshot capture. | Open |
+| LQA-04 | Minor / Visual | Edit removal controls remain fully visible and tappable. | Source moves the red remove control inward; post-fix simulator evidence is missing. | Verify bounds and touch target in edit mode. | UI screenshot / tap test. | Open |
+| LQA-05 | Minor / Functional | Home widgets remain still outside edit mode. | Animation is gated by edit state in source; runtime check is missing. | Add a non-edit screenshot assertion and edit-mode check. | UI tests. | Open |
+| LQA-06 | Major / Functional | Rotation tracks completed and skipped positions; only explicit finish advances it. | Current model has a simple rotation index and finish increment. | Implement event-based rotation history and verify finish/discard/out-of-order completion. | Training model; unit tests. | Open |
+| LQA-07 | Major / Missing Feature | Training supports supersets, substitutions, previous-set values, exercise reorder, and rest timing. | These behaviors are not established in current native screens/store. | Implement as scoped training work after QA foundation. | Training UI and data model. | Open |
+| LQA-08 | Major / Functional | Saved workouts have valid summaries, PRs, and safe correction flows. | Summary/PR calculation and historical correction are not established. | Add calculations from completed valid sets and regression tests. | Training history model. | Open |
+| LQA-09 | Major / Data Integrity | Food/water deletion can be undone; historical food entries can be corrected safely. | Delete methods remove entries; undo/edit path is not established. | Add reversible mutations and verify totals/persistence after correction. | Store/repository; tests. | Open |
+| LQA-10 | Major / Missing Feature | Food entry supports required recent/favorite/saved-meal and verified lookup/conversion flows. | Current picker searches local foods; wider flows are not established. | Add only supported sources and require quantity confirmation on every add. | Food model and source policy. | Open |
+| LQA-11 | Major / Data Integrity | Nutrition goals and adherence are historically accurate and missing days stay missing. | Targets are current values; effective-dated targets/adherence are not established. | Add effective dates and test real-observation streak rules. | Nutrition model/history tests. | Open |
+| LQA-12 | Major / Functional | Sleep and weight analytics follow approved goals, thresholds, and correction rules. | Basic manual entry exists; advanced trends/corrections are not established. | Implement rule-driven analytics without synthetic observations. | Check-in model; chart tests. | Open |
+| LQA-13 | Major / Functional | Supplement schedules and adherence use actual scheduled doses. | Basic supplement entry/marking exists; schedule editing and denominator behavior are not established. | Add versioned schedules and tests, including zero scheduled doses. | Check-in model. | Open |
+| LQA-14 | Major / Missing Feature | History has five categories, shared activity calendar, and documented ranges. | Current History view has limited sections/ranges; required overview/calendar is not established. | Build from shared data queries; verify absent dates are not plotted as zero. | History model and UI tests. | Open |
+| LQA-15 | Major / Reliability | Data can be safely imported/restored and recoverable; sync conflicts preserve both sides. | Local JSON/export exist; web import, restore, cloud sync, conflict resolution, and 30-day recovery are absent. | Keep migration isolated; add verified backup/rollback before any real import. | Separate approval and synthetic migration tests. | Open |
+| LQA-16 | Major / Accessibility | Screens remain usable with VoiceOver, Dynamic Type, contrast, and reduced motion. | Some labels exist; systematic accessibility coverage is absent. | Add Accessibility Inspector review and focused UI tests. | Device/simulator accessibility testing. | Open |
+| LQA-17 | Major / Integration | WidgetKit, Live Activity, Watch, notifications, and App Group behavior are verified on supported devices. | Integrations exist in source; current device evidence is incomplete. | Test simulator-supported behavior and label device-only checks. | Signing/App Group; physical devices for Watch. | Open |
+| LQA-18 | Major / Reliability | Core workflows have repeatable automated regression tests. | Existing suite has a small number of store tests and no established UI screenshot suite. | Grow tests by subsystem and retain CI results. | XcodeGen and macOS runner. | In Progress |
+| LQA-19 | Minor / Visual | Approved theme appearances have protected visual baselines. | Themes are approved, but native screenshot baselines are not yet captured in the repository. | Capture deterministic theme candidates; baseline changes require explicit approval. | Daily Home screenshot workflow. | In Progress |
+| LQA-20 | Major / Reliability | Current branch builds/tests on macOS and screenshot artifacts are reviewable. | Previous workflow status was not consistently green; local workspace has no Xcode. | Add a dedicated Daily QA workflow and inspect its result bundle. | GitHub macOS runner. | In Progress |
+
+## Status meanings
+
+- **Open:** Finding remains to be implemented or verified.
+- **In Progress:** QA infrastructure or a scoped correction is being built.
+- **Ready for Review:** Automated checks pass; human review remains.
+- **Approved:** Explicitly accepted by the user and recorded with a protected baseline.
+- **Blocked:** Verification needs a tool, device, reference, or decision that is unavailable.
+
+Do not close issues merely because a build succeeds. Record evidence and verification commit in the issue row or its linked detail before changing status.

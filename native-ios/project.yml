@@ -108,6 +108,20 @@ targets:
         IPHONEOS_DEPLOYMENT_TARGET: "17.0"
         GENERATE_INFOPLIST_FILE: YES
 
+  LogbookUITests:
+    type: bundle.ui-testing
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - Tests/LogbookUITests
+    dependencies:
+      - target: Logbook
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.example.logbook.uitests
+        IPHONEOS_DEPLOYMENT_TARGET: "17.0"
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   Logbook:
     build:
@@ -115,10 +129,12 @@ schemes:
         Logbook: all
         LogbookWidgets: all
         LogbookTests: [test]
+        LogbookUITests: [test]
     test:
       config: Debug
       targets:
         - LogbookTests
+        - LogbookUITests
   LogbookWatch:
     build:
       targets:

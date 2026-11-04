@@ -1,0 +1,48 @@
+name: Daily Home QA
+
+on:
+  push:
+    branches: [qa/daily-home-workflow]
+    paths:
+      - 'native-ios/**'
+      - '.github/workflows/daily-home-qa.yml'
+  pull_request:
+    branches: [qa/daily-home-workflow]
+    paths:
+      - 'native-ios/**'
+      - '.github/workflows/daily-home-qa.yml'
+  workflow_dispatch:
+
+jobs:
+  daily-home:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Select available iPhone simulator
+        id: simulator
+        run: |
+          DEVICE="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); names=[x["name"] for group in d["devices"].values() for x in group if x.get("isAvailable")]; print("iPhone 18 Pro" if "iPhone 18 Pro" in names else "iPhone 16")')"
+          echo "name=$DEVICE" >> "$GITHUB_OUTPUT"
+
+      - name: Run Daily Home QA
+        run: ./native-ios/QA/Scripts/run-daily-home-qa.sh "${{ steps.simulator.outputs.name }}"
+
+      - name: Upload Xcode result bundle, screenshots, and report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daily-home-qa-results
+          path: |
+            native-ios/QA/artifacts/daily-home-*/Logbook.xcresult
+            native-ios/QA/artifacts/daily-home-*/screenshots
+            native-ios/QA/artifacts/daily-home-*/xcodebuild.log
+            native-ios/QA/REPORT.md
+          if-no-files-found: warn
+          retention-days: 30

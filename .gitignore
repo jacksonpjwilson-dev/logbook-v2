@@ -2,3 +2,4 @@ node_modules/
 *-debug.log
 stage1/artifacts/
 stage1/dev/generated/
+native-ios/QA/artifacts/
