@@ -35,7 +35,7 @@ final class LogbookStoreTests: XCTestCase {
 
         let active = try XCTUnwrap(store.state.training.activeSession)
         let row = try XCTUnwrap(active.exercises.first)
-        let set = try XCTUnwrap(row.sets.first)
+        XCTAssertFalse(row.sets.isEmpty)
         for plannedSet in row.sets {
             store.updateSet(exerciseID: row.id, setID: plannedSet.id, weightKg: 60, reps: 8)
             XCTAssertTrue(store.toggleSet(exerciseID: row.id, setID: plannedSet.id))

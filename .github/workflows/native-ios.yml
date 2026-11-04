@@ -50,4 +50,5 @@ jobs:
           -scheme LogbookWatch
           -sdk watchsimulator
           -destination 'generic/platform=watchOS Simulator'
+          -arch arm64
           CODE_SIGNING_ALLOWED=NO build
