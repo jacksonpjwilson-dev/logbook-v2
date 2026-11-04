@@ -228,7 +228,7 @@ private struct HomeWidgetCard: View {
         case .meals:
             let count = state.nutrition.logs.filter { $0.date == today }.count
             return ("\(count) food entries", "across \(state.nutrition.meals.count) meals")
-        case .nextWorkout, .workoutSplit, .upcomingPlan:
+        case .nextWorkout, .workoutSplit, .upcomingPlan, .volumeTrend, .muscleGroups, .restTimer:
             if let active = state.training.activeSession { return (active.templateName, "Workout in progress") }
             if let template = state.training.templates.first { return (template.name, "\(state.training.templates.count) workout plan\(state.training.templates.count == 1 ? "" : "s")") }
             return ("No workout planned", "Create a plan in Training")

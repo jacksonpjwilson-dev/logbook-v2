@@ -159,8 +159,10 @@ struct WorkoutTemplateScreen: View {
                 .presentationDetents([.large]).presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $startSession) {
-            if let template { ActiveWorkoutScreen(onStart: { store.startWorkout(template) }) }
-                .presentationDetents([.large]).presentationDragIndicator(.visible)
+            Group {
+                if let template { ActiveWorkoutScreen(onStart: { store.startWorkout(template) }) }
+            }
+            .presentationDetents([.large]).presentationDragIndicator(.visible)
         }
         .alert("Rename workout", isPresented: $editingName) {
             TextField("Workout name", text: $nameDraft)
