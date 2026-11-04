@@ -1,0 +1,668 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03A53D4E466B32FD2E649287 /* LogbookStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */; };
+		049EF6B80F772C3CD6861582 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
+		11FD8DE3F0DFF2AD7A22A22B /* LogbookWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D768DBB0C87D0B21E1A30A88 /* LogbookWatchApp.swift */; };
+		2F8C337E96A17E091D3E56A7 /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */; };
+		38FE7A3DF61D60752A88CB41 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B70F6228C3CA91357AA565 /* WatchBridge.swift */; };
+		428F5644E93243A421D3BBEE /* LogbookWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD602160788F41D1391E65D /* LogbookWidgets.swift */; };
+		480672D540A045E5A85A64EA /* CheckInHistorySettingsScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD344BA6568B5C8E90D244F0 /* CheckInHistorySettingsScreens.swift */; };
+		581F74784C76530D1C80B371 /* LogbookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53AF4C63550141DCFC86C18 /* LogbookStore.swift */; };
+		5B85E9D4CDC93FBE6C426AFC /* ReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39E1D175BFDFB76BB290D92 /* ReminderService.swift */; };
+		7B01FC3710F8E2DBB5789DAE /* SharedStateFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */; };
+		860497F335ABE38E943277AB /* LogbookWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		9063C04458A798D5F0FA6F25 /* WatchSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856100ACA15B96602A7781D0 /* WatchSnapshot.swift */; };
+		9B874B7DD8F6F51B2B726701 /* CoreScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C05CE8E1E6D633923697B61 /* CoreScreens.swift */; };
+		A4916B143D435336940EC253 /* LogbookApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 353638D52BCBF0B6A2449B92 /* LogbookApp.swift */; };
+		A4EC8E95B985BB2F7A46F723 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
+		A917562132852690E2D1EDBF /* WorkoutActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA531ACABA69409EDCA59A7 /* WorkoutActivityController.swift */; };
+		AA4DD10385FC9F20409671CC /* WatchSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856100ACA15B96602A7781D0 /* WatchSnapshot.swift */; };
+		CC7E98ADB5CC37857127A5A7 /* SharedStateFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */; };
+		D153F92ADACE0BE8ADF990B2 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */; };
+		DA8C91E03259D6E0D0E700E5 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
+		F956850456945FB4FF1FC246 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		2D8CFDDAB9A8FFA886EBA3F5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0500A3EBC5BF2EE039C9F36D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 383D0B41E98F9DA91AA16B62;
+			remoteInfo = Logbook;
+		};
+		EDDC9297DD5C36F802D2F263 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0500A3EBC5BF2EE039C9F36D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ACD16791B3F7EC12B1AF3F87;
+			remoteInfo = LogbookWidgets;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A53C433B6F0A4F0B1C46C4FF /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				860497F335ABE38E943277AB /* LogbookWidgets.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		1AD602160788F41D1391E65D /* LogbookWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookWidgets.swift; sourceTree = "<group>"; };
+		1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		2C41D8E2FDDBD36C471158BB /* LogbookWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LogbookWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		353638D52BCBF0B6A2449B92 /* LogbookApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookApp.swift; sourceTree = "<group>"; };
+		4C05CE8E1E6D633923697B61 /* CoreScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreScreens.swift; sourceTree = "<group>"; };
+		7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStateFile.swift; sourceTree = "<group>"; };
+		7FA531ACABA69409EDCA59A7 /* WorkoutActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityController.swift; sourceTree = "<group>"; };
+		84FF955D7A0242DDC073D77D /* Logbook.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Logbook.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		856100ACA15B96602A7781D0 /* WatchSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSnapshot.swift; sourceTree = "<group>"; };
+		9596F4299ED9B11098CFA817 /* LogbookTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LogbookTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookStoreTests.swift; sourceTree = "<group>"; };
+		B072F009194A00FC8AB83AB6 /* LogbookModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookModels.swift; sourceTree = "<group>"; };
+		B39E1D175BFDFB76BB290D92 /* ReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderService.swift; sourceTree = "<group>"; };
+		BD344BA6568B5C8E90D244F0 /* CheckInHistorySettingsScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInHistorySettingsScreens.swift; sourceTree = "<group>"; };
+		D768DBB0C87D0B21E1A30A88 /* LogbookWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookWatchApp.swift; sourceTree = "<group>"; };
+		E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LogbookWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		E53AF4C63550141DCFC86C18 /* LogbookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookStore.swift; sourceTree = "<group>"; };
+		F2B70F6228C3CA91357AA565 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXGroup section */
+		130F2164AA1ECB133D8B6478 /* Logbook */ = {
+			isa = PBXGroup;
+			children = (
+				BD344BA6568B5C8E90D244F0 /* CheckInHistorySettingsScreens.swift */,
+				4C05CE8E1E6D633923697B61 /* CoreScreens.swift */,
+				1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */,
+				353638D52BCBF0B6A2449B92 /* LogbookApp.swift */,
+				E53AF4C63550141DCFC86C18 /* LogbookStore.swift */,
+				B39E1D175BFDFB76BB290D92 /* ReminderService.swift */,
+				F2B70F6228C3CA91357AA565 /* WatchBridge.swift */,
+				7FA531ACABA69409EDCA59A7 /* WorkoutActivityController.swift */,
+			);
+			path = Logbook;
+			sourceTree = "<group>";
+		};
+		162406791E92F35C20CD50DE /* LogbookWidgets */ = {
+			isa = PBXGroup;
+			children = (
+				1AD602160788F41D1391E65D /* LogbookWidgets.swift */,
+			);
+			path = LogbookWidgets;
+			sourceTree = "<group>";
+		};
+		26FA94A0FE4A162D33B7DC0E = {
+			isa = PBXGroup;
+			children = (
+				CBEFA84B7EF53663171F6E17 /* Shared */,
+				4B01441FC1EAE042DBABEA5E /* Sources */,
+				F7189BF1BE2C454986E3AAA3 /* Tests */,
+				D17B3D0338F08F3CCDB5D9A3 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		4B01441FC1EAE042DBABEA5E /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				130F2164AA1ECB133D8B6478 /* Logbook */,
+				E5B5E4BBCEDC9B0018C18675 /* LogbookWatch */,
+				162406791E92F35C20CD50DE /* LogbookWidgets */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		CBEFA84B7EF53663171F6E17 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				B072F009194A00FC8AB83AB6 /* LogbookModels.swift */,
+				7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */,
+				856100ACA15B96602A7781D0 /* WatchSnapshot.swift */,
+				FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		D17B3D0338F08F3CCDB5D9A3 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				84FF955D7A0242DDC073D77D /* Logbook.app */,
+				9596F4299ED9B11098CFA817 /* LogbookTests.xctest */,
+				2C41D8E2FDDBD36C471158BB /* LogbookWatch.app */,
+				E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		E5B5E4BBCEDC9B0018C18675 /* LogbookWatch */ = {
+			isa = PBXGroup;
+			children = (
+				D768DBB0C87D0B21E1A30A88 /* LogbookWatchApp.swift */,
+			);
+			path = LogbookWatch;
+			sourceTree = "<group>";
+		};
+		E8CE13D89A079CB4A451FFB4 /* LogbookTests */ = {
+			isa = PBXGroup;
+			children = (
+				A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */,
+			);
+			path = LogbookTests;
+			sourceTree = "<group>";
+		};
+		F7189BF1BE2C454986E3AAA3 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				E8CE13D89A079CB4A451FFB4 /* LogbookTests */,
+			);
+			path = Tests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		03352925B5C82C868A4D483E /* LogbookTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7F76E1040FA0CD746E0D9496 /* Build configuration list for PBXNativeTarget "LogbookTests" */;
+			buildPhases = (
+				8CE3B5303D3ABE13F778EED0 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C5F70A4122C525BDFBF0AF7B /* PBXTargetDependency */,
+			);
+			name = LogbookTests;
+			packageProductDependencies = (
+			);
+			productName = LogbookTests;
+			productReference = 9596F4299ED9B11098CFA817 /* LogbookTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		130EBC2ADEB90058429957C9 /* LogbookWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = FC6386C596D578342E715550 /* Build configuration list for PBXNativeTarget "LogbookWatch" */;
+			buildPhases = (
+				1BB1516D97E2243A81D38ADF /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LogbookWatch;
+			packageProductDependencies = (
+			);
+			productName = LogbookWatch;
+			productReference = 2C41D8E2FDDBD36C471158BB /* LogbookWatch.app */;
+			productType = "com.apple.product-type.application.watchapp2";
+		};
+		383D0B41E98F9DA91AA16B62 /* Logbook */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C40AF4A55C9F8036AD8DF72A /* Build configuration list for PBXNativeTarget "Logbook" */;
+			buildPhases = (
+				4E02F5D04B39C010513237BF /* Sources */,
+				A53C433B6F0A4F0B1C46C4FF /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				36DCBB387F713C78A03DE99F /* PBXTargetDependency */,
+			);
+			name = Logbook;
+			packageProductDependencies = (
+			);
+			productName = Logbook;
+			productReference = 84FF955D7A0242DDC073D77D /* Logbook.app */;
+			productType = "com.apple.product-type.application";
+		};
+		ACD16791B3F7EC12B1AF3F87 /* LogbookWidgets */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 623221470DB21605DC50CD0A /* Build configuration list for PBXNativeTarget "LogbookWidgets" */;
+			buildPhases = (
+				E753BCCA520FB314692A1753 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = LogbookWidgets;
+			packageProductDependencies = (
+			);
+			productName = LogbookWidgets;
+			productReference = E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		0500A3EBC5BF2EE039C9F36D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					03352925B5C82C868A4D483E = {
+						ProvisioningStyle = Automatic;
+					};
+					130EBC2ADEB90058429957C9 = {
+						ProvisioningStyle = Automatic;
+					};
+					383D0B41E98F9DA91AA16B62 = {
+						ProvisioningStyle = Automatic;
+					};
+					ACD16791B3F7EC12B1AF3F87 = {
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = C7101F9349FB5821D4C62422 /* Build configuration list for PBXProject "Logbook" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 26FA94A0FE4A162D33B7DC0E;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D17B3D0338F08F3CCDB5D9A3 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				383D0B41E98F9DA91AA16B62 /* Logbook */,
+				ACD16791B3F7EC12B1AF3F87 /* LogbookWidgets */,
+				130EBC2ADEB90058429957C9 /* LogbookWatch */,
+				03352925B5C82C868A4D483E /* LogbookTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1BB1516D97E2243A81D38ADF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				049EF6B80F772C3CD6861582 /* LogbookModels.swift in Sources */,
+				11FD8DE3F0DFF2AD7A22A22B /* LogbookWatchApp.swift in Sources */,
+				AA4DD10385FC9F20409671CC /* WatchSnapshot.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		4E02F5D04B39C010513237BF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				480672D540A045E5A85A64EA /* CheckInHistorySettingsScreens.swift in Sources */,
+				9B874B7DD8F6F51B2B726701 /* CoreScreens.swift in Sources */,
+				2F8C337E96A17E091D3E56A7 /* HomeScreen.swift in Sources */,
+				A4916B143D435336940EC253 /* LogbookApp.swift in Sources */,
+				A4EC8E95B985BB2F7A46F723 /* LogbookModels.swift in Sources */,
+				581F74784C76530D1C80B371 /* LogbookStore.swift in Sources */,
+				5B85E9D4CDC93FBE6C426AFC /* ReminderService.swift in Sources */,
+				CC7E98ADB5CC37857127A5A7 /* SharedStateFile.swift in Sources */,
+				38FE7A3DF61D60752A88CB41 /* WatchBridge.swift in Sources */,
+				9063C04458A798D5F0FA6F25 /* WatchSnapshot.swift in Sources */,
+				F956850456945FB4FF1FC246 /* WorkoutActivityAttributes.swift in Sources */,
+				A917562132852690E2D1EDBF /* WorkoutActivityController.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		8CE3B5303D3ABE13F778EED0 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				03A53D4E466B32FD2E649287 /* LogbookStoreTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E753BCCA520FB314692A1753 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DA8C91E03259D6E0D0E700E5 /* LogbookModels.swift in Sources */,
+				428F5644E93243A421D3BBEE /* LogbookWidgets.swift in Sources */,
+				7B01FC3710F8E2DBB5789DAE /* SharedStateFile.swift in Sources */,
+				D153F92ADACE0BE8ADF990B2 /* WorkoutActivityAttributes.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		36DCBB387F713C78A03DE99F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ACD16791B3F7EC12B1AF3F87 /* LogbookWidgets */;
+			targetProxy = EDDC9297DD5C36F802D2F263 /* PBXContainerItemProxy */;
+		};
+		C5F70A4122C525BDFBF0AF7B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 383D0B41E98F9DA91AA16B62 /* Logbook */;
+			targetProxy = 2D8CFDDAB9A8FFA886EBA3F5 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		0C9B1F328A9CD500932FB7BF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = "Config/LogbookWatch-Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.watchkitapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		41C344F03C19F5FD7F3233E8 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Logbook.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/Logbook-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		464B4BF2B1DBF8A496097E71 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Debug;
+		};
+		8B94DC9427C2A1F7D1ED04E4 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/LogbookWidgets.entitlements;
+				INFOPLIST_FILE = "Config/LogbookWidgets-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		B13A5C6202ED8B429E198F2A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = "Config/LogbookWatch-Info.plist";
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.watchkitapp;
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+		BA529C0D4E98071A133EA6DF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = Config/LogbookWidgets.entitlements;
+				INFOPLIST_FILE = "Config/LogbookWidgets-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.widgets;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D5C9A15874460F8741ACE515 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Logbook.app/Logbook";
+			};
+			name = Release;
+		};
+		DED7EAE5276CF9EF62526ACA /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Logbook.app/Logbook";
+			};
+			name = Debug;
+		};
+		EC43FA1B57B1F45869DF9AA1 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Config/Logbook.entitlements;
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Config/Logbook-Info.plist";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		F961E7B8A4E91EA53469C44A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_STYLE = Automatic;
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MARKETING_VERSION = 0.1;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				WATCHOS_DEPLOYMENT_TARGET = 10.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		623221470DB21605DC50CD0A /* Build configuration list for PBXNativeTarget "LogbookWidgets" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				BA529C0D4E98071A133EA6DF /* Debug */,
+				8B94DC9427C2A1F7D1ED04E4 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		7F76E1040FA0CD746E0D9496 /* Build configuration list for PBXNativeTarget "LogbookTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				DED7EAE5276CF9EF62526ACA /* Debug */,
+				D5C9A15874460F8741ACE515 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C40AF4A55C9F8036AD8DF72A /* Build configuration list for PBXNativeTarget "Logbook" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				41C344F03C19F5FD7F3233E8 /* Debug */,
+				EC43FA1B57B1F45869DF9AA1 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		C7101F9349FB5821D4C62422 /* Build configuration list for PBXProject "Logbook" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				464B4BF2B1DBF8A496097E71 /* Debug */,
+				F961E7B8A4E91EA53469C44A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		FC6386C596D578342E715550 /* Build configuration list for PBXNativeTarget "LogbookWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				0C9B1F328A9CD500932FB7BF /* Debug */,
+				B13A5C6202ED8B429E198F2A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 0500A3EBC5BF2EE039C9F36D /* Project object */;
+}
