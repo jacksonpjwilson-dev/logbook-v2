@@ -246,7 +246,7 @@ private struct HomeWidgetCard: View {
         case .lastNight, .sleepChart, .sleepConsistency:
             guard let sleep = state.checkins.sleep.max(by: { $0.wakeDate < $1.wakeDate }) else { return ("No sleep logged", "Add a check-in when you wake") }
             return (String(format: "%.1f hours", Double(sleep.durationMinutes) / 60), "last recorded sleep")
-        case .weight, .weightTrend:
+        case .weight, .weightTrend, .measurements:
             guard let weight = state.checkins.weights.max(by: { $0.date < $1.date }) else { return ("No weight logged", "Add an optional check-in") }
             return (String(format: "%.1f %@", weightValue(weight.kilograms), state.home.preferredWeightUnit), "last recorded · \(weight.date)")
         case .supplements:
