@@ -58,8 +58,61 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(HomeState().pages.map(\.name), ["Daily", "Training", "Food", "Progress & History"])
     }
 
+    func testDailyDefaultUsesApprovedWidgetSizesAndPositions() throws {
+        let widgets = try XCTUnwrap(HomeState.defaultPages.first?.widgets.sorted {
+            $0.row == $1.row ? $0.column < $1.column : $0.row < $1.row
+        })
+        XCTAssertEqual(widgets.map(\.kind), [.calories, .nextWorkout, .trainingStreak, .vitals])
+        XCTAssertEqual(widgets.map(\.size), [.large, .medium, .small, .small])
+        XCTAssertEqual(widgets.map { [$0.row, $0.column] }, [[0, 0], [2, 0], [3, 0], [3, 1]])
+        XCTAssertEqual(widgets[0].variant, "Calories & Protein Remaining")
+        XCTAssertEqual(widgets[2].variant, "Habits Streak")
+        XCTAssertEqual(widgets[3].variant, "Daily Check-in")
+    }
+
+    func testMigrationUpdatesOnlyUntouchedPreviousDailyDefault() throws {
+        let repository = temporaryRepository()
+        var legacy = LogbookState.empty
+        legacy.home.pages[0] = previousDailyPage(id: legacy.home.pages[0].id)
+        legacy.home.pages[2].name = "My Food Page"
+        legacy.home.theme = .oceanBreeze
+        try repository.save(legacy)
+
+        let migrated = LogbookStore(repository: repository).state
+        let daily = try XCTUnwrap(migrated.home.pages.first)
+        XCTAssertEqual(daily.name, "Daily")
+        XCTAssertEqual(daily.widgets.map(\.size), [.large, .medium, .small, .small])
+        XCTAssertEqual(daily.widgets.map { [$0.row, $0.column] }, [[0, 0], [2, 0], [3, 0], [3, 1]])
+        XCTAssertEqual(migrated.home.theme, .oceanBreeze)
+        XCTAssertEqual(migrated.home.pages[1], legacy.home.pages[1])
+        XCTAssertEqual(migrated.home.pages[2], legacy.home.pages[2])
+        XCTAssertEqual(migrated.home.pages[3], legacy.home.pages[3])
+        XCTAssertEqual(migrated.home.pages[0].id, legacy.home.pages[0].id)
+        XCTAssertEqual(migrated.home.pages[0].widgets.map(\.id), legacy.home.pages[0].widgets.map(\.id))
+    }
+
+    func testMigrationDoesNotOverwriteCustomizedDailyLayout() throws {
+        let repository = temporaryRepository()
+        var legacy = LogbookState.empty
+        legacy.home.pages[0] = previousDailyPage(id: legacy.home.pages[0].id)
+        legacy.home.pages[0].widgets[3].row = 3
+        try repository.save(legacy)
+
+        let loaded = LogbookStore(repository: repository).state
+        XCTAssertEqual(loaded.home.pages, legacy.home.pages)
+    }
+
     private func temporaryRepository() -> LogbookRepository {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("LogbookTests-\(UUID().uuidString)", isDirectory: true)
         return LogbookRepository(url: directory.appendingPathComponent("state.json"))
+    }
+
+    private func previousDailyPage(id: UUID) -> HomePage {
+        HomePage(id: id, name: "Daily", widgets: [
+            HomeWidget(kind: .calories, size: .medium, row: 0, column: 0),
+            HomeWidget(kind: .nextWorkout, size: .medium, row: 1, column: 0),
+            HomeWidget(kind: .trainingStreak, size: .small, row: 2, column: 0, variant: "Habits Streak"),
+            HomeWidget(kind: .vitals, size: .small, row: 2, column: 1, variant: "Daily Check-in")
+        ])
     }
 }

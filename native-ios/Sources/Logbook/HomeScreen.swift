@@ -249,8 +249,14 @@ private struct HomeWidgetCard: View {
         switch widget.kind {
         case .calories:
             if let target = state.nutrition.targets.calories {
-                return (String(Int(max(0, target - (totals.calories ?? 0)))), "calories left · \(Int(totals.calories ?? 0)) eaten")
+                let remaining = Int(max(0, target - (totals.calories ?? 0)))
+                if widget.variant == "Calories & Protein Remaining" {
+                    let proteinLeft = state.nutrition.targets.protein.map { Int(max(0, $0 - (totals.protein ?? 0))) }
+                    return ("\(remaining) kcal left", proteinLeft.map { "\($0) g protein left" } ?? "Set a protein target")
+                }
+                return (String(remaining), "calories left · \(Int(totals.calories ?? 0)) eaten")
             }
+            if widget.variant == "Calories & Protein Remaining" { return ("Set calorie target", "Set a protein target") }
             return ("Set your target", "Calories update from your food log")
         case .protein:
             if let target = state.nutrition.targets.protein { return (String(Int(max(0, target - (totals.protein ?? 0)))) + " g", "protein remaining") }
@@ -263,7 +269,15 @@ private struct HomeWidgetCard: View {
         case .meals:
             let count = state.nutrition.logs.filter { $0.date == today }.count
             return ("\(count) food entries", "across \(state.nutrition.meals.count) meals")
-        case .nextWorkout, .workoutSplit, .upcomingPlan, .volumeTrend, .muscleGroups, .restTimer:
+        case .nextWorkout:
+            if let active = state.training.activeSession { return (active.templateName, "Workout in progress · Tap to open Training") }
+            let templates = state.training.templates
+            if templates.indices.contains(state.training.rotationIndex) {
+                let position = state.training.rotationIndex + 1
+                return ("\(position). \(templates[state.training.rotationIndex].name)", "Workout \(position) of \(templates.count) · Tap to open Training")
+            }
+            return ("No workout planned", "Create a plan in Training")
+        case .workoutSplit, .upcomingPlan, .volumeTrend, .muscleGroups, .restTimer:
             if let active = state.training.activeSession { return (active.templateName, "Workout in progress") }
             if let template = state.training.templates.first { return (template.name, "\(state.training.templates.count) workout plan\(state.training.templates.count == 1 ? "" : "s")") }
             return ("No workout planned", "Create a plan in Training")
@@ -330,7 +344,25 @@ private struct HomeWidgetCard: View {
     }
 
     @ViewBuilder private var detailVisual: some View {
-        if widget.kind == .calories || widget.kind == .protein || widget.kind == .macros {
+        if widget.variant == "Calories & Protein Remaining" {
+            let totals = state.nutritionTotals(on: LocalDay.string())
+            VStack(alignment: .leading, spacing: 9) {
+                nutritionProgressRow(
+                    title: "Calories",
+                    consumed: totals.calories ?? 0,
+                    goal: state.nutrition.targets.calories,
+                    unit: "kcal",
+                    color: palette.accentColor
+                )
+                nutritionProgressRow(
+                    title: "Protein",
+                    consumed: totals.protein ?? 0,
+                    goal: state.nutrition.targets.protein,
+                    unit: "g",
+                    color: .cyan
+                )
+            }
+        } else if widget.kind == .calories || widget.kind == .protein || widget.kind == .macros {
             let totals = state.nutritionTotals(on: LocalDay.string())
             HStack(alignment: .bottom, spacing: 7) {
                 macroPill("Protein", value: totals.protein ?? 0, color: palette.accentColor)
@@ -348,6 +380,27 @@ private struct HomeWidgetCard: View {
             HStack {
                 Image(systemName: "arrow.up.right.circle.fill").foregroundStyle(palette.accentColor)
                 Text("Tap to open").font(.system(size: 10, weight: .semibold)).foregroundStyle(palette.mutedColor)
+            }
+        }
+    }
+
+    private func nutritionProgressRow(title: String, consumed: Double, goal: Double?, unit: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Text(title).font(.system(size: 10, weight: .semibold, design: .rounded))
+                Spacer(minLength: 4)
+                if let goal {
+                    Text("\(Int(consumed)) / \(Int(goal)) \(unit) · \(Int(max(0, goal - consumed))) left")
+                        .font(.system(size: 9, weight: .medium, design: .rounded))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                } else {
+                    Text("Set target").font(.system(size: 9, weight: .medium, design: .rounded))
+                }
+            }
+            .foregroundStyle(palette.textColor)
+            if let goal, goal > 0 {
+                ProgressView(value: min(1, consumed / goal)).tint(color)
             }
         }
     }

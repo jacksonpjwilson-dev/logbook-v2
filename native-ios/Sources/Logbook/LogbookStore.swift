@@ -14,16 +14,28 @@ final class LogbookStore: ObservableObject {
     init(repository: LogbookRepository = .shared) {
         self.repository = repository
         do {
-            state = try repository.load()
-            if state.training.exercises.isEmpty, let url = Bundle.main.url(forResource: "exercise-catalog", withExtension: "json"),
+            var loaded = try repository.load()
+            if loaded.training.exercises.isEmpty, let url = Bundle.main.url(forResource: "exercise-catalog", withExtension: "json"),
                let data = try? Data(contentsOf: url), let catalogue = try? JSONDecoder().decode([ExerciseDefinition].self, from: data) {
-                state.training.exercises = catalogue
+                loaded.training.exercises = catalogue
             }
-            if state.nutrition.foods.isEmpty, let url = Bundle.main.url(forResource: "food-catalog", withExtension: "json"),
+            if loaded.nutrition.foods.isEmpty, let url = Bundle.main.url(forResource: "food-catalog", withExtension: "json"),
                let data = try? Data(contentsOf: url), let foods = try? JSONDecoder().decode([FoodDefinition].self, from: data) {
-                state.nutrition.foods = foods
+                loaded.nutrition.foods = foods
             }
+            let migratedDailyLayout = loaded.home.migrateUntouchedDailyLayout()
+            state = loaded
             lastSavedAt = FileManager.default.fileExists(atPath: repository.url.path) ? Date() : nil
+            if migratedDailyLayout {
+                do {
+                    try repository.save(loaded)
+                    lastSavedAt = .now
+                } catch {
+                    // Preserve the loaded data and disable edits until the layout migration can be saved.
+                    persistenceError = "The Daily Home Screen update could not be saved. Your existing data is still loaded. \(error.localizedDescription)"
+                    canEdit = false
+                }
+            }
         } catch {
             // Do not turn an unreadable or newer data file into a blank database.
             state = .empty

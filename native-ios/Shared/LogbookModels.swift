@@ -205,12 +205,7 @@ struct HomeState: Codable {
 
     static var defaultPages: [HomePage] {
         [
-            HomePage(name: "Daily", widgets: [
-                HomeWidget(kind: .calories, size: .medium, row: 0, column: 0),
-                HomeWidget(kind: .nextWorkout, size: .medium, row: 1, column: 0),
-                HomeWidget(kind: .trainingStreak, size: .small, row: 2, column: 0, variant: "Habits Streak"),
-                HomeWidget(kind: .vitals, size: .small, row: 2, column: 1, variant: "Daily Check-in")
-            ]),
+            defaultDailyPage,
             HomePage(name: "Training", widgets: [
                 HomeWidget(kind: .workoutSplit, size: .large, row: 0, column: 0),
                 HomeWidget(kind: .calendarHeatmap, size: .large, row: 2, column: 0, variant: "Workout Calendar")
@@ -228,6 +223,50 @@ struct HomeState: Codable {
                 HomeWidget(kind: .mealTiming, size: .small, row: 3, column: 1, variant: "Nutrition Adherence")
             ])
         ]
+    }
+
+    static var defaultDailyPage: HomePage {
+        HomePage(name: "Daily", widgets: [
+            HomeWidget(kind: .calories, size: .large, row: 0, column: 0, variant: "Calories & Protein Remaining"),
+            HomeWidget(kind: .nextWorkout, size: .medium, row: 2, column: 0),
+            HomeWidget(kind: .trainingStreak, size: .small, row: 3, column: 0, variant: "Habits Streak"),
+            HomeWidget(kind: .vitals, size: .small, row: 3, column: 1, variant: "Daily Check-in")
+        ])
+    }
+
+    /// Migrates only the untouched previous Daily default. User-arranged pages are preserved.
+    @discardableResult
+    mutating func migrateUntouchedDailyLayout() -> Bool {
+        guard let index = pages.firstIndex(where: { $0.name == "Daily" }),
+              Self.matchesPreviousDailyDefault(pages[index]) else { return false }
+
+        let previous = pages[index]
+        var updated = Self.defaultDailyPage
+        updated.id = previous.id
+        for newIndex in updated.widgets.indices {
+            if let old = previous.widgets.first(where: { $0.kind == updated.widgets[newIndex].kind }) {
+                updated.widgets[newIndex].id = old.id
+            }
+        }
+        pages[index] = updated
+        return true
+    }
+
+    private static func matchesPreviousDailyDefault(_ page: HomePage) -> Bool {
+        guard page.widgets.count == 4 else { return false }
+        let expected: [(WidgetKind, WidgetSize, Int, Int, String?)] = [
+            (.calories, .medium, 0, 0, nil),
+            (.nextWorkout, .medium, 1, 0, nil),
+            (.trainingStreak, .small, 2, 0, "Habits Streak"),
+            (.vitals, .small, 2, 1, "Daily Check-in")
+        ]
+        return expected.allSatisfy { expectedWidget in
+            page.widgets.contains { widget in
+                widget.kind == expectedWidget.0 && widget.size == expectedWidget.1 &&
+                    widget.row == expectedWidget.2 && widget.column == expectedWidget.3 &&
+                    widget.variant == expectedWidget.4
+            }
+        }
     }
 }
 
