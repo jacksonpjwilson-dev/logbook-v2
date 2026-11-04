@@ -36,8 +36,10 @@ final class LogbookStoreTests: XCTestCase {
         let active = try XCTUnwrap(store.state.training.activeSession)
         let row = try XCTUnwrap(active.exercises.first)
         let set = try XCTUnwrap(row.sets.first)
-        store.updateSet(exerciseID: row.id, setID: set.id, weightKg: 60, reps: 8)
-        XCTAssertTrue(store.toggleSet(exerciseID: row.id, setID: set.id))
+        for plannedSet in row.sets {
+            store.updateSet(exerciseID: row.id, setID: plannedSet.id, weightKg: 60, reps: 8)
+            XCTAssertTrue(store.toggleSet(exerciseID: row.id, setID: plannedSet.id))
+        }
         XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
 
         let reopened = LogbookStore(repository: repository)
