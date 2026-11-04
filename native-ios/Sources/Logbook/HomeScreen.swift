@@ -41,9 +41,10 @@ struct HomeScreen: View {
             .safeAreaInset(edge: .bottom, spacing: 0) {
                 LogbookDock(path: $path, palette: palette)
                     .padding(.horizontal, 14)
-                    .padding(.bottom, 5)
+                    // Keep the dock above the home-indicator safe area. The
+                    // screen background already extends edge-to-edge.
+                    .padding(.bottom, 8)
             }
-            .ignoresSafeArea(edges: .bottom)
         }
         .toolbar(.hidden, for: .navigationBar)
         .sheet(isPresented: $showEditor) {
@@ -285,9 +286,9 @@ private struct HomeWidgetCard: View {
         }
         .padding(widget.size == .small ? 12 : 15)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 25, style: .continuous))
-        .background(palette.surfaceColor.opacity(palette.light ? 0.30 : 0.22), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 25, style: .continuous).stroke(.white.opacity(palette.light ? 0.62 : 0.31), lineWidth: 0.8))
+        // A light tint keeps labels readable without hiding the theme artwork.
+        .background(palette.surfaceColor.opacity(palette.light ? 0.18 : 0.08), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 25, style: .continuous).stroke(.white.opacity(palette.light ? 0.62 : 0.38), lineWidth: 0.8))
         .shadow(color: .black.opacity(0.13), radius: 12, x: 0, y: 7)
         .contentShape(RoundedRectangle(cornerRadius: 25))
         .accessibilityElement(children: .combine)
@@ -356,7 +357,7 @@ struct ThemeBackdrop: View {
                 .frame(width: proxy.size.width, height: proxy.size.height)
                 .clipped()
                 .overlay {
-                    LinearGradient(colors: [Color.black.opacity(theme.palette.light ? 0.10 : 0.22), Color.black.opacity(theme.palette.light ? 0.12 : 0.36)], startPoint: .top, endPoint: .bottom)
+                    LinearGradient(colors: [Color.black.opacity(theme.palette.light ? 0.04 : 0.06), Color.black.opacity(theme.palette.light ? 0.10 : 0.16)], startPoint: .top, endPoint: .bottom)
                 }
                 .ignoresSafeArea()
         }
