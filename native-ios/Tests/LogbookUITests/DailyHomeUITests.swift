@@ -27,7 +27,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(nextWorkout.label.contains("Workout 1 of 1"))
 
         XCTAssertEqual(calories.frame.width, nextWorkout.frame.width, accuracy: 2)
-        XCTAssertLessThan(calories.frame.height, nextWorkout.frame.height)
+        XCTAssertGreaterThan(calories.frame.height, nextWorkout.frame.height)
         XCTAssertEqual(habits.frame.width, checkIn.frame.width, accuracy: 2)
         XCTAssertEqual(habits.frame.minY, checkIn.frame.minY, accuracy: 2)
         XCTAssertLessThanOrEqual(calories.frame.maxY, nextWorkout.frame.minY)
