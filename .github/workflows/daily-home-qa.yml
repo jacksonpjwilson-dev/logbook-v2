@@ -40,8 +40,8 @@ jobs:
         with:
           name: daily-home-qa-results
           path: |
-            native-ios/QA/artifacts/daily-home-*/Logbook.xcresult
             native-ios/QA/artifacts/daily-home-*/screenshots
+            native-ios/QA/artifacts/daily-home-*/summary.json
             native-ios/QA/artifacts/daily-home-*/xcodebuild.log
             native-ios/QA/REPORT.md
           if-no-files-found: warn
