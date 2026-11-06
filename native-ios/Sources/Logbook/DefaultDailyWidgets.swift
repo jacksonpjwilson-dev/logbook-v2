@@ -200,7 +200,7 @@ private struct NutritionRemainingContent: View {
 
     private func calorieRing(diameter: CGFloat) -> some View {
         let ringSize = diameter - 11
-        VStack(spacing: 3) {
+        return VStack(spacing: 3) {
             ZStack {
                 Circle().stroke(palette.accentColor.opacity(0.18), lineWidth: 7)
                 Circle()

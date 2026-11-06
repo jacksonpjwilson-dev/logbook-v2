@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 12326)
+Total output lines: 941
+
 import SwiftUI
 
 struct HomeScreen: View {
@@ -128,7 +131,7 @@ struct HomeScreen: View {
                 Text(currentPageName).font(.system(size: 13, weight: .medium))
                     .foregroundStyle(palette.mutedColor).lineLimit(1)
             }
-            .frame(height: 36, alignment: .firstTextBaseline)
+            .frame(height: 36, alignment: .leading)
             .foregroundStyle(palette.textColor)
         }
         .padding(.horizontal, 22)
@@ -445,35 +448,7 @@ private struct HomeWidgetCard: View {
                         .font(.system(size: 9, weight: .medium, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-                } else {
-                    Text("Set target").font(.system(size: 9, weight: .medium, design: .rounded))
-                }
-            }
-            .foregroundStyle(palette.textColor)
-            if let goal, goal > 0 {
-                ProgressView(value: min(1, consumed / goal)).tint(color)
-            }
-        }
-    }
-
-    private func macroPill(_ title: String, value: Double, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Capsule().fill(color.opacity(0.9)).frame(height: 4)
-            Text("\(Int(value)) g").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(palette.textColor)
-            Text(title).font(.system(size: 9, weight: .medium)).foregroundStyle(palette.mutedColor)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private func weekStart() -> String {
-        let components = Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: .now)
-        return LocalDay.string(Calendar.current.date(from: components) ?? .now)
-    }
-
-    private func hasWorkout(on offset: Int) -> Bool {
-        guard let date = Calendar.current.date(byAdding: .day, value: offset, to: .now) else { return false }
-        let day = LocalDay.string(date)
-        return state.training.completedSessions.contains { $0.localDate == day }
+           …326 tokens truncated…completedSessions.contains { $0.localDate == day }
     }
 
     private func weightValue(_ kg: Double) -> Double { state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
