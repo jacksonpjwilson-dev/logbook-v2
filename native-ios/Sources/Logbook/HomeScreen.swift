@@ -40,7 +40,7 @@ struct HomeScreen: View {
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            LogbookDock(path: $path, palette: palette)
+            LogbookDock(path: $path, tokens: theme.tokens)
                 .frame(height: 58)
                 .padding(.horizontal, 14)
                 .padding(.bottom, 8)
@@ -163,14 +163,18 @@ private struct HomePageGrid: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let columnWidth = (proxy.size.width - gap) / 2
-            let rowHeight = (proxy.size.height - gap * 3) / 4
+            // One scalar controls both axes: the eight cells are true squares.
+            // Constrain the grid by the safe vertical space first when needed,
+            // then center the two-column grid instead of stretching its rows.
+            let cellSide = max(1, min((proxy.size.width - gap) / 2, (proxy.size.height - gap * 3) / 4))
+            let gridWidth = cellSide * 2 + gap
+            let gridLeading = max(0, (proxy.size.width - gridWidth) / 2)
             ZStack(alignment: .topLeading) {
                 ForEach(page.widgets) { widget in
                     let columns = widget.size == .small ? 1 : 2
                     let rows = widget.size == .large ? 2 : 1
-                    let width = columnWidth * CGFloat(columns) + gap * CGFloat(columns - 1)
-                    let height = rowHeight * CGFloat(rows) + gap * CGFloat(rows - 1)
+                    let width = cellSide * CGFloat(columns) + gap * CGFloat(columns - 1)
+                    let height = cellSide * CGFloat(rows) + gap * CGFloat(rows - 1)
                     ZStack(alignment: .topTrailing) {
                         Button {
                             guard !editing else { return }
@@ -198,8 +202,8 @@ private struct HomePageGrid: View {
                     }
                     .frame(width: width, height: height)
                     .position(
-                        x: CGFloat(widget.column) * (columnWidth + gap) + width / 2,
-                        y: CGFloat(widget.row) * (rowHeight + gap) + height / 2
+                        x: gridLeading + CGFloat(widget.column) * (cellSide + gap) + width / 2,
+                        y: CGFloat(widget.row) * (cellSide + gap) + height / 2
                     )
                     .rotationEffect(.degrees(editing ? ((widget.row + widget.column).isMultiple(of: 2) ? -1 : 1) * (wigglePhase ? 0.6 : -0.6) : 0))
                     .transaction { transaction in
@@ -341,32 +345,25 @@ private struct HomeWidgetCard: View {
         .padding(widget.size == .small ? 12 : 15)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         // A tinted glass surface keeps the theme visible while protecting text contrast.
-        .background(palette.surfaceColor.opacity(palette.light ? 0.86 : 0.78), in: RoundedRectangle(cornerRadius: 25, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: 25, style: .continuous).stroke(palette.light ? palette.accentColor.opacity(0.30) : .white.opacity(0.42), lineWidth: 0.9))
-        .shadow(color: .black.opacity(0.22), radius: 12, x: 0, y: 7)
-        .contentShape(RoundedRectangle(cornerRadius: 25))
+        .background(themeTokens.surfaceTint.opacity(themeTokens.cardOpacity), in: RoundedRectangle(cornerRadius: themeTokens.cornerRadius, style: cardCornerStyle))
+        .overlay(RoundedRectangle(cornerRadius: themeTokens.cornerRadius, style: cardCornerStyle).stroke(palette.light ? palette.accentColor.opacity(themeTokens.borderOpacity) : .white.opacity(themeTokens.borderOpacity), lineWidth: 0.9))
+        .shadow(color: .black.opacity(themeTokens.shadowOpacity), radius: themeTokens.cardShadowRadius, x: 0, y: 7)
+        .contentShape(RoundedRectangle(cornerRadius: themeTokens.cornerRadius, style: cardCornerStyle))
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(widget.variant ?? widget.kind.title), \(summary.0), \(summary.1). Open details.")
     }
 
+    private var themeTokens: ThemeTokens { state.home.theme.tokens }
+    private var cardCornerStyle: RoundedCornerStyle { state.home.theme == .defaultTheme ? .continuous : .circular }
+
     @ViewBuilder private var detailVisual: some View {
-        if widget.variant == "Calories & Protein Remaining" {
+        if widget.variant == "Calories & Protein Remaining", state.home.theme == .defaultTheme {
+            CaloriesMacroVisual(state: state, palette: palette)
+        } else if widget.variant == "Calories & Protein Remaining" {
             let totals = state.nutritionTotals(on: LocalDay.string())
             VStack(alignment: .leading, spacing: 9) {
-                nutritionProgressRow(
-                    title: "Calories",
-                    consumed: totals.calories ?? 0,
-                    goal: state.nutrition.targets.calories,
-                    unit: "kcal",
-                    color: palette.accentColor
-                )
-                nutritionProgressRow(
-                    title: "Protein",
-                    consumed: totals.protein ?? 0,
-                    goal: state.nutrition.targets.protein,
-                    unit: "g",
-                    color: .cyan
-                )
+                nutritionProgressRow(title: "Calories", consumed: totals.calories ?? 0, goal: state.nutrition.targets.calories, unit: "kcal", color: palette.accentColor)
+                nutritionProgressRow(title: "Protein", consumed: totals.protein ?? 0, goal: state.nutrition.targets.protein, unit: "g", color: .cyan)
             }
         } else if widget.kind == .calories || widget.kind == .protein || widget.kind == .macros {
             let totals = state.nutritionTotals(on: LocalDay.string())
@@ -434,6 +431,71 @@ private struct HomeWidgetCard: View {
     private func weightValue(_ kg: Double) -> Double { state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
 }
 
+private struct CaloriesMacroVisual: View {
+    let state: LogbookState
+    let palette: ThemePalette
+
+    private var totals: NutritionTargets { state.nutritionTotals(on: LocalDay.string()) }
+    private var calorieGoal: Double? { state.nutrition.targets.calories }
+    private var calorieCount: Double { totals.calories ?? 0 }
+    private var caloriesLeft: Int { Int(max(0, (calorieGoal ?? 0) - calorieCount)) }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            VStack(spacing: 3) {
+                ZStack {
+                    Circle().stroke(palette.accentColor.opacity(0.18), lineWidth: 6)
+                    Circle()
+                        .trim(from: 0, to: calorieGoal.map { $0 > 0 ? min(1, calorieCount / $0) : 0 } ?? 0)
+                        .stroke(palette.accentColor, style: StrokeStyle(lineWidth: 6, lineCap: .round))
+                        .rotationEffect(.degrees(-90))
+                    VStack(spacing: 0) {
+                        Text(calorieGoal == nil ? "—" : "\(caloriesLeft)")
+                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                            .lineLimit(1).minimumScaleFactor(0.65)
+                        Text("kcal left").font(.system(size: 7, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(palette.textColor)
+                }
+                .frame(width: 62, height: 62)
+                Text(calorieGoal.map { "\(Int(calorieCount))/\(Int($0)) kcal" } ?? "Set calorie goal")
+                    .font(.system(size: 7.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(palette.mutedColor)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            VStack(spacing: 6) {
+                macroRow("Protein", consumed: totals.protein ?? 0, goal: state.nutrition.targets.protein, unit: "g", color: palette.accentColor)
+                macroRow("Carbs", consumed: totals.carbohydrates ?? 0, goal: state.nutrition.targets.carbohydrates, unit: "g", color: palette.mutedColor)
+                macroRow("Fat", consumed: totals.fat ?? 0, goal: state.nutrition.targets.fat, unit: "g", color: palette.accentColor.opacity(0.62))
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .bottomTrailing) {
+            Label("View Food", systemImage: "chevron.right")
+                .font(.system(size: 8, weight: .semibold, design: .rounded))
+                .foregroundStyle(palette.accentColor)
+                .padding(.top, 2)
+                .accessibilityLabel("View Food")
+        }
+    }
+
+    private func macroRow(_ name: String, consumed: Double, goal: Double?, unit: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 2) {
+                Text(name).font(.system(size: 8, weight: .semibold, design: .rounded))
+                Spacer(minLength: 1)
+                Text(goal.map { "\(Int(consumed))/\(Int($0)) \(unit) · \(Int(max(0, $0 - consumed))) left" } ?? "\(Int(consumed)) \(unit) · Set goal")
+                    .font(.system(size: 7.5, weight: .medium, design: .rounded))
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            .foregroundStyle(palette.textColor)
+            ProgressView(value: goal.flatMap { $0 > 0 ? min(1, consumed / $0) : nil } ?? 0)
+                .tint(color)
+                .accessibilityLabel("\(name), \(Int(consumed)) of \(Int(goal ?? 0)) \(unit)")
+        }
+    }
+}
+
 private struct WidgetPressStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.scaleEffect(configuration.isPressed ? 0.975 : 1).animation(.spring(response: 0.22, dampingFraction: 0.7), value: configuration.isPressed)
@@ -443,16 +505,23 @@ private struct WidgetPressStyle: ButtonStyle {
 struct ThemeBackdrop: View {
     let theme: LogbookTheme
     var body: some View {
+        let tokens = theme.tokens
         GeometryReader { proxy in
-            Image(theme.rawValue)
-                .resizable()
-                .scaledToFill()
-                .frame(width: proxy.size.width, height: proxy.size.height)
-                .clipped()
-                .overlay {
-                    LinearGradient(colors: [Color.black.opacity(theme.palette.light ? 0.04 : 0.06), Color.black.opacity(theme.palette.light ? 0.10 : 0.16)], startPoint: .top, endPoint: .bottom)
+            ZStack {
+                tokens.backgroundBase
+                Image(tokens.backgroundAsset)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: proxy.size.width, height: proxy.size.height)
+                    .clipped()
+                    .overlay {
+                        LinearGradient(
+                            colors: [Color.black.opacity(theme == .defaultTheme ? 0.02 : theme.palette.light ? 0.04 : 0.06), Color.black.opacity(theme == .defaultTheme ? 0.08 : theme.palette.light ? 0.10 : 0.16)],
+                            startPoint: .top,
+                            endPoint: .bottom
+                        )
+                    }
                 }
-                .ignoresSafeArea()
         }
         .ignoresSafeArea()
     }
@@ -460,7 +529,7 @@ struct ThemeBackdrop: View {
 
 private struct LogbookDock: View {
     @Binding var path: [LogbookRoute]
-    let palette: ThemePalette
+    let tokens: ThemeTokens
     private let items: [(LogbookRoute, String, String)] = [
         (.training, "Training", "dumbbell.fill"), (.food, "Food", "fork.knife"), (.history, "History", "chart.bar.fill"), (.checkins, "Sleep", "moon.fill"), (.settings, "Settings", "gearshape.fill")
     ]
@@ -472,7 +541,7 @@ private struct LogbookDock: View {
                         Image(systemName: item.2).font(.system(size: 16, weight: .semibold)).frame(height: 18)
                         Text(item.1).font(.system(size: 9, weight: .semibold, design: .rounded)).lineLimit(1)
                     }
-                    .foregroundStyle(palette.textColor)
+                    .foregroundStyle(tokens.text)
                     .frame(maxWidth: .infinity).padding(.vertical, 9)
                     .contentShape(Rectangle())
                 }
@@ -482,7 +551,7 @@ private struct LogbookDock: View {
         }
         .padding(.horizontal, 5)
         .background(.ultraThinMaterial, in: Capsule())
-        .background(palette.surfaceColor.opacity(0.36), in: Capsule())
+        .background(tokens.surfaceTint.opacity(0.36), in: Capsule())
         .overlay(Capsule().stroke(.white.opacity(0.38), lineWidth: 0.8))
         .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 6)
     }

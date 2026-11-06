@@ -2,7 +2,7 @@ name: Daily Home QA
 
 on:
   push:
-    branches: [qa/daily-home-workflow]
+    branches: [qa/daily-home-workflow, codex/default-theme-gate1]
     paths:
       - 'native-ios/**'
       - '.github/workflows/daily-home-qa.yml'

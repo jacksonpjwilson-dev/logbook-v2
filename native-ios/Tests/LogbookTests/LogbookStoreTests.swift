@@ -52,10 +52,13 @@ final class LogbookStoreTests: XCTestCase {
     }
 
     func testApprovedThemeAndWidgetInventoryCounts() {
-        XCTAssertEqual(LogbookTheme.allCases.count, 16)
+        XCTAssertEqual(LogbookTheme.allCases.count, 17)
+        XCTAssertEqual(LogbookTheme.allCases.filter { $0 != .defaultTheme }.count, 16, "Preserve all existing themes while staging v2 Default")
         XCTAssertEqual(WidgetKind.allCases.count, 38)
-        XCTAssertEqual(HomeState().theme, .premiumGlass)
+        XCTAssertEqual(HomeState().theme, .defaultTheme)
         XCTAssertEqual(HomeState().pages.map(\.name), ["Daily", "Training", "Food", "Progress & History"])
+        XCTAssertEqual(LogbookTheme.defaultTheme.tokens.cardOpacity, 0.86, accuracy: 0.001)
+        XCTAssertEqual(LogbookTheme.premiumGlass.tokens.cardOpacity, 0.78, accuracy: 0.001)
     }
 
     func testDailyDefaultUsesApprovedWidgetSizesAndPositions() throws {

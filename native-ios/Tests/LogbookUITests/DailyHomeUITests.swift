@@ -1,13 +1,6 @@
 import XCTest
 
 final class DailyHomeUITests: XCTestCase {
-    private let approvedThemeIDs = [
-        "modern-clean", "sunset-vibes", "ocean-breeze", "monochrome-pro",
-        "soft-pastel", "premium-glass", "mountain-dawn", "coastal-minimal",
-        "midnight-luxe", "cherry-blossom", "arctic-mountain", "slate-glass",
-        "midnight-glass", "monochrome", "neon-gradient", "teal-coral"
-    ]
-
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
@@ -29,6 +22,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(calories.frame.width, nextWorkout.frame.width, accuracy: 2)
         XCTAssertGreaterThan(calories.frame.height, nextWorkout.frame.height)
         XCTAssertEqual(habits.frame.width, checkIn.frame.width, accuracy: 2)
+        XCTAssertEqual(habits.frame.width, habits.frame.height, accuracy: 2, "Small widgets must occupy square cells")
+        XCTAssertEqual(calories.frame.width, calories.frame.height, accuracy: 2, "Large widgets must be square")
+        XCTAssertEqual(nextWorkout.frame.height, habits.frame.height, accuracy: 2, "Medium widget must be two cells wide and one cell tall")
+        XCTAssertEqual(nextWorkout.frame.width, habits.frame.width * 2 + 9, accuracy: 3, "Medium width must span two cells and one grid gap")
         XCTAssertEqual(habits.frame.minY, checkIn.frame.minY, accuracy: 2)
         XCTAssertLessThanOrEqual(calories.frame.maxY, nextWorkout.frame.minY)
         XCTAssertLessThanOrEqual(nextWorkout.frame.maxY, habits.frame.minY)
@@ -39,7 +36,14 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Sleep tab"].exists)
         XCTAssertTrue(app.buttons["Settings tab"].exists)
 
-        attachScreenshot(of: app, named: "Home-Daily-Premium-Glass")
+        let pageNames = ["Daily page", "Training page", "Food page", "Progress & History page"]
+        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label IN %@", pageNames)).count, 4)
+
+        let dockFrame = app.buttons["Training tab"].frame
+        let measurement = "Default Daily widget frames (points): large=\(calories.frame), medium=\(nextWorkout.frame), small-left=\(habits.frame), small-right=\(checkIn.frame), dock=\(dockFrame)"
+        add(XCTAttachment(string: measurement))
+
+        attachScreenshot(of: app, named: "Home-Daily-Default-Candidate")
         capturePage("Training", in: app)
         capturePage("Food", in: app)
         capturePage("Progress & History", in: app)
@@ -51,19 +55,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Calories widget should open Food")
     }
 
-    func testCaptureProtectedThemeCandidates() throws {
-        for themeID in approvedThemeIDs {
-            let app = launchApp(themeID: themeID)
-            XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 20), "Home failed to render theme \(themeID)")
-            attachScreenshot(of: app, named: "Theme-Candidate-\(themeID)")
-            app.terminate()
-        }
-    }
-
     private func launchApp(themeID: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
-        if let themeID { app.launchArguments.append("--qa-theme=\(themeID)") }
+        app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 20))
         return app

@@ -2,6 +2,7 @@ import Foundation
 import SwiftUI
 
 enum LogbookTheme: String, CaseIterable, Codable, Identifiable, Equatable {
+    case defaultTheme = "default"
     case modernClean = "modern-clean"
     case sunsetVibes = "sunset-vibes"
     case oceanBreeze = "ocean-breeze"
@@ -22,6 +23,7 @@ enum LogbookTheme: String, CaseIterable, Codable, Identifiable, Equatable {
     var id: String { rawValue }
     var title: String {
         switch self {
+        case .defaultTheme: "Default"
         case .modernClean: "Modern Clean"
         case .sunsetVibes: "Sunset Vibes"
         case .oceanBreeze: "Ocean Breeze"
@@ -43,6 +45,9 @@ enum LogbookTheme: String, CaseIterable, Codable, Identifiable, Equatable {
 
     var palette: ThemePalette {
         switch self {
+        // Provisional starter values from the v2 handoff manifest. They remain
+        // explicitly subject to visual review; the reference is conceptual.
+        case .defaultTheme: .init(surface: "#D6E4F5", text: "#25456E", muted: "#426487", accent: "#7FAEE2", onAccent: "#FFFFFF", light: true)
         case .modernClean: .init(surface: "#1C3B82", text: "#FFFFFF", muted: "#DCE8FF", accent: "#B4F0E4", onAccent: "#123C37", light: false)
         case .sunsetVibes: .init(surface: "#4F2038", text: "#FFF9FA", muted: "#F5D9E1", accent: "#FFD599", onAccent: "#533117", light: false)
         case .oceanBreeze: .init(surface: "#064455", text: "#F5FEFF", muted: "#C9EDF2", accent: "#8AF0D5", onAccent: "#073B33", light: false)
@@ -61,6 +66,62 @@ enum LogbookTheme: String, CaseIterable, Codable, Identifiable, Equatable {
         case .tealCoral: .init(surface: "#073D45", text: "#F6FFFE", muted: "#CBE8E8", accent: "#FFB3A2", onAccent: "#542A24", light: false)
         }
     }
+
+    /// Shared semantic theme values used by the native Home surfaces. Existing
+    /// themes keep their established rendering until their later review gate.
+    var tokens: ThemeTokens {
+        if self == .defaultTheme {
+            return ThemeTokens(
+                backgroundAsset: "default",
+                backgroundBase: Color(hex: "#F3F7FC"),
+                surfaceTint: palette.surfaceColor,
+                text: palette.textColor,
+                secondaryText: palette.mutedColor,
+                accent: palette.accentColor,
+                onAccent: palette.onAccentColor,
+                cardOpacity: 0.86,
+                cornerRadius: 22,
+                borderOpacity: 0.24,
+                shadowOpacity: 0.08,
+                backgroundBlurRadius: 12,
+                cardShadowRadius: 12,
+                isLight: true
+            )
+        }
+        return ThemeTokens(
+            backgroundAsset: rawValue,
+            backgroundBase: palette.surfaceColor,
+            surfaceTint: palette.surfaceColor,
+            text: palette.textColor,
+            secondaryText: palette.mutedColor,
+            accent: palette.accentColor,
+            onAccent: palette.onAccentColor,
+            cardOpacity: palette.light ? 0.86 : 0.78,
+            cornerRadius: 25,
+            borderOpacity: palette.light ? 0.30 : 0.42,
+            shadowOpacity: 0.22,
+            backgroundBlurRadius: 12,
+            cardShadowRadius: 12,
+            isLight: palette.light
+        )
+    }
+}
+
+struct ThemeTokens {
+    let backgroundAsset: String
+    let backgroundBase: Color
+    let surfaceTint: Color
+    let text: Color
+    let secondaryText: Color
+    let accent: Color
+    let onAccent: Color
+    let cardOpacity: Double
+    let cornerRadius: CGFloat
+    let borderOpacity: Double
+    let shadowOpacity: Double
+    let backgroundBlurRadius: CGFloat
+    let cardShadowRadius: CGFloat
+    let isLight: Bool
 }
 
 struct ThemePalette {
@@ -195,7 +256,7 @@ struct HomePage: Codable, Identifiable, Equatable {
 }
 
 struct HomeState: Codable {
-    var theme: LogbookTheme = .premiumGlass
+    var theme: LogbookTheme = .defaultTheme
     var pages: [HomePage] = HomeState.defaultPages
     var undoPages: [HomePage]? = nil
     var hapticsEnabled = false
