@@ -7,6 +7,7 @@ final class LogbookStore: ObservableObject {
     @Published private(set) var state: LogbookState
     @Published private(set) var persistenceError: String?
     @Published private(set) var lastSavedAt: Date?
+    @Published private(set) var focusedCheckInSection: CheckInSection?
 
     private let repository: LogbookRepository
     private(set) var canEdit = true
@@ -48,6 +49,76 @@ final class LogbookStore: ObservableObject {
     func setTheme(_ theme: LogbookTheme) {
         transact { $0.home.theme = theme }
     }
+
+    func focusCheckIn(_ section: CheckInSection) {
+        focusedCheckInSection = section
+    }
+
+    func clearCheckInFocus() {
+        focusedCheckInSection = nil
+    }
+
+    #if DEBUG
+    /// Synthetic, isolated UI-test data. It is only installed in the temporary
+    /// repository created for --ui-testing and never touches the App Group store.
+    func installDefaultDailyQAFixture() {
+        guard ProcessInfo.processInfo.arguments.contains("--ui-testing") else { return }
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let exerciseData: [(String, String, String)] = [
+            ("qa-bench", "Bench Press", "Chest"),
+            ("qa-row", "Seated Row", "Back"),
+            ("qa-press", "Shoulder Press", "Shoulders"),
+            ("qa-curl", "Dumbbell Curl", "Arms")
+        ]
+        let exercises = exerciseData.map { id, name, muscle in
+            PlannedExercise(exerciseID: id, name: name, muscle: muscle, equipment: "Dumbbell")
+        }
+        let templateID = UUID(uuidString: "F0D8D0A0-33A2-4E7F-8B0A-318BE1F79F51")!
+        let template = WorkoutTemplate(id: templateID, name: "Upper Body", exercises: exercises)
+        let supplementID = UUID(uuidString: "D1B2B4F8-9B2A-493C-B60E-41E3587799A8")!
+        let supplement = Supplement(id: supplementID, name: "Creatine", schedule: "daily")
+        var sleepLogs: [SleepLog] = []
+        var weightLogs: [WeightLog] = []
+        var doses: [SupplementDose] = []
+        for offset in 0..<5 {
+            guard let wake = calendar.date(byAdding: .day, value: -offset, to: today),
+                  let bedtimeDay = calendar.date(byAdding: .day, value: -1, to: wake),
+                  let bedtime = calendar.date(bySettingHour: 22, minute: 30, second: 0, of: bedtimeDay),
+                  let wakeTime = calendar.date(bySettingHour: 6, minute: 30, second: 0, of: wake) else { continue }
+            let key = LocalDay.string(wake)
+            sleepLogs.append(SleepLog(wakeDate: key, bedtime: bedtime, wakeTime: wakeTime))
+            weightLogs.append(WeightLog(date: key, kilograms: 78.4 - Double(offset) * 0.1))
+            doses.append(SupplementDose(supplementID: supplementID, supplementName: supplement.name, date: key, taken: true, explicitlyMarked: true))
+        }
+        guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return }
+        let finished = calendar.date(bySettingHour: 16, minute: 20, second: 0, of: yesterday) ?? yesterday
+        var fixture = state
+        fixture.training.templates = [template]
+        fixture.training.rotationIndex = 0
+        fixture.training.completedSessions = [WorkoutSession(
+                templateID: templateID,
+                templateName: template.name,
+                templateVersion: template.version,
+                localDate: LocalDay.string(yesterday),
+                startedAt: finished.addingTimeInterval(-2_700),
+                finishedAt: finished,
+                exercises: []
+            )]
+        fixture.checkins.sleep = sleepLogs
+        fixture.checkins.weights = weightLogs
+        fixture.checkins.supplements = [supplement]
+        fixture.checkins.doses = doses
+        fixture.lastModified = .now
+        do {
+            try repository.save(fixture)
+            state = fixture
+            lastSavedAt = .now
+        } catch {
+            persistenceError = "Could not prepare isolated Daily Home test data. \(error.localizedDescription)"
+        }
+    }
+    #endif
 
     func setNutritionTargets(calories: Double?, protein: Double?, carbohydrates: Double?, fat: Double?) {
         transact {

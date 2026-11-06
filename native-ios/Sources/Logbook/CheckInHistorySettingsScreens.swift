@@ -17,6 +17,7 @@ struct CheckInScreen: View {
     private var weightToday: WeightLog? { store.state.checkins.weights.first { $0.date == LocalDay.string() } }
 
     var body: some View {
+        ScrollViewReader { proxy in
         List {
             Section("Sleep") {
                 DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
@@ -28,6 +29,7 @@ struct CheckInScreen: View {
                 } else { Text("No sleep record yet.").font(.caption).foregroundStyle(.secondary) }
                 Text("Sleep is entered manually. This app has no Apple Health access.").font(.footnote).foregroundStyle(.secondary)
             }
+            .id(CheckInSection.sleep)
 
             Section("Weight") {
                 HStack { TextField("Weight", text: $weight).keyboardType(.decimalPad); Text(unit).foregroundStyle(.secondary) }
@@ -37,6 +39,7 @@ struct CheckInScreen: View {
                     Text("Last entry: \(displayWeight(last.kilograms)) \(unit) · \(last.date)").font(.caption).foregroundStyle(.secondary)
                 }
             }
+            .id(CheckInSection.weight)
 
             Section {
                 if store.state.checkins.supplements.isEmpty {
@@ -60,6 +63,7 @@ struct CheckInScreen: View {
                 }
                 Button { showSupplementForm = true } label: { Label("Add supplement", systemImage: "plus") }
             } header: { Text("Supplements") }
+            .id(CheckInSection.supplements)
 
             Section {
                 NavigationLink("Reminder settings", destination: ReminderSettingsScreen())
@@ -67,6 +71,9 @@ struct CheckInScreen: View {
                 Text("Reminder times are optional and use local notifications. They are not guaranteed during Focus or when iOS limits delivery.")
                     .font(.footnote).foregroundStyle(.secondary)
             }
+        }
+        .onAppear { scrollToRequestedSection(using: proxy) }
+        .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
         }
         .navigationTitle("Sleep & Check-ins")
         .alert("Weight saved", isPresented: $showWeightSaved) { Button("OK", role: .cancel) { } }
@@ -97,6 +104,14 @@ struct CheckInScreen: View {
         let crossesMidnight = bedHour * 60 + bedMinute >= wakeHour * 60 + wakeMinute
         let bedDay = crossesMidnight ? (calendar.date(byAdding: .day, value: -1, to: day) ?? day) : day
         return calendar.date(bySettingHour: bedHour, minute: bedMinute, second: 0, of: bedDay) ?? bedtime
+    }
+
+    private func scrollToRequestedSection(using proxy: ScrollViewProxy) {
+        guard let section = store.focusedCheckInSection else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(section, anchor: .top) }
+            store.clearCheckInFocus()
+        }
     }
 
     private func displayWeight(_ kg: Double) -> String {

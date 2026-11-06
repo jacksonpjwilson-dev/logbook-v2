@@ -23,6 +23,14 @@ struct HomeScreen: View {
                                 page: page,
                                 editing: isEditing,
                                 open: { route in path = [route] },
+                                openCheckIn: { section in
+                                    store.focusCheckIn(section)
+                                    path = [.checkins]
+                                },
+                                startWorkout: { template in
+                                    store.startWorkout(template)
+                                    path = [.training]
+                                },
                                 remove: { id in store.removeHomeWidget(id, pageID: page.id) }
                             )
                             .tag(index)
@@ -40,7 +48,7 @@ struct HomeScreen: View {
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            LogbookDock(path: $path, tokens: theme.tokens)
+            LogbookDock(path: $path, tokens: theme.tokens, isDefault: theme == .defaultTheme)
                 .frame(height: 58)
                 .padding(.horizontal, 14)
                 .padding(.bottom, 8)
@@ -109,14 +117,18 @@ struct HomeScreen: View {
                 }
             }
             Text(displayDate)
-                .font(.system(size: 10, weight: .medium, design: .rounded)).tracking(1.1)
+                .font(.system(size: 10, weight: .medium))
+                .tracking(theme == .defaultTheme ? 0.45 : 1.1)
                 .foregroundStyle(palette.mutedColor)
+                .frame(height: 12, alignment: .leading)
             HStack(alignment: .firstTextBaseline) {
-                Text("Logbook").font(.system(size: 30, weight: .bold, design: .rounded))
+                Text("Logbook")
+                    .font(.system(size: theme == .defaultTheme ? 27 : 30, weight: theme == .defaultTheme ? .semibold : .bold, design: .rounded))
                 Spacer()
                 Text(currentPageName).font(.system(size: 13, weight: .medium))
                     .foregroundStyle(palette.mutedColor).lineLimit(1)
             }
+            .frame(height: 36, alignment: .firstTextBaseline)
             .foregroundStyle(palette.textColor)
         }
         .padding(.horizontal, 22)
@@ -156,10 +168,23 @@ private struct HomePageGrid: View {
     let page: HomePage
     let editing: Bool
     let open: (LogbookRoute) -> Void
+    let openCheckIn: (CheckInSection) -> Void
+    let startWorkout: (WorkoutTemplate) -> Void
     let remove: (UUID) -> Void
     @State private var wigglePhase = false
 
     private let gap: CGFloat = 9
+
+    private var usesApprovedDailyLayout: Bool {
+        guard page.name == "Daily", store.state.home.theme == .defaultTheme,
+              page.widgets.count == HomeState.defaultDailyPage.widgets.count else { return false }
+        return HomeState.defaultDailyPage.widgets.allSatisfy { expected in
+            page.widgets.contains {
+                $0.kind == expected.kind && $0.size == expected.size && $0.row == expected.row &&
+                    $0.column == expected.column && $0.variant == expected.variant
+            }
+        }
+    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -176,16 +201,30 @@ private struct HomePageGrid: View {
                     let width = cellSide * CGFloat(columns) + gap * CGFloat(columns - 1)
                     let height = cellSide * CGFloat(rows) + gap * CGFloat(rows - 1)
                     ZStack(alignment: .topTrailing) {
-                        Button {
-                            guard !editing else { return }
-                            open(route(for: widget.kind))
-                        } label: {
-                            HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
-                                .frame(width: width, height: height)
+                        if usesApprovedDailyLayout {
+                            DefaultDailyWidgetView(
+                                widget: widget,
+                                palette: store.state.home.theme.palette,
+                                state: store.state,
+                                openFood: { open(.food) },
+                                openTraining: { open(.training) },
+                                openCheckIn: openCheckIn,
+                                startWorkout: startWorkout
+                            )
+                            .frame(width: width, height: height)
+                            .disabled(editing)
+                        } else {
+                            Button {
+                                guard !editing else { return }
+                                open(route(for: widget.kind))
+                            } label: {
+                                HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
+                                    .frame(width: width, height: height)
+                            }
+                            .accessibilityIdentifier("home-widget-\(widget.kind.rawValue)")
+                            .buttonStyle(WidgetPressStyle())
+                            .disabled(editing)
                         }
-                        .accessibilityIdentifier("home-widget-\(widget.kind.rawValue)")
-                        .buttonStyle(WidgetPressStyle())
-                        .disabled(editing)
 
                         if editing {
                             Button { remove(widget.id) } label: {
@@ -539,6 +578,7 @@ struct ThemeBackdrop: View {
 private struct LogbookDock: View {
     @Binding var path: [LogbookRoute]
     let tokens: ThemeTokens
+    let isDefault: Bool
     private let items: [(LogbookRoute, String, String)] = [
         (.training, "Training", "dumbbell.fill"), (.food, "Food", "fork.knife"), (.history, "History", "chart.bar.fill"), (.checkins, "Sleep", "moon.fill"), (.settings, "Settings", "gearshape.fill")
     ]
@@ -546,12 +586,20 @@ private struct LogbookDock: View {
         HStack(spacing: 0) {
             ForEach(items, id: \.0) { item in
                 Button { path = [item.0] } label: {
+                    let selected = path.last == item.0 || (path.isEmpty && item.0 == .training)
                     VStack(spacing: 4) {
                         Image(systemName: item.2).font(.system(size: 16, weight: .semibold)).frame(height: 18)
                         Text(item.1).font(.system(size: 9, weight: .semibold, design: .rounded)).lineLimit(1)
                     }
-                    .foregroundStyle(tokens.text)
-                    .frame(maxWidth: .infinity).padding(.vertical, 9)
+                    .foregroundStyle(isDefault ? (selected ? tokens.accent : tokens.text.opacity(0.78)) : tokens.text)
+                    .frame(maxWidth: .infinity).padding(.vertical, isDefault ? 7 : 9)
+                    .background {
+                        if isDefault && selected {
+                            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                .fill(tokens.accent.opacity(0.17))
+                                .padding(.horizontal, 2)
+                        }
+                    }
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)

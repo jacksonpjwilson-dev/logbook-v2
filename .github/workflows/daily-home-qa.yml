@@ -15,7 +15,14 @@ on:
 
 jobs:
   daily-home:
-    runs-on: macos-15
+    runs-on: macos-26
+    strategy:
+      fail-fast: false
+      matrix:
+        simulator:
+          - { name: 'iPhone 16', slug: 'iphone-16' }
+          - { name: 'iPhone SE (3rd generation)', slug: 'iphone-se-3' }
+          - { name: 'iPhone 18 Pro', slug: 'iphone-18-pro' }
     steps:
       - uses: actions/checkout@v4
 
@@ -25,24 +32,32 @@ jobs:
       - name: Install XcodeGen
         run: brew install xcodegen
 
-      - name: Select available iPhone simulator
+      - name: Check simulator availability
         id: simulator
         run: |
-          DEVICE="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; d=json.load(sys.stdin); names=[x["name"] for group in d["devices"].values() for x in group if x.get("isAvailable")]; print("iPhone 18 Pro" if "iPhone 18 Pro" in names else "iPhone 16")')"
-          echo "name=$DEVICE" >> "$GITHUB_OUTPUT"
+          DEVICE='${{ matrix.simulator.name }}'
+          AVAILABLE="$(xcrun simctl list devices available -j | python3 -c 'import json,sys; wanted=sys.argv[1]; d=json.load(sys.stdin); names=[x["name"] for group in d["devices"].values() for x in group if x.get("isAvailable")]; print("true" if wanted in names else "false")' "$DEVICE")"
+          echo "available=$AVAILABLE" >> "$GITHUB_OUTPUT"
+          if [ "$AVAILABLE" = "false" ]; then
+            mkdir -p "native-ios/QA/artifacts/device-unavailable-${{ matrix.simulator.slug }}"
+            printf 'Simulator **%s** is not installed on this GitHub macOS runner. No screenshot or test result was produced for this device.\n' "$DEVICE" > "native-ios/QA/artifacts/device-unavailable-${{ matrix.simulator.slug }}/README.md"
+            echo "Simulator not available: $DEVICE"
+          fi
 
       - name: Run Daily Home QA
-        run: ./native-ios/QA/Scripts/run-daily-home-qa.sh "${{ steps.simulator.outputs.name }}"
+        if: steps.simulator.outputs.available == 'true'
+        run: ./native-ios/QA/Scripts/run-daily-home-qa.sh '${{ matrix.simulator.name }}'
 
-      - name: Upload Xcode result bundle, screenshots, and report
+      - name: Upload simulator-specific screenshots and test report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: daily-home-qa-results
+          name: daily-home-qa-${{ matrix.simulator.slug }}
           path: |
-            native-ios/QA/artifacts/daily-home-*/screenshots
+            native-ios/QA/artifacts/daily-home-*/screenshots/**
             native-ios/QA/artifacts/daily-home-*/summary.json
             native-ios/QA/artifacts/daily-home-*/xcodebuild.log
+            native-ios/QA/artifacts/device-unavailable-*/README.md
             native-ios/QA/REPORT.md
           if-no-files-found: warn
           retention-days: 30

@@ -37,7 +37,11 @@ struct LogbookApp: App {
             store.addFoodDefinition(fixture)
             _ = store.logFood(fixture, meal: meal, quantity: 1, unit: "serving", confirmed: true)
         }
+        #if DEBUG
+        store.installDefaultDailyQAFixture()
+        #else
         _ = store.addTemplate(name: "Upper Body")
+        #endif
         return store
     }
 

@@ -9,15 +9,25 @@ final class DailyHomeUITests: XCTestCase {
         let app = launchApp()
         let calories = app.buttons["home-widget-kcal"]
         let nextWorkout = app.buttons["home-widget-next"]
-        let habits = app.buttons["home-widget-streak"]
-        let checkIn = app.buttons["home-widget-vitals"]
+        let habits = app.otherElements["home-widget-streak"]
+        let checkIn = app.otherElements["home-widget-vitals"]
 
         XCTAssertTrue(calories.waitForExistence(timeout: 20), "Daily nutrition widget did not appear")
         XCTAssertTrue(nextWorkout.exists)
         XCTAssertTrue(habits.exists)
         XCTAssertTrue(checkIn.exists)
-        XCTAssertTrue(calories.label.contains("Calories & Protein Remaining"))
-        XCTAssertTrue(nextWorkout.label.contains("Workout 1 of 1"))
+        XCTAssertTrue(calories.label.localizedCaseInsensitiveContains("Calories and macros remaining"))
+        XCTAssertTrue(nextWorkout.label.contains("Upper Body"))
+        XCTAssertTrue(nextWorkout.label.contains("4 exercises"))
+        XCTAssertTrue(nextWorkout.label.contains("minutes"))
+        XCTAssertTrue(app.buttons["start-next-workout"].exists)
+        XCTAssertTrue(app.buttons["view-next-workout"].exists)
+        XCTAssertTrue(app.buttons["habit-sleep"].exists)
+        XCTAssertTrue(app.buttons["habit-weight"].exists)
+        XCTAssertTrue(app.buttons["habit-supplements"].exists)
+        XCTAssertTrue(app.buttons["checkin-sleep"].exists)
+        XCTAssertTrue(app.buttons["checkin-weight"].exists)
+        XCTAssertTrue(app.buttons["checkin-supplements"].exists)
 
         XCTAssertEqual(calories.frame.width, nextWorkout.frame.width, accuracy: 2)
         XCTAssertGreaterThan(calories.frame.height, nextWorkout.frame.height)
@@ -54,6 +64,48 @@ final class DailyHomeUITests: XCTestCase {
         dailyPage.tap()
         app.buttons["home-widget-kcal"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Calories widget should open Food")
+    }
+
+    func testDailySmallWidgetRegionsOpenTheirMatchingCheckInSections() throws {
+        let app = launchApp()
+        app.buttons["habit-sleep"].tap()
+        XCTAssertTrue(app.buttons["Save sleep"].waitForExistence(timeout: 5), "Habits Sleep region must open Sleep controls")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["habit-weight"].tap()
+        XCTAssertTrue(app.buttons["Save today’s weight"].waitForExistence(timeout: 5), "Habits Weight region must open Weight controls")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["habit-supplements"].tap()
+        XCTAssertTrue(app.buttons["Add supplement"].waitForExistence(timeout: 5), "Habits Supplements region must open supplement controls")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["checkin-sleep"].tap()
+        XCTAssertTrue(app.buttons["Save sleep"].waitForExistence(timeout: 5), "Daily Check-in Sleep value must open Sleep controls")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["checkin-weight"].tap()
+        XCTAssertTrue(app.buttons["Save today’s weight"].waitForExistence(timeout: 5), "Daily Check-in Weight value must open Weight controls")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["checkin-supplements"].tap()
+        XCTAssertTrue(app.buttons["Add supplement"].waitForExistence(timeout: 5), "Daily Check-in Supplements must open supplement controls")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["checkin-checklist"].tap()
+        XCTAssertTrue(app.buttons["Add supplement"].waitForExistence(timeout: 5), "Checklist icon must open the supplement checklist")
+    }
+
+    func testNextWorkoutStartActionCreatesAnActiveWorkout() throws {
+        let app = launchApp()
+        app.buttons["view-next-workout"].tap()
+        XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["start-next-workout"].tap()
+        XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Upper Body"].waitForExistence(timeout: 5), "Start Workout must create and open the scheduled program")
+        XCTAssertTrue(app.staticTexts["Workout in progress"].exists)
     }
 
     private func launchApp(themeID: String? = nil) -> XCUIApplication {

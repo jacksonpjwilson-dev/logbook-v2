@@ -68,7 +68,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(widgets.map(\.kind), [.calories, .nextWorkout, .trainingStreak, .vitals])
         XCTAssertEqual(widgets.map(\.size), [.large, .medium, .small, .small])
         XCTAssertEqual(widgets.map { [$0.row, $0.column] }, [[0, 0], [2, 0], [3, 0], [3, 1]])
-        XCTAssertEqual(widgets[0].variant, "Calories & Protein Remaining")
+        XCTAssertEqual(widgets[0].variant, "Calories & Macros Remaining")
         XCTAssertEqual(widgets[2].variant, "Habits Streak")
         XCTAssertEqual(widgets[3].variant, "Daily Check-in")
     }
@@ -105,6 +105,62 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(loaded.home.pages, legacy.home.pages)
     }
 
+    func testMigrationRelabelsOnlyUntouchedNamedCaloriesWidgetAndKeepsItsIdentity() throws {
+        let repository = temporaryRepository()
+        var legacy = LogbookState.empty
+        legacy.home.pages[0] = previousNamedDailyPage(id: legacy.home.pages[0].id)
+        try repository.save(legacy)
+
+        let loaded = LogbookStore(repository: repository).state
+        let daily = try XCTUnwrap(loaded.home.pages.first)
+        XCTAssertEqual(daily.widgets.first(where: { $0.kind == .calories })?.variant, "Calories & Macros Remaining")
+        XCTAssertEqual(daily.widgets.map(\.id), legacy.home.pages[0].widgets.map(\.id))
+    }
+
+    func testDailyHabitDenominatorTreatsNoDueSupplementsAsNeutral() {
+        var state = LogbookState.empty
+        let today = Calendar.current.startOfDay(for: .now)
+        let day = LocalDay.string(today)
+        let sleepEnd = today.addingTimeInterval(8 * 60 * 60)
+        state.checkins.sleep = [SleepLog(wakeDate: day, bedtime: today, wakeTime: sleepEnd)]
+        state.checkins.weights = [WeightLog(date: day, kilograms: 80)]
+        let weekday = Calendar.current.component(.weekday, from: today)
+        state.checkins.supplements = [Supplement(name: "Weekday-only", schedule: "weekdays", weekdays: [weekday == 1 ? 2 : 1])]
+
+        let metrics = DailyHomeMetrics(state: state, date: today)
+        XCTAssertEqual(metrics.eligibleCount, 2)
+        XCTAssertEqual(metrics.completedCount, 2)
+        XCTAssertTrue(metrics.supplementsComplete)
+        XCTAssertTrue(metrics.isPerfectDay)
+    }
+
+    func testDailyHabitCompletionRequiresEveryDueSupplementAndKeepsYesterdayStreak() {
+        var state = LogbookState.empty
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: .now)
+        let supplement = Supplement(name: "Daily", schedule: "daily")
+        state.checkins.supplements = [supplement]
+        for offset in 1...3 {
+            guard let dayDate = calendar.date(byAdding: .day, value: -offset, to: today),
+                  let bedtime = calendar.date(byAdding: .hour, value: -8, to: dayDate),
+                  let wake = calendar.date(byAdding: .hour, value: 8, to: dayDate) else { continue }
+            let key = LocalDay.string(dayDate)
+            state.checkins.sleep.append(SleepLog(wakeDate: key, bedtime: bedtime, wakeTime: wake))
+            state.checkins.weights.append(WeightLog(date: key, kilograms: 80))
+            state.checkins.doses.append(SupplementDose(supplementID: supplement.id, supplementName: supplement.name, date: key, taken: true, explicitlyMarked: true))
+        }
+        let todayKey = LocalDay.string(today)
+        state.checkins.sleep.append(SleepLog(wakeDate: todayKey, bedtime: today, wakeTime: today.addingTimeInterval(8 * 60 * 60)))
+        state.checkins.weights.append(WeightLog(date: todayKey, kilograms: 80))
+
+        let metrics = DailyHomeMetrics(state: state, date: today)
+        XCTAssertEqual(metrics.eligibleCount, 3)
+        XCTAssertEqual(metrics.completedCount, 2)
+        XCTAssertFalse(metrics.supplementsComplete)
+        XCTAssertFalse(metrics.isPerfectDay)
+        XCTAssertEqual(metrics.perfectDayStreak, 3, "An incomplete current day keeps the preceding consecutive perfect-day streak visible")
+    }
+
     private func temporaryRepository() -> LogbookRepository {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("LogbookTests-\(UUID().uuidString)", isDirectory: true)
         return LogbookRepository(url: directory.appendingPathComponent("state.json"))
@@ -116,6 +172,15 @@ final class LogbookStoreTests: XCTestCase {
             HomeWidget(kind: .nextWorkout, size: .medium, row: 1, column: 0),
             HomeWidget(kind: .trainingStreak, size: .small, row: 2, column: 0, variant: "Habits Streak"),
             HomeWidget(kind: .vitals, size: .small, row: 2, column: 1, variant: "Daily Check-in")
+        ])
+    }
+
+    private func previousNamedDailyPage(id: UUID) -> HomePage {
+        HomePage(id: id, name: "Daily", widgets: [
+            HomeWidget(kind: .calories, size: .large, row: 0, column: 0, variant: "Calories & Protein Remaining"),
+            HomeWidget(kind: .nextWorkout, size: .medium, row: 2, column: 0),
+            HomeWidget(kind: .trainingStreak, size: .small, row: 3, column: 0, variant: "Habits Streak"),
+            HomeWidget(kind: .vitals, size: .small, row: 3, column: 1, variant: "Daily Check-in")
         ])
     }
 }

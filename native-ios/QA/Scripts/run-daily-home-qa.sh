@@ -2,7 +2,7 @@
 set -u
 
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
-DEVICE_NAME="${1:-iPhone 18 Pro}"
+DEVICE_NAME="${1:-iPhone 16}"
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 RUN_DIR="$ROOT/native-ios/QA/artifacts/daily-home-$STAMP"
 RESULT="$RUN_DIR/Logbook.xcresult"

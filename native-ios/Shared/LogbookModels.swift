@@ -288,7 +288,7 @@ struct HomeState: Codable {
 
     static var defaultDailyPage: HomePage {
         HomePage(name: "Daily", widgets: [
-            HomeWidget(kind: .calories, size: .large, row: 0, column: 0, variant: "Calories & Protein Remaining"),
+            HomeWidget(kind: .calories, size: .large, row: 0, column: 0, variant: "Calories & Macros Remaining"),
             HomeWidget(kind: .nextWorkout, size: .medium, row: 2, column: 0),
             HomeWidget(kind: .trainingStreak, size: .small, row: 3, column: 0, variant: "Habits Streak"),
             HomeWidget(kind: .vitals, size: .small, row: 3, column: 1, variant: "Daily Check-in")
@@ -299,7 +299,7 @@ struct HomeState: Codable {
     @discardableResult
     mutating func migrateUntouchedDailyLayout() -> Bool {
         guard let index = pages.firstIndex(where: { $0.name == "Daily" }),
-              Self.matchesPreviousDailyDefault(pages[index]) else { return false }
+              Self.matchesPreviousDailyDefault(pages[index]) || Self.matchesPreviousNamedDailyDefault(pages[index]) else { return false }
 
         let previous = pages[index]
         var updated = Self.defaultDailyPage
@@ -311,6 +311,22 @@ struct HomeState: Codable {
         }
         pages[index] = updated
         return true
+    }
+
+    private static func matchesPreviousNamedDailyDefault(_ page: HomePage) -> Bool {
+        guard page.widgets.count == 4 else { return false }
+        let expected: [(WidgetKind, WidgetSize, Int, Int, String?)] = [
+            (.calories, .large, 0, 0, "Calories & Protein Remaining"),
+            (.nextWorkout, .medium, 2, 0, nil),
+            (.trainingStreak, .small, 3, 0, "Habits Streak"),
+            (.vitals, .small, 3, 1, "Daily Check-in")
+        ]
+        return expected.allSatisfy { item in
+            page.widgets.contains {
+                $0.kind == item.0 && $0.size == item.1 && $0.row == item.2 &&
+                    $0.column == item.3 && $0.variant == item.4
+            }
+        }
     }
 
     private static func matchesPreviousDailyDefault(_ page: HomePage) -> Bool {
@@ -525,6 +541,10 @@ struct LogbookState: Codable {
 
 enum LogbookRoute: String, Hashable {
     case training, food, history, checkins, settings
+}
+
+enum CheckInSection: String, Hashable {
+    case sleep, weight, supplements
 }
 
 enum LocalDay {
