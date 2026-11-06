@@ -1,13 +1,14 @@
-# Logbook QA report
+# Logbook Default theme QA report
 
-- Latest automated run: **Not run in this workspace**
-- Reason: Linux environment has no Xcode, `xcodebuild`, `xcrun`, or iOS Simulator.
-- Branch: `codex/default-theme-gate1` (isolated from `qa/daily-home-workflow`)
-- Base commit: `8741ee53b9495d5558d6a35b152772fca3fbd646`
-- Implementation commit: pending CI run
-- Tests passed / failed: **not executed**
-- Native screenshots/artifacts: **none in this checkout**
-- Default appearance: **candidate implementation only; not visually reviewed or approved**
-- Protected baselines: none; no baseline was created or overwritten.
+- Workflow: [Daily Home QA run 42274999088](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42274999088)
+- Branch: `codex/default-theme-gate1`
+- Tested source commit: `9d6a724655218de42f0f4b70f66f9be37c7db12e`
+- Simulator: iPhone 16, iOS 18.5 (GitHub macOS 15 runner)
+- Build / Xcode test result: **PASSED**
+- Tests: **7 passed, 0 failed, 0 skipped** (6 store/unit + 1 UI)
+- Screenshots: 4 real PNG captures (Daily, Training, Food, Progress & History), artifact `daily-home-qa-results`
+- Missing asset runtime warnings: none
+- Baselines: unchanged; no candidate has been approved
+- Current decision: **Ready for user review**, not design-approved
 
-See [AUDIT_RESULTS.md](AUDIT_RESULTS.md), [REQUIREMENTS_TRACEABILITY.csv](REQUIREMENTS_TRACEABILITY.csv), [ISSUES.md](ISSUES.md), and [VISUAL_DIFFS/README.md](VISUAL_DIFFS/README.md). Run `Scripts/run-daily-home-qa.sh "iPhone 18 Pro"` and then an available smaller iPhone simulator to produce real evidence.
+See the downloaded visual review gallery for the captures, measured frames, and open discrepancies. iPhone 18 Pro and smaller-device runs remain outstanding. The other three Home captures show the current implementation for audit only; their functional content remains incomplete.
