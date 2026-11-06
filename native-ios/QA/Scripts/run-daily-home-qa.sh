@@ -43,6 +43,13 @@ xcodebuild \
 TEST_EXIT=${PIPESTATUS[0]}
 set -e
 
+# A green XCTest run is not a valid visual capture if the app's bundled art
+# failed to load. Keep this runtime check alongside the screenshot workflow.
+if grep -q "No image named" "$LOG"; then
+  echo "QA failed: the simulator reported an image missing from the asset catalog." >&2
+  TEST_EXIT=1
+fi
+
 xcrun xcresulttool export attachments --path "$RESULT" --output-path "$RUN_DIR/screenshots" >/dev/null 2>&1 || true
 xcrun xcresulttool get test-results summary --path "$RESULT" --format json > "$SUMMARY" 2>/dev/null || echo '{}' > "$SUMMARY"
 SCREENSHOT_COUNT="$(find "$RUN_DIR/screenshots" -type f \( -iname '*.png' -o -iname '*.jpg' \) | wc -l | tr -d ' ')"

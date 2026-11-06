@@ -326,7 +326,7 @@ private struct HomeWidgetCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {
                 Image(systemName: widget.kind.icon).font(.system(size: 11, weight: .semibold)).foregroundStyle(palette.accentColor)
-                Text(widget.variant ?? widget.kind.title.uppercased())
+                Text(visibleHeaderTitle)
                     .font(.system(size: 9, weight: .bold, design: .rounded)).tracking(1.1).lineLimit(1)
                 Spacer(minLength: 2)
                 if widget.kind == .graph { Image(systemName: "arrow.up.right").font(.system(size: 9, weight: .bold)) }
@@ -355,6 +355,15 @@ private struct HomeWidgetCard: View {
 
     private var themeTokens: ThemeTokens { state.home.theme.tokens }
     private var cardCornerStyle: RoundedCornerStyle { state.home.theme == .defaultTheme ? .continuous : .circular }
+
+    private var visibleHeaderTitle: String {
+        guard state.home.theme == .defaultTheme, widget.size == .small else {
+            return widget.variant ?? widget.kind.title.uppercased()
+        }
+        if widget.variant == "Habits Streak" { return "HABITS" }
+        if widget.variant == "Daily Check-in" { return "CHECK-IN" }
+        return widget.variant ?? widget.kind.title.uppercased()
+    }
 
     @ViewBuilder private var detailVisual: some View {
         if widget.variant == "Calories & Protein Remaining", state.home.theme == .defaultTheme {

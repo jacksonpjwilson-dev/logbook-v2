@@ -18,12 +18,12 @@ targets:
     deploymentTarget: "17.0"
     sources:
       - Sources/Logbook
+      - Resources/LogbookAssets.xcassets
       - Shared/LogbookModels.swift
       - Shared/SharedStateFile.swift
       - Shared/WatchSnapshot.swift
       - Shared/WorkoutActivityAttributes.swift
     resources:
-      - Resources/LogbookAssets.xcassets
       - Resources/exercise-catalog.json
       - Resources/food-catalog.json
     entitlements:

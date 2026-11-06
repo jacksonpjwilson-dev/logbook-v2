@@ -41,6 +41,7 @@ final class DailyHomeUITests: XCTestCase {
 
         let dockFrame = app.buttons["Training tab"].frame
         let measurement = "Default Daily widget frames (points): large=\(calories.frame), medium=\(nextWorkout.frame), small-left=\(habits.frame), small-right=\(checkIn.frame), dock=\(dockFrame)"
+        print("GRID_MEASUREMENT: \(measurement)")
         add(XCTAttachment(string: measurement))
 
         attachScreenshot(of: app, named: "Home-Daily-Default-Candidate")
