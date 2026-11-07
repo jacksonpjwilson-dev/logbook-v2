@@ -155,10 +155,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(timerToggle.waitForExistence(timeout: 5), "The rest timer needs one stable pause/resume control")
         timerToggle.tap()
         let timerPaused = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == %@", "Paused"),
+            predicate: NSPredicate(format: "label CONTAINS[cd] %@", "Resume"),
             object: timerToggle
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should preserve the timer and expose its paused state")
+        XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should change the visible timer action to Resume")
         let pausedRemaining = restTimer.label
         app.terminate()
         app.launch()
@@ -173,13 +173,13 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(recoveredTimer.label, pausedRemaining, "The paused remaining time must survive app termination")
         let resumeTimer = app.buttons["rest-toggle"]
         XCTAssertTrue(resumeTimer.waitForExistence(timeout: 5), "The recovered timer should preserve its paused state")
-        XCTAssertEqual(resumeTimer.value as? String, "Paused")
+        XCTAssertTrue(resumeTimer.label.localizedCaseInsensitiveContains("Resume"))
         resumeTimer.tap()
         let timerRunning = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == %@", "Running"),
+            predicate: NSPredicate(format: "label CONTAINS[cd] %@", "Pause"),
             object: resumeTimer
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume into its running state")
+        XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume and show its Pause action")
         XCTAssertNotEqual(recoveredTimer.label, "Ready", "The recovered timer should continue running after resume")
     }
 
@@ -291,6 +291,7 @@ final class DailyHomeUITests: XCTestCase {
         let sets = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-sets-")
         ).firstMatch
+        scrollToElement(sets, in: app)
         XCTAssertTrue(sets.waitForExistence(timeout: 5), "The selected exercise exposes its planned set configuration")
         let increaseSets = sets.buttons["Increment"]
         if increaseSets.exists { increaseSets.tap() }
@@ -436,6 +437,7 @@ final class DailyHomeUITests: XCTestCase {
             "Historical set completion should update after the store publishes its edit"
         )
         let notes = app.descendants(matching: .any)["history-workout-notes"]
+        scrollToElement(notes, in: app)
         XCTAssertTrue(notes.waitForExistence(timeout: 5), "Workout notes remain editable in the multiline history field")
         notes.tap()
         notes.typeText("QA history edit")
