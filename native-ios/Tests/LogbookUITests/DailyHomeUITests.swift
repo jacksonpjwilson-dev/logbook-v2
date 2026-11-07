@@ -200,7 +200,9 @@ final class DailyHomeUITests: XCTestCase {
         let firstID = rows.element(boundBy: 0).identifier
         let secondID = rows.element(boundBy: 1).identifier
         app.buttons["Edit"].tap()
-        rows.element(boundBy: 0).press(forDuration: 1.0, thenDragTo: rows.element(boundBy: 1))
+        let dragSource = rows.element(boundBy: 0).coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
+        let dropAfterSecondRow = rows.element(boundBy: 1).coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9))
+        dragSource.press(forDuration: 1.0, thenDragTo: dropAfterSecondRow)
         XCTAssertEqual(rows.element(boundBy: 0).identifier, secondID, "Dragging a workout row should update the saved split order")
         XCTAssertNotEqual(rows.element(boundBy: 0).identifier, firstID)
         app.buttons["Done"].tap()
