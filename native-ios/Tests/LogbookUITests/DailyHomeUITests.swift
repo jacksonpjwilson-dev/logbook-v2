@@ -304,7 +304,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), suggestedLoad, "Suggested load must not be applied before explicit acceptance")
         scrollToElement(suggestion, in: app)
         suggestion.tap()
-        scrollToElement(weight, in: app)
+        // The suggestion lives after the set rows, so bring the first set row
+        // back above the pinned footer before verifying its accepted value.
+        scrollToElement(weight, in: app, towardTop: true)
         XCTAssertTrue(weight.isHittable, "The current set field should scroll above the pinned workout controls")
         let accepted = XCTNSPredicateExpectation(predicate: NSPredicate { object, _ in
             guard let field = object as? XCUIElement, let target = suggestedLoad else { return false }
