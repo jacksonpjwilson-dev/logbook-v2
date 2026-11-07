@@ -256,6 +256,36 @@ final class DailyHomeUITests: XCTestCase {
         replaceText(in: customEquipment, with: "Cable")
         app.buttons["custom-exercise-save"].tap()
         XCTAssertTrue(app.staticTexts["QA Cable Fly"].waitForExistence(timeout: 5), "A custom exercise should return to the persisted workout plan")
+
+        // Open the selected catalog exercise and edit its real planned prescription.
+        app.staticTexts["Flat barbell bench press"].tap()
+        let sets = app.steppers.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-sets-")
+        ).firstMatch
+        XCTAssertTrue(sets.waitForExistence(timeout: 5), "The selected exercise exposes its planned set configuration")
+        let increaseSets = sets.buttons["Increment"]
+        if increaseSets.exists { increaseSets.tap() }
+        else { sets.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
+        XCTAssertTrue(app.staticTexts["Sets · 4"].waitForExistence(timeout: 5), "Set-count customization should update the saved plan")
+
+        let reps = app.steppers.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-reps-")
+        ).firstMatch
+        XCTAssertTrue(reps.waitForExistence(timeout: 5))
+        let increaseReps = reps.buttons["Increment"]
+        if increaseReps.exists { increaseReps.tap() }
+        else { reps.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
+        XCTAssertTrue(app.staticTexts["Reps · 9"].waitForExistence(timeout: 5), "Rep-count customization should update the saved plan")
+
+        let rest = app.steppers.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-rest-")
+        ).firstMatch
+        XCTAssertTrue(rest.waitForExistence(timeout: 5))
+        let increaseRest = rest.buttons["Increment"]
+        if increaseRest.exists { increaseRest.tap() }
+        else { rest.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
+        XCTAssertTrue(app.staticTexts["Rest · 105s"].waitForExistence(timeout: 5), "Exercise-specific rest configuration should be retained")
+
         attachScreenshot(of: app, named: "Training-Split-Editor-Candidate")
     }
 
