@@ -40,3 +40,17 @@ Theme screenshots are **STYLE REFERENCES ONLY**. None overrides approved 2×4 sq
 - Latest screenshot thumbnails for White/Blue/Grey/Champagne Glass are too low-resolution for pixel-exact spec extraction. If better source images exist in the Codex repository, use them unchanged and update this index. Otherwise implement best-fit and request visual approval.
 - The user can approve a render that intentionally differs from the promotional image when needed to obey the approved Home geometry.
 - Pre-existing visual HTML galleries are historic; if an element conflicts with the later 2026-11-06 approvals, the later approval takes precedence.
+
+
+## Binary reference inventory and repository destination
+
+The supplied v2 handoff is available in the development workspace, but these 26 binary reference images are not present in the GitHub repository tree. To mirror the source package without renaming or altering artwork, place them under `docs/handoff-v2/themes/references/` using the category subfolders and filenames below. These are the source handoff files, not new or reconstructed images.
+
+| Destination folder | Files to copy unchanged |
+|---|---|
+| `defaults/` | `classic-blue_COMPOSITE_CROP.png`, `classic-dark_COMPOSITE_CROP.png`, `classic-green_COMPOSITE_CROP.png`, `classic-white_COMPOSITE_CROP.png`, `default_COMPOSITE_CROP.png`, `default_CONCEPT.png`, `graphite-linen_CONCEPT.png`, `pearl-mist_CONCEPT.png`, `soft-ivory_CONCEPT.png`, `soft-slate_CONCEPT.png` |
+| `featured/` | `aurora-pulse_CONCEPT.png`, `ember-dusk_CONCEPT.png`, `forest-studio_CONCEPT.png`, `sandstone-minimal_CONCEPT.png`, `soft-ivory_CONCEPT.png`, `soft-ivory_SHARED_CONCEPT.png` |
+| `glass/` | `alpine-glass_CONCEPT.png`, `black-glass.png`, `blue-glass_THUMBNAIL_ONLY.png`, `champagne-glass_THUMBNAIL_ONLY.png`, `grey-glass_THUMBNAIL_ONLY.png`, `white-glass_THUMBNAIL_ONLY.png` |
+| `overview/` | `APPLE_STYLE_FIVE_COLOURS.png`, `LATEST_APPROVED_GLASS_SCREENSHOT.png`, `NEUTRAL_OVERVIEW.jpg`, `SPECIALTY_OVERVIEW.jpg` |
+
+The corresponding supplied files are under `/workspace/handoff-v2/Logbook_Codex_Visual_Handoff_v2/themes/references/<category>/` in this execution environment. The thumbnail-only glass images remain limited-resolution sources after mirroring. Provisional blurred backgrounds and the provisional theme manifest are separate handoff assets and are not original visual references.
