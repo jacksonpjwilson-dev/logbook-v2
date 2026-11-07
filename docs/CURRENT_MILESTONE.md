@@ -3,7 +3,7 @@
 **Objective:** Complete end-to-end Training editor, active-workout, progression, completion and history UI verification, then review Default visuals. This is not a beta-complete milestone.
 
 **Development branch:** `codex/default-theme-gate1`  
-**Current branch head:** `5fa556da6da8775d26bffeb5c56cf899f6fd035b` (UI-test corrections; simulator result pending run #71)  
+**Latest app/test source commit:** `5fa556da6da8775d26bffeb5c56cf899f6fd035b` (UI-test corrections; simulator result pending run #71). Later commits update evidence documents only and do not change app/test source.  
 **Last fully green app-source baseline:** `85783dac2f65767e4d762064df46b9d81cda8c35`, run [#42](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800).  
 **Latest completed attempt:** run [#66](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418581935), source `7492512db7cb1085c90ccee193d376289561f781), failed UI tests.  
 **Newer attempts:** #67 and #68 in progress; #69–#71 queued when this note was written. The current source fixes are not yet simulator-verified.
