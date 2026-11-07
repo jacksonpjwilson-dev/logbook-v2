@@ -106,6 +106,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Upper Body"].waitForExistence(timeout: 5), "Start Workout must create and open the scheduled program")
         XCTAssertTrue(app.descendants(matching: .any)["training-active-session"].waitForExistence(timeout: 5), "Start Workout must create an active session")
+        XCTAssertEqual(app.staticTexts["rest-timer-value"].label, "Ready", "A new workout starts in the Ready timer state")
+        XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
     }
 
     private func launchApp(themeID: String? = nil) -> XCUIApplication {
