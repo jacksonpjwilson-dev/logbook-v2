@@ -74,13 +74,18 @@ struct DefaultTrainingWidgetView: View {
             } else {
                 // Keep the approved compact two-column split even when a program
                 // has fewer than eight workouts. Unused cells remain empty.
-                LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)], spacing: 5) {
-                    ForEach(Array(upcoming.enumerated()), id: \.element.id) { offset, template in
-                        splitTile(template, offset: offset)
+                GeometryReader { geometry in
+                    let rowSpacing: CGFloat = 5
+                    let cellHeight = max(27, (geometry.size.height - rowSpacing * 3) / 4)
+                    LazyVGrid(columns: [GridItem(.flexible(), spacing: rowSpacing), GridItem(.flexible(), spacing: rowSpacing)], spacing: rowSpacing) {
+                        ForEach(Array(upcoming.enumerated()), id: \.element.id) { offset, template in
+                            splitTile(template, offset: offset, cellHeight: cellHeight)
+                        }
+                        ForEach(upcoming.count..<8, id: \.self) { _ in
+                            Color.clear.frame(maxWidth: .infinity).frame(height: cellHeight)
+                        }
                     }
-                    ForEach(upcoming.count..<8, id: \.self) { _ in
-                        Color.clear.frame(maxWidth: .infinity).frame(height: 27)
-                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
                 .frame(maxHeight: .infinity)
             }
@@ -107,7 +112,7 @@ struct DefaultTrainingWidgetView: View {
         .accessibilityIdentifier("home-widget-workout-split")
     }
 
-    private func splitTile(_ template: WorkoutTemplate, offset: Int) -> some View {
+    private func splitTile(_ template: WorkoutTemplate, offset: Int, cellHeight: CGFloat) -> some View {
         let templateIndex = templates.firstIndex(where: { $0.id == template.id }) ?? 0
         let isNext = template.id == scheduledID
         let lastSession = state.training.visibleCompletedSessions
@@ -139,7 +144,7 @@ struct DefaultTrainingWidgetView: View {
                 Spacer(minLength: 0)
             }
             .padding(.horizontal, 4)
-            .frame(maxWidth: .infinity, minHeight: 27, maxHeight: 27, alignment: .leading)
+            .frame(maxWidth: .infinity, minHeight: cellHeight, maxHeight: cellHeight, alignment: .leading)
             .background(isNext ? palette.accentColor.opacity(0.18) : Color.white.opacity(0.3), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
             .overlay(RoundedRectangle(cornerRadius: 8, style: .continuous).stroke(isNext ? palette.accentColor.opacity(0.5) : palette.accentColor.opacity(0.1), lineWidth: 0.7))
         }

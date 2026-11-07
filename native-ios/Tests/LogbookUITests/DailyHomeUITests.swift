@@ -157,7 +157,8 @@ final class DailyHomeUITests: XCTestCase {
 
         let firstWorkout = app.buttons["training-split-workout-1"]
         XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5), "The split widget must show a tappable numbered workout tile")
-        XCTAssertLessThanOrEqual(firstWorkout.frame.height, 40, "A split item must stay a compact tile instead of stretching into a nested card")
+        XCTAssertGreaterThanOrEqual(firstWorkout.frame.height, 27, "Split rows should use the available four-row grid height")
+        XCTAssertLessThanOrEqual(firstWorkout.frame.height, 100, "A split item must stay a compact tile instead of stretching into a nested card")
         XCTAssertTrue(firstWorkout.label.contains("Upper Body"))
         XCTAssertTrue(firstWorkout.label.localizedCaseInsensitiveContains("next scheduled"))
         XCTAssertTrue(firstWorkout.label.localizedCaseInsensitiveContains("last completed"))
