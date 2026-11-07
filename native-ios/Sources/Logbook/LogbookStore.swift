@@ -208,7 +208,8 @@ final class LogbookStore: ObservableObject {
             if let sourceScheduledID, let preservedIndex = programs[sourceIndex].templateIDs.firstIndex(of: sourceScheduledID) {
                 programs[sourceIndex].rotationIndex = preservedIndex
             } else {
-                // When the scheduled item itself moves, its successor takes its old position.
+                // The scheduled item itself was moved; the item that followed it
+                // now occupies the removed item's old index.
                 programs[sourceIndex].rotationIndex = min(programs[sourceIndex].rotationIndex, max(0, programs[sourceIndex].templateIDs.count - 1))
             }
             guard let refreshedTargetIndex = programs.firstIndex(where: { $0.id == programID }) else { return }
@@ -665,6 +666,7 @@ final class LogbookStore: ObservableObject {
     func restoreDeletedWorkout(_ id: UUID, at date: Date = .now) -> Bool {
         guard let session = state.training.completedSessions.first(where: { $0.id == id }),
               let deletedAt = session.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0,
               date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
         transact { state in
             guard let index = state.training.completedSessions.firstIndex(where: { $0.id == id }) else { return }

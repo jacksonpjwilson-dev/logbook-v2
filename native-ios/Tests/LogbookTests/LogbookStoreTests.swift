@@ -352,6 +352,25 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertNil(reopened.training.activeSession?.exercises.first?.restSeconds)
     }
 
+    func testDatePersistenceKeepsSubsecondsAndReadsLegacyWholeSecondDates() throws {
+        let preciseDate = Date(timeIntervalSince1970: 1_800_000_000.123)
+        var state = LogbookState.empty
+        state.lastModified = preciseDate
+
+        let encoded = try JSONEncoder.logbook.encode(state)
+        let encodedText = try XCTUnwrap(String(data: encoded, encoding: .utf8))
+        XCTAssertTrue(encodedText.contains(".123"), "New state files retain fractional seconds for timer recovery")
+        let roundTrip = try JSONDecoder.logbook.decode(LogbookState.self, from: encoded)
+        XCTAssertLessThan(abs(roundTrip.lastModified.timeIntervalSince(preciseDate)), 0.001)
+
+        var legacyObject = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        let legacyDate = Date(timeIntervalSince1970: 1_800_000_000)
+        legacyObject["lastModified"] = "2027-01-15T08:00:00Z"
+        let legacyData = try JSONSerialization.data(withJSONObject: legacyObject)
+        let legacyRoundTrip = try JSONDecoder.logbook.decode(LogbookState.self, from: legacyData)
+        XCTAssertLessThan(abs(legacyRoundTrip.lastModified.timeIntervalSince(legacyDate)), 0.001)
+    }
+
     func testApprovedThemeAndWidgetInventoryCounts() {
         XCTAssertEqual(LogbookTheme.allCases.count, 17)
         XCTAssertEqual(LogbookTheme.allCases.filter { $0 != .defaultTheme }.count, 16, "Preserve all existing themes while staging v2 Default")

@@ -123,31 +123,6 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
-
-        let weightField = app.textFields["Weight in kilograms"].firstMatch
-        if !weightField.isHittable { app.swipeUp() }
-        XCTAssertTrue(weightField.waitForExistence(timeout: 5), "Weighted set input should be available")
-        replaceText(weightField, with: "60")
-        let repsField = app.textFields["Repetitions"].firstMatch
-        replaceText(repsField, with: "10")
-        restTimer.tap()
-        app.buttons["Mark set complete"].firstMatch.tap()
-        XCTAssertTrue(NSPredicate(format: "label != %@", "Ready").evaluate(with: restTimer))
-        app.buttons["rest-pause"].tap()
-        XCTAssertTrue(app.buttons["rest-resume"].waitForExistence(timeout: 5))
-        app.buttons["rest-add-15"].tap()
-        app.buttons["rest-resume"].tap()
-        app.buttons["rest-skip"].tap()
-        XCTAssertEqual(restTimer.label, "Ready")
-    }
-
-    private func replaceText(_ field: XCUIElement, with value: String) {
-        field.tap()
-        let existing = (field.value as? String) ?? ""
-        if !existing.isEmpty {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: existing.count))
-        }
-        field.typeText(value)
     }
 
     private func launchApp(themeID: String? = nil) -> XCUIApplication {

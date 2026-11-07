@@ -547,7 +547,8 @@ struct TrainingState: Codable {
     func recentlyDeletedSessions(asOf date: Date = .now) -> [WorkoutSession] {
         completedSessions.filter {
             guard let deletedAt = $0.deletedAt else { return false }
-            return date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60
+            let age = date.timeIntervalSince(deletedAt)
+            return age >= 0 && age < 30 * 24 * 60 * 60
         }.sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
     }
 

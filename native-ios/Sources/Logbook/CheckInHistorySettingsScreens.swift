@@ -464,6 +464,23 @@ struct WorkoutCalendarScreen: View {
                         if selectedSessions.isEmpty {
                             Text("No completed workouts on this date.").font(.subheadline).foregroundStyle(.secondary)
                         } else {
+                            let completedSets = selectedSessions.reduce(0) { total, session in
+                                total + session.exercises.flatMap(\.sets).filter(\.completed).count
+                            }
+                            let volumeKg = selectedSessions.reduce(0.0) { total, session in
+                                total + session.exercises.flatMap(\.sets).filter(\.completed).reduce(0.0) { subtotal, set in
+                                    subtotal + (set.weightKg ?? 0) * Double(set.reps)
+                                }
+                            }
+                            let unit = store.state.home.preferredWeightUnit
+                            let volume = unit == "lb" ? volumeKg * 2.2046226218 : volumeKg
+                            HStack {
+                                Label("\(selectedSessions.count) workouts", systemImage: "dumbbell.fill")
+                                Spacer()
+                                Text("\(completedSets) sets · \(Int(volume)) \(unit) volume")
+                            }
+                            .font(.caption.weight(.medium))
+                            .foregroundStyle(.secondary)
                             ForEach(selectedSessions) { session in
                                 NavigationLink(destination: WorkoutHistoryDetailScreen(sessionID: session.id)) {
                                     HStack {
