@@ -198,7 +198,8 @@ final class LogbookStore: ObservableObject {
                 muscle: planned.muscle,
                 equipment: planned.equipment,
                 sets: planned.sets.map { WorkoutSet(reps: $0.reps, kind: $0.kind) },
-                supersetID: planned.supersetID
+                supersetID: planned.supersetID,
+                restSeconds: planned.restSeconds
             )
         }
         let session = WorkoutSession(
@@ -207,7 +208,8 @@ final class LogbookStore: ObservableObject {
             templateVersion: template.version,
             localDate: LocalDay.string(now),
             startedAt: now,
-            exercises: exerciseRows
+            exercises: exerciseRows,
+            restTimer: WorkoutRestTimer()
         )
         transact { $0.training.activeSession = session }
         guard state.training.activeSession?.id == session.id else { return }
@@ -217,7 +219,7 @@ final class LogbookStore: ObservableObject {
 
     func startQuickWorkout() {
         guard state.training.activeSession == nil else { return }
-        let session = WorkoutSession(templateName: "Workout", templateVersion: 1, localDate: LocalDay.string(), startedAt: .now, exercises: [])
+        let session = WorkoutSession(templateName: "Workout", templateVersion: 1, localDate: LocalDay.string(), startedAt: .now, exercises: [], restTimer: WorkoutRestTimer())
         transact { $0.training.activeSession = session }
         guard state.training.activeSession?.id == session.id else { return }
         WorkoutActivityController.shared.start(session: session)
@@ -231,7 +233,8 @@ final class LogbookStore: ObservableObject {
                 name: exercise.name,
                 muscle: exercise.group,
                 equipment: exercise.equipment,
-                sets: (0..<3).map { _ in WorkoutSet() }
+                sets: (0..<3).map { _ in WorkoutSet() },
+                restSeconds: nil
             ))
         }
     }
@@ -257,15 +260,64 @@ final class LogbookStore: ObservableObject {
         guard let exercise = state.training.activeSession?.exercises.first(where: { $0.id == exerciseID }),
               let set = exercise.sets.first(where: { $0.id == setID }) else { return false }
         guard set.completed || (set.weightKg ?? 0) > 0 && set.reps > 0 else { return false }
+        let isCompleting = !set.completed
+        let setIndex = exercise.sets.firstIndex(where: { $0.id == setID })
         transact { state in
             guard let exerciseIndex = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }),
                   let setIndex = state.training.activeSession?.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
             state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].completed.toggle()
         }
-        let active = state.training.activeSession
-        if let active { WorkoutActivityController.shared.update(session: active) }
+        if isCompleting, let setIndex, shouldStartRestTimer(after: exerciseID, setIndex: setIndex),
+           let changedExercise = state.training.activeSession?.exercises.first(where: { $0.id == exerciseID }) {
+            transact { state in
+                var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+                timer.start(seconds: changedExercise.restSeconds)
+                state.training.activeSession?.restTimer = timer
+            }
+        }
+        if let active = state.training.activeSession { WorkoutActivityController.shared.update(session: active) }
         WatchBridge.shared.send(state: state)
         return true
+    }
+
+    func pauseRestTimer() {
+        transact { state in
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.pause()
+            state.training.activeSession?.restTimer = timer
+        }
+    }
+
+    func resumeRestTimer() {
+        transact { state in
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.resume()
+            state.training.activeSession?.restTimer = timer
+        }
+    }
+
+    func addFifteenSecondsToRestTimer() {
+        transact { state in
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.addFifteenSeconds()
+            state.training.activeSession?.restTimer = timer
+        }
+    }
+
+    func skipRestTimer() {
+        transact { state in
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.skip()
+            state.training.activeSession?.restTimer = timer
+        }
+    }
+
+    func setWorkoutRestDuration(_ seconds: Int) {
+        transact { state in
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.setBaseDuration(seconds)
+            state.training.activeSession?.restTimer = timer
+        }
     }
 
     func finishWorkout(confirmIncomplete: Bool) -> Int {
@@ -300,6 +352,9 @@ final class LogbookStore: ObservableObject {
         transact { state in
             guard state.training.activeSession?.pausedAt == nil else { return }
             state.training.activeSession?.pausedAt = .now
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.pause()
+            state.training.activeSession?.restTimer = timer
         }
         if let session = state.training.activeSession { WorkoutActivityController.shared.update(session: session) }
     }
@@ -309,6 +364,9 @@ final class LogbookStore: ObservableObject {
             guard let pausedAt = state.training.activeSession?.pausedAt else { return }
             state.training.activeSession?.pausedSeconds += Date.now.timeIntervalSince(pausedAt)
             state.training.activeSession?.pausedAt = nil
+            var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
+            timer.resume()
+            state.training.activeSession?.restTimer = timer
         }
         if let session = state.training.activeSession { WorkoutActivityController.shared.update(session: session) }
     }
@@ -542,6 +600,18 @@ final class LogbookStore: ObservableObject {
         } catch {
             persistenceError = "Could not save this change. Your earlier saved data is still on this device. \(error.localizedDescription)"
         }
+    }
+
+    private func shouldStartRestTimer(after exerciseID: UUID, setIndex: Int) -> Bool {
+        guard let session = state.training.activeSession,
+              let exercise = session.exercises.first(where: { $0.id == exerciseID }) else { return false }
+        guard let supersetID = exercise.supersetID else { return true }
+        return session.exercises
+            .filter { $0.supersetID == supersetID }
+            .allSatisfy { member in
+                guard member.sets.indices.contains(setIndex) else { return true }
+                return member.sets[setIndex].completed
+            }
     }
 
     private static func isValid(_ state: LogbookState) -> Bool {
