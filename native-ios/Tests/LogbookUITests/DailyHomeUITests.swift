@@ -445,10 +445,13 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["Delete Workout"].tap()
 
         let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))
+        // Recently Deleted is below the charts and Training history sections.
+        // Scroll the visible History list so its lazy row enters the accessibility tree.
+        scrollToElement(restoreButtons.firstMatch, in: app)
         XCTAssertTrue(restoreButtons.firstMatch.waitForExistence(timeout: 5), "Deleting a workout should move it into Recently Deleted")
-        for _ in 0..<6 where !restoreButtons.firstMatch.isHittable { app.swipeUp() }
         XCTAssertTrue(restoreButtons.firstMatch.isHittable)
         restoreButtons.firstMatch.tap()
+        scrollToElement(historyRows.firstMatch, in: app, towardTop: true)
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "Restoring should return the record to the Training history list")
     }
 
