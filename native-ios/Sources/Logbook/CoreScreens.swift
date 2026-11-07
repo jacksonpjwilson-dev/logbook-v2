@@ -490,7 +490,7 @@ private struct WorkoutSetEditor: View {
             TextField("—", value: weight, format: .number.precision(.fractionLength(0...2)))
                 .keyboardType(.decimalPad)
                 .textFieldStyle(.roundedBorder)
-                .frame(maxWidth: .infinity, minWidth: 42)
+                .frame(minWidth: 42, maxWidth: .infinity)
                 .accessibilityLabel("Weight in kilograms")
             TextField("—", value: reps, format: .number)
                 .keyboardType(.numberPad)

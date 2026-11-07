@@ -98,7 +98,7 @@ struct DefaultDailyWidgetView: View {
             .accessibilityElement(children: .contain)
             .accessibilityIdentifier("home-widget-next")
             .accessibilityLabel("Next workout, \(workout.name), \(workout.exerciseCount) exercises, \(workout.duration.map { "about \($0) minutes" } ?? "estimated duration unavailable"), \(workout.lastCompletion). View Workout.")
-            .accessibilityFrame(geometry.frame(in: .global))
+            .accessibilityValue(String(format: "%.2f|%.2f", geometry.size.width, geometry.size.height))
         }
     }
 

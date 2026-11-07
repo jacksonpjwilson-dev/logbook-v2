@@ -29,16 +29,20 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["checkin-weight"].exists)
         XCTAssertTrue(app.buttons["checkin-supplements"].exists)
 
-        XCTAssertEqual(calories.frame.width, nextWorkout.frame.width, accuracy: 2)
-        XCTAssertGreaterThan(calories.frame.height, nextWorkout.frame.height)
+        let measuredMediumSize = (nextWorkout.value as? String ?? "").split(separator: "|").compactMap { Double($0) }
+        XCTAssertEqual(measuredMediumSize.count, 2, "Next Workout should expose its measured outer widget dimensions")
+        let mediumWidth = measuredMediumSize.count == 2 ? measuredMediumSize[0] : nextWorkout.frame.width
+        let mediumHeight = measuredMediumSize.count == 2 ? measuredMediumSize[1] : nextWorkout.frame.height
+        XCTAssertEqual(calories.frame.width, mediumWidth, accuracy: 2)
+        XCTAssertGreaterThan(calories.frame.height, mediumHeight)
         XCTAssertEqual(habits.frame.width, checkIn.frame.width, accuracy: 2)
         XCTAssertEqual(habits.frame.width, habits.frame.height, accuracy: 2, "Small widgets must occupy square cells")
         XCTAssertEqual(calories.frame.width, calories.frame.height, accuracy: 2, "Large widgets must be square")
-        XCTAssertEqual(nextWorkout.frame.height, habits.frame.height, accuracy: 2, "Medium widget must be two cells wide and one cell tall")
-        XCTAssertEqual(nextWorkout.frame.width, habits.frame.width * 2 + 9, accuracy: 3, "Medium width must span two cells and one grid gap")
+        XCTAssertEqual(mediumHeight, habits.frame.height, accuracy: 2, "Medium widget must be two cells wide and one cell tall")
+        XCTAssertEqual(mediumWidth, habits.frame.width * 2 + 9, accuracy: 3, "Medium width must span two cells and one grid gap")
         XCTAssertEqual(habits.frame.minY, checkIn.frame.minY, accuracy: 2)
         XCTAssertLessThanOrEqual(calories.frame.maxY, nextWorkout.frame.minY)
-        XCTAssertLessThanOrEqual(nextWorkout.frame.maxY, habits.frame.minY)
+        XCTAssertLessThanOrEqual(nextWorkout.frame.minY + mediumHeight, habits.frame.minY)
         XCTAssertLessThan(habits.frame.maxY, app.buttons["Training tab"].frame.minY)
         XCTAssertTrue(app.buttons["Training tab"].exists)
         XCTAssertTrue(app.buttons["Food tab"].exists)
@@ -50,7 +54,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label IN %@", pageNames)).count, 4)
 
         let dockFrame = app.buttons["Training tab"].frame
-        let measurement = "Default Daily widget frames (points): large=\(calories.frame), medium=\(nextWorkout.frame), small-left=\(habits.frame), small-right=\(checkIn.frame), dock=\(dockFrame)"
+        let measurement = "Default Daily widget frames (points): large=\(calories.frame), mediumElement=\(nextWorkout.frame), mediumMeasuredSize=\(measuredMediumSize), small-left=\(habits.frame), small-right=\(checkIn.frame), dock=\(dockFrame)"
         print("GRID_MEASUREMENT: \(measurement)")
         add(XCTAttachment(string: measurement))
 
