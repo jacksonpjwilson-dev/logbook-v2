@@ -62,3 +62,26 @@ The UI test asserts these equations and checks the bottom small widgets remain a
 Open the downloadable review gallery and inspect the four PNG candidates before approving the Default appearance. The visible default screen follows the required large/medium/two-small structure and has no clipped widgets; the full-screen style is close to the supplied pale-blue blurred reference, which remains a concept/style image and does not define exact final colors. Do not use automated success as visual approval.
 
 After review, rerun `./native-ios/QA/Scripts/run-daily-home-qa.sh "iPhone 18 Pro"` on the user's Mac and choose an installed smaller iPhone for a second run. Review the output for Dynamic Type, content clipping and sizing. Do not accept a screenshot baseline or implement other v2 themes until the user approves Default.
+
+
+## Development addendum — 2026-11-07
+
+**Current branch head at this addendum:** `d2c6e4580ff36e8bcfd732d9fa180d915e422f31`. This supersedes the run and verification claims above for current code; those earlier claims describe an older source revision only.
+
+### Current verification status
+
+- Run #14 on `a6e11fc` (https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42373579417) completed: 9 unit tests passed; 2 of 3 UI tests passed; the Daily geometry UI test failed because the Next Workout accessibility frame measured 71.5 pt high instead of the 101.85 pt expected. The workout View/Start actions passed. iPhone 18 Pro was skipped as unavailable, not passed.
+- Commit `d26d52c` corrected the accessibility frame at the outer card. The available combined-status endpoint returned no statuses for that commit and does not expose push-run listings. No result from that change can be claimed.
+- Commits through `d2c6e45` add rest-timer recovery/override assertions, a Ready-state UI assertion, and an active-workout five-column row and notes controls. These new tests have not been observed executing. No revised Simulator screenshot exists for this source revision.
+- This workspace is Linux and has no `xcodebuild`, `swift`, or `xcrun`; only GitHub Actions can validate the native build here. The push path for `native-ios/**` is configured to invoke Daily Home QA, but its latest run result is not available through the connected Actions tools.
+
+### Training work added, not yet accepted as verified
+
+- Rest timer data is saved as an absolute end-time/paused remaining value on the active workout, so repository reload can recover its countdown. Default duration is 90 seconds; a planned exercise override controls the current countdown without changing the default; pause, resume, +15, skip, Ready, and superset-round scheduling are implemented in source.
+- The rest timer card is the first active-workout list section under the navigation header and uses a floating blue surface. Resume is guarded while the overall workout is paused.
+- The active set table now has Set / Previous / Weight / Reps / Done headings. Previous values are sourced from the latest completed matching exercise. Workout-level and per-exercise notes are editable and autosaved.
+- Tests were added for duration override, repository reload, supersets, timer control math, legacy decoding and the initial Ready state. They remain unverified until a successful macOS simulator run.
+
+### Remaining Training and visual gaps
+
+Named workout programs with independent rotations, origin-program switching semantics, full template drag/drop editor, tracking modes, expansion/collapse, automatic progression, acceptance-based suggestions, completion summary, historical editing/calendar, 1RM/PR derivation and recomputation are not complete. The four Home pages have not completed visual acceptance; revised screenshots and a new SE result are still required. No remaining theme has been applied. Existing themes and HealthKit authorization choices were left unchanged.
