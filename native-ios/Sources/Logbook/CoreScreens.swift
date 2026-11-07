@@ -267,20 +267,6 @@ struct ActiveWorkoutScreen: View {
                 if let session {
                     List {
                         Section {
-                            HStack {
-                                Label("\(session.exercises.flatMap(\.sets).filter(\.completed).count) / \(session.exercises.flatMap(\.sets).count) sets", systemImage: "checkmark.circle.fill")
-                                Spacer()
-                                TimelineView(.periodic(from: .now, by: 1)) { context in
-                                    Text(elapsed(session, now: context.date)).monospacedDigit().fontWeight(.semibold)
-                                }
-                            }
-                            HStack {
-                                Button { session.pausedAt == nil ? store.pauseWorkout() : store.resumeWorkout() } label: { Label(session.pausedAt == nil ? "Pause" : "Resume", systemImage: session.pausedAt == nil ? "pause.fill" : "play.fill") }
-                                Spacer()
-                                Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus") }
-                            }
-                        }
-                        Section {
                             TimelineView(.periodic(from: .now, by: 1)) { context in
                                 let timer = session.restTimer ?? WorkoutRestTimer()
                                 let remaining = timer.remainingSeconds(at: context.date)
@@ -294,7 +280,7 @@ struct ActiveWorkoutScreen: View {
                                             .accessibilityIdentifier("rest-timer-value")
                                     }
                                     ProgressView(value: timer.baseDurationSeconds > 0
-                                        ? Double(min(timer.baseDurationSeconds, remaining)) / Double(timer.baseDurationSeconds)
+                                        ? Double(min(timer.currentDurationSeconds, remaining)) / Double(max(1, timer.currentDurationSeconds))
                                         : 0)
                                         .tint(Color.blue)
                                     HStack(spacing: 8) {
@@ -331,11 +317,48 @@ struct ActiveWorkoutScreen: View {
                         } header: {
                             Text("Rest")
                         }
+                        Section("Workout notes") {
+                            TextField("Notes for this workout", text: Binding(
+                                get: { session.notes },
+                                set: { store.updateWorkoutNotes($0) }
+                            ), axis: .vertical)
+                                .lineLimit(2...5)
+                                .accessibilityIdentifier("active-workout-notes")
+                        }
+                        Section {
+                            HStack {
+                                Label("\(session.exercises.flatMap(\.sets).filter(\.completed).count) / \(session.exercises.flatMap(\.sets).count) sets", systemImage: "checkmark.circle.fill")
+                                Spacer()
+                                TimelineView(.periodic(from: .now, by: 1)) { context in
+                                    Text(elapsed(session, now: context.date)).monospacedDigit().fontWeight(.semibold)
+                                }
+                            }
+                            HStack {
+                                Button { session.pausedAt == nil ? store.pauseWorkout() : store.resumeWorkout() } label: { Label(session.pausedAt == nil ? "Pause" : "Resume", systemImage: session.pausedAt == nil ? "pause.fill" : "play.fill") }
+                                Spacer()
+                                Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus") }
+                            }
+                        }
                         ForEach(session.exercises) { exercise in
                             Section {
+                                HStack(spacing: 4) {
+                                    Text("Set").frame(width: 20, alignment: .center)
+                                    Text("Previous").frame(width: 55, alignment: .leading)
+                                    Text("Weight").frame(maxWidth: .infinity, alignment: .leading)
+                                    Text("Reps").frame(width: 52, alignment: .center)
+                                    Text("Done").frame(width: 28, alignment: .center)
+                                }
+                                .font(.caption2.weight(.medium))
+                                .foregroundStyle(.secondary)
                                 ForEach(exercise.sets) { set in
                                     WorkoutSetEditor(exercise: exercise, set: set)
                                 }
+                                TextField("Exercise notes", text: Binding(
+                                    get: { exercise.notes },
+                                    set: { store.updateExerciseNotes($0, exerciseID: exercise.id) }
+                                ), axis: .vertical)
+                                    .lineLimit(1...3)
+                                    .accessibilityIdentifier("exercise-notes-\(exercise.id.uuidString)")
                                 Button { store.addSet(toExercise: exercise.id) } label: { Label("Add set", systemImage: "plus") }
                             } header: {
                                 VStack(alignment: .leading, spacing: 3) {
@@ -438,25 +461,56 @@ private struct WorkoutSetEditor: View {
     let exercise: WorkoutExercise
     let set: WorkoutSet
 
+    private var setIndex: Int { exercise.sets.firstIndex(of: set) ?? 0 }
+
+    private var previous: String {
+        let session = store.state.training.completedSessions
+            .sorted { $0.startedAt > $1.startedAt }
+            .first { candidate in candidate.exercises.contains { $0.exerciseID == exercise.exerciseID } }
+        guard let previousExercise = session?.exercises.first(where: { $0.exerciseID == exercise.exerciseID }),
+              previousExercise.sets.indices.contains(setIndex) else { return "—" }
+        let previousSet = previousExercise.sets[setIndex]
+        guard previousSet.weightKg != nil || previousSet.reps > 0 else { return "—" }
+        let weight = previousSet.weightKg.map { $0.formatted(.number.precision(.fractionLength(0...1))) } ?? "—"
+        return "\(weight) × \(previousSet.reps)"
+    }
+
     var body: some View {
-        HStack(spacing: 7) {
-            Text("\(exercise.sets.firstIndex(of: set).map { $0 + 1 } ?? 1)")
-                .font(.caption.monospacedDigit().weight(.semibold)).frame(width: 25)
-            TextField("kg", value: weight, format: .number.precision(.fractionLength(0...2)))
-                .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity).accessibilityLabel("Weight in kilograms")
-            Text("×").foregroundStyle(.secondary)
-            TextField("Reps", value: reps, format: .number).keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(width: 62).accessibilityLabel("Repetitions")
+        HStack(spacing: 4) {
+            Text("\(setIndex + 1)")
+                .font(.caption.monospacedDigit().weight(.semibold))
+                .frame(width: 20)
+            Text(previous)
+                .font(.system(size: 9, weight: .regular).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+                .frame(width: 55, alignment: .leading)
+                .accessibilityLabel("Previous: \(previous)")
+            TextField("—", value: weight, format: .number.precision(.fractionLength(0...2)))
+                .keyboardType(.decimalPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: .infinity, minWidth: 42)
+                .accessibilityLabel("Weight in kilograms")
+            TextField("—", value: reps, format: .number)
+                .keyboardType(.numberPad)
+                .textFieldStyle(.roundedBorder)
+                .frame(width: 52)
+                .accessibilityLabel("Repetitions")
             Button { _ = store.toggleSet(exerciseID: exercise.id, setID: set.id) } label: {
                 Image(systemName: set.completed ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 25)).foregroundStyle(set.completed ? Color.green : Color.secondary)
+                    .font(.system(size: 24)).foregroundStyle(set.completed ? Color.green : Color.secondary)
             }
-            .buttonStyle(.plain).accessibilityLabel(set.completed ? "Mark set not done" : "Mark set complete")
+            .buttonStyle(.plain)
+            .frame(width: 28)
+            .accessibilityLabel(set.completed ? "Mark set not done" : "Mark set complete")
         }
     }
 
     private var weight: Binding<Double> {
         Binding(get: { set.weightKg ?? 0 }, set: { store.updateSet(exerciseID: exercise.id, setID: set.id, weightKg: $0 > 0 ? $0 : nil, reps: set.reps) })
     }
+
     private var reps: Binding<Int> {
         Binding(get: { set.reps }, set: { store.updateSet(exerciseID: exercise.id, setID: set.id, weightKg: set.weightKg, reps: max(1, $0)) })
     }
