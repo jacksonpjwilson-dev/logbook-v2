@@ -97,6 +97,29 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertGreaterThan(try XCTUnwrap(store.state.training.activeSession?.restTimer?.endsAt), .now)
     }
 
+    func testRestTimerUsesExerciseOverrideAndSurvivesRepositoryReopen() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        var planned = PlannedExercise(exerciseID: "timer-row", name: "Row", muscle: "Back", equipment: "Cable", sets: [PlannedSet()])
+        planned.restSeconds = 45
+        store.startWorkout(WorkoutTemplate(name: "Timer test", exercises: [planned]))
+
+        let session = try XCTUnwrap(store.state.training.activeSession)
+        let exercise = try XCTUnwrap(session.exercises.first)
+        store.updateSet(exerciseID: exercise.id, setID: exercise.sets[0].id, weightKg: 40, reps: 8)
+        XCTAssertTrue(store.toggleSet(exerciseID: exercise.id, setID: exercise.sets[0].id))
+
+        let original = try XCTUnwrap(store.state.training.activeSession?.restTimer)
+        XCTAssertEqual(original.baseDurationSeconds, 90)
+        XCTAssertEqual(original.currentDurationSeconds, 45)
+        let originalEnd = try XCTUnwrap(original.endsAt)
+        let reopened = LogbookStore(repository: repository)
+        let recovered = try XCTUnwrap(reopened.state.training.activeSession?.restTimer)
+        XCTAssertEqual(recovered.endsAt, originalEnd)
+        XCTAssertEqual(recovered.currentDurationSeconds, 45)
+        XCTAssertGreaterThan(recovered.remainingSeconds(), 0)
+    }
+
     func testOldActiveSessionPayloadDecodesWithoutRestTimerFields() throws {
         let repository = temporaryRepository()
         let store = LogbookStore(repository: repository)
