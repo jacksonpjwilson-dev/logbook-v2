@@ -132,6 +132,12 @@ final class DailyHomeUITests: XCTestCase {
             object: restTimer
         )
         XCTAssertEqual(XCTWaiter.wait(for: [timerStarted], timeout: 5), .completed, "The visible timer should update before testing recovery")
+        // The first +15 starts the timer from Ready. Keep the recovery window long
+        // enough that slower simulator launches cannot consume the whole interval.
+        for _ in 0..<8 {
+            addTime.tap()
+        }
+        XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before termination")
         app.terminate()
         app.launch()
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 10), "The app should reopen to Home after termination")
@@ -151,8 +157,10 @@ final class DailyHomeUITests: XCTestCase {
 
         let firstWorkout = app.buttons["training-split-workout-1"]
         XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5), "The split widget must show a tappable numbered workout tile")
-        XCTAssertGreaterThan(firstWorkout.frame.height, 120, "A single-workout split should use the available widget space for readable details")
-        XCTAssertTrue(firstWorkout.label.contains("4 exercises"), "The featured workout should expose its exercise count")
+        XCTAssertLessThanOrEqual(firstWorkout.frame.height, 40, "A split item must stay a compact tile instead of stretching into a nested card")
+        XCTAssertTrue(firstWorkout.label.contains("Upper Body"))
+        XCTAssertTrue(firstWorkout.label.localizedCaseInsensitiveContains("next scheduled"))
+        XCTAssertTrue(firstWorkout.label.localizedCaseInsensitiveContains("last completed"))
         XCTAssertTrue(app.buttons["training-split-full"].exists, "The complete split remains available from the fixed-size widget")
         let monthLabel = app.staticTexts["training-calendar-month-label"]
         XCTAssertTrue(monthLabel.exists)
@@ -172,9 +180,143 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["Start Upper Body"].waitForExistence(timeout: 5), "Tapping a split tile opens its workout details without changing the scheduled workout")
     }
 
-    private func launchApp(themeID: String? = nil) -> XCUIApplication {
+    func testWorkoutSplitEditorSupportsReorderingExerciseSearchAndCustomExercises() throws {
+        let app = launchApp()
+        app.buttons["Training tab"].tap()
+
+        let newWorkout = app.buttons["New workout"]
+        XCTAssertTrue(newWorkout.waitForExistence(timeout: 5))
+        newWorkout.tap()
+        let name = app.textFields["Workout name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        replaceText(in: name, with: "Lower Body")
+        app.buttons["Create"].tap()
+
+        let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-"))
+        XCTAssertEqual(rows.count, 2, "The UI should show both saved workouts in the active program")
+        let firstID = rows.element(boundBy: 0).identifier
+        let secondID = rows.element(boundBy: 1).identifier
+        app.buttons["Edit"].tap()
+        rows.element(boundBy: 0).press(forDuration: 1.0, thenDragTo: rows.element(boundBy: 1))
+        XCTAssertEqual(rows.element(boundBy: 0).identifier, secondID, "Dragging a workout row should update the saved split order")
+        XCTAssertNotEqual(rows.element(boundBy: 0).identifier, firstID)
+        app.buttons["Done"].tap()
+
+        rows.firstMatch.tap()
+        XCTAssertTrue(app.buttons["workout-template-add-exercise"].waitForExistence(timeout: 5))
+        app.buttons["workout-template-add-exercise"].tap()
+        XCTAssertTrue(app.navigationBars["Choose exercise"].waitForExistence(timeout: 5))
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("Bench Press")
+        let result = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "exercise-picker-result-")).firstMatch
+        XCTAssertTrue(result.waitForExistence(timeout: 5), "Search should find the built-in Bench Press exercise")
+        result.tap()
+        XCTAssertTrue(app.staticTexts["Bench Press"].waitForExistence(timeout: 5), "Selecting a search result should persist it in the workout plan")
+
+        app.buttons["workout-template-add-exercise"].tap()
+        app.buttons["exercise-picker-create-custom"].tap()
+        XCTAssertTrue(app.navigationBars["Custom exercise"].waitForExistence(timeout: 5))
+        let customName = app.textFields["custom-exercise-name"]
+        replaceText(in: customName, with: "QA Cable Fly")
+        let customMuscle = app.textFields["custom-exercise-muscle"]
+        replaceText(in: customMuscle, with: "Chest")
+        let customEquipment = app.textFields["custom-exercise-equipment"]
+        replaceText(in: customEquipment, with: "Cable")
+        app.buttons["custom-exercise-save"].tap()
+        XCTAssertTrue(app.staticTexts["QA Cable Fly"].waitForExistence(timeout: 5), "A custom exercise should return to the persisted workout plan")
+        attachScreenshot(of: app, named: "Training-Split-Editor-Candidate")
+    }
+
+    func testProgressionSuggestionRequiresAndAppliesExplicitAcceptance() throws {
+        let app = launchApp(progressionHistory: true)
+        app.buttons["Training tab"].tap()
+        let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
+        XCTAssertTrue(template.waitForExistence(timeout: 5))
+        template.tap()
+        XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
+        app.buttons["workout-template-start"].tap()
+
+        let suggestion = app.buttons["accept-progression-suggestion"]
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "A matching prior completed set should produce an optional suggestion")
+        let weight = app.textFields["Weight in kilograms"].firstMatch
+        XCTAssertTrue(weight.exists)
+        XCTAssertNotEqual(weight.value as? String, "62.5", "Suggested load must not be applied before explicit acceptance")
+        suggestion.tap()
+        let accepted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "62.5"), object: weight)
+        XCTAssertEqual(XCTWaiter.wait(for: [accepted], timeout: 5), .completed, "Accepting the suggestion should update the session set weights")
+        attachScreenshot(of: app, named: "Training-Progression-Acceptance-Candidate")
+    }
+
+    func testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery() throws {
+        let app = launchApp()
+        app.buttons["Training tab"].tap()
+        let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
+        XCTAssertTrue(template.waitForExistence(timeout: 5))
+        template.tap()
+        XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
+        app.buttons["workout-template-start"].tap()
+
+        let finish = app.buttons["finish-workout"]
+        XCTAssertTrue(finish.waitForExistence(timeout: 5))
+        finish.tap()
+        let confirmSave = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save")).lastMatch
+        XCTAssertTrue(confirmSave.waitForExistence(timeout: 5), "Unfinished planned sets should require explicit save confirmation")
+        confirmSave.tap()
+        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Sets completed")).firstMatch.exists)
+        attachScreenshot(of: app, named: "Training-Completion-Summary-Candidate")
+        app.buttons["workout-summary-done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
+
+        app.buttons["History tab"].tap()
+        let historyRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-workout-"))
+        XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History")
+        for _ in 0..<5 where !historyRows.firstMatch.isHittable { app.swipeUp() }
+        XCTAssertTrue(historyRows.firstMatch.isHittable)
+        historyRows.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
+        attachScreenshot(of: app, named: "Training-History-Detail-Candidate")
+
+        let historyWeight = app.textFields["history-set-weight"].firstMatch
+        XCTAssertTrue(historyWeight.waitForExistence(timeout: 5))
+        replaceText(in: historyWeight, with: "40")
+        let historyReps = app.textFields["history-set-reps"].firstMatch
+        replaceText(in: historyReps, with: "8")
+        app.buttons["history-set-complete"].firstMatch.tap()
+        XCTAssertTrue(app.buttons["history-set-complete"].label.localizedCaseInsensitiveContains("incomplete"), "Historical set completion should update immediately")
+        let notes = app.textFields["history-workout-notes"]
+        XCTAssertTrue(notes.exists)
+        notes.tap()
+        notes.typeText("QA history edit")
+        app.buttons["Delete workout"].tap()
+        app.buttons["Delete Workout"].tap()
+
+        let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))
+        XCTAssertTrue(restoreButtons.firstMatch.waitForExistence(timeout: 5), "Deleting a workout should move it into Recently Deleted")
+        for _ in 0..<6 where !restoreButtons.firstMatch.isHittable { app.swipeUp() }
+        XCTAssertTrue(restoreButtons.firstMatch.isHittable)
+        restoreButtons.firstMatch.tap()
+        XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "Restoring should return the record to the Training history list")
+    }
+
+    private func replaceText(in field: XCUIElement, with value: String) {
+        field.tap()
+        let current = field.value as? String ?? ""
+        if !current.isEmpty {
+            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
+        }
+        field.typeText(value)
+    }
+
+    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
+        if progressionHistory { app.launchArguments.append("--qa-progression-history") }
         app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
         app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()

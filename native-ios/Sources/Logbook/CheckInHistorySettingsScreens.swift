@@ -189,6 +189,7 @@ struct HistoryScreen: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    .accessibilityIdentifier("history-workout-\(session.id.uuidString)")
                 }
                 Button { showingWorkoutCalendar = true } label: { Label("Workout Calendar", systemImage: "calendar") }
             }
@@ -226,6 +227,7 @@ struct HistoryScreen: View {
                         Spacer()
                         Button("Restore") { _ = store.restoreDeletedWorkout(session.id) }
                             .buttonStyle(.bordered).controlSize(.small)
+                            .accessibilityIdentifier("restore-deleted-workout-\(session.id.uuidString)")
                         Button(role: .destructive) { workoutToDeletePermanently = session.id } label: {
                             Image(systemName: "trash").accessibilityLabel("Delete permanently")
                         }
@@ -300,6 +302,7 @@ private struct WorkoutHistoryDetailScreen: View {
                             set: { store.updateCompletedWorkoutNotes(sessionID: sessionID, notes: $0) }
                         ), axis: .vertical)
                             .lineLimit(2...5)
+                            .accessibilityIdentifier("history-workout-notes")
                     }
                     let records = store.state.training.personalRecordEvents.filter { $0.sessionID == sessionID }
                     if !records.isEmpty {
@@ -369,6 +372,7 @@ private struct HistoryWorkoutSetEditor: View {
                 update(weight: set.weightKg, reps: set.reps, completed: !set.completed, duration: set.durationSeconds, distance: set.distanceMeters)
             } label: { Image(systemName: set.completed ? "checkmark.circle.fill" : "circle").foregroundStyle(set.completed ? .green : .secondary) }
                 .buttonStyle(.plain).accessibilityLabel(set.completed ? "Mark set incomplete" : "Mark set complete")
+                    .accessibilityIdentifier("history-set-complete")
         }
     }
 
@@ -378,6 +382,7 @@ private struct HistoryWorkoutSetEditor: View {
             set: { update(weight: $0 > 0 ? $0 : nil, reps: set.reps, completed: set.completed, duration: nil, distance: set.distanceMeters) }
         ), format: .number.precision(.fractionLength(0...2)))
             .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).accessibilityLabel("Weight in kilograms")
+                .accessibilityIdentifier("history-set-weight")
     }
 
     private var repsField: some View {
@@ -386,6 +391,7 @@ private struct HistoryWorkoutSetEditor: View {
             set: { update(weight: set.weightKg, reps: $0, completed: set.completed, duration: nil, distance: set.distanceMeters) }
         ), format: .number)
             .keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(width: 64).accessibilityLabel("Repetitions")
+                .accessibilityIdentifier("history-set-reps")
     }
 
     private func update(weight: Double?, reps: Int, completed: Bool, duration: Int?, distance: Double?) {

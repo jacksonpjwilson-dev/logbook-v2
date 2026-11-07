@@ -91,6 +91,7 @@ struct TrainingScreen: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    .accessibilityIdentifier("training-template-\(template.id.uuidString)")
                     .contextMenu {
                         ForEach(store.state.training.availablePrograms.filter { $0.id != activeProgram?.id }) { destination in
                             Button("Move to \(destination.name)", systemImage: "folder") {
@@ -236,6 +237,7 @@ struct WorkoutTemplateScreen: View {
                             Label("Start \(template.name)", systemImage: "play.fill").frame(maxWidth: .infinity, alignment: .center)
                         }
                         .font(.headline).listRowBackground(store.state.home.theme.palette.accentColor.opacity(0.22))
+                            .accessibilityIdentifier("workout-template-start")
                     }
                     Section {
                         if template.exercises.isEmpty {
@@ -298,6 +300,7 @@ struct WorkoutTemplateScreen: View {
                             store.reorderTemplateExercises(templateID: templateID, orderedIDs: orderedIDs)
                         }
                         Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus.circle.fill") }
+                            .accessibilityIdentifier("workout-template-add-exercise")
                     } header: { Text("Exercise plan") }
                     Section("Plan") {
                         Button("Rename workout") { nameDraft = template.name; editingName = true }
@@ -350,6 +353,7 @@ struct ExercisePickerScreen: View {
             List {
                 Section {
                     Button { showCustom = true } label: { Label("Create custom exercise", systemImage: "plus.circle") }
+                        .accessibilityIdentifier("exercise-picker-create-custom")
                 }
                 Section("Built-in exercises · \(filtered.count)") {
                     ForEach(filtered) { exercise in
@@ -363,6 +367,7 @@ struct ExercisePickerScreen: View {
                             }
                         }
                         .foregroundStyle(.primary)
+                            .accessibilityIdentifier("exercise-picker-result-\(exercise.id)")
                     }
                 }
             }
@@ -391,9 +396,9 @@ struct CustomExerciseScreen: View {
     var body: some View {
         NavigationStack {
             Form {
-                TextField("Exercise name", text: $name)
-                TextField("Primary muscle", text: $muscle)
-                TextField("Equipment", text: $equipment)
+                TextField("Exercise name", text: $name).accessibilityIdentifier("custom-exercise-name")
+                TextField("Primary muscle", text: $muscle).accessibilityIdentifier("custom-exercise-muscle")
+                TextField("Equipment", text: $equipment).accessibilityIdentifier("custom-exercise-equipment")
                 Picker("Tracking mode", selection: $trackingMode) {
                     ForEach(ExerciseTrackingMode.allCases) { mode in Text(mode.title).tag(mode) }
                 }
@@ -409,6 +414,7 @@ struct CustomExerciseScreen: View {
                         onCreate(item); dismiss()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .accessibilityIdentifier("custom-exercise-save")
                 }
             }
         }
@@ -719,7 +725,7 @@ private struct WorkoutCompletionSummaryScreen: View {
             }
             .navigationTitle("Workout saved")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() }.accessibilityIdentifier("workout-summary-done") } }
         }
     }
 }

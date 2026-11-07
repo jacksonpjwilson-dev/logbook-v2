@@ -110,6 +110,15 @@ final class LogbookStore: ObservableObject {
         let qaProgram = WorkoutProgram(name: "QA Program", templateIDs: [templateID], rotationIndex: 0)
         fixture.training.programs = [qaProgram]
         fixture.training.activeProgramID = qaProgram.id
+        let progressionSets = [WorkoutSet(weightKg: 60, reps: 8, completed: true)]
+        let progressionExercise = WorkoutExercise(
+            exerciseID: "qa-bench",
+            name: "Bench Press",
+            muscle: "Chest",
+            equipment: "Dumbbell",
+            sets: progressionSets
+        )
+        let progressionHistoryEnabled = ProcessInfo.processInfo.arguments.contains("--qa-progression-history")
         fixture.training.completedSessions = [WorkoutSession(
                 templateID: templateID,
                 templateName: template.name,
@@ -117,7 +126,7 @@ final class LogbookStore: ObservableObject {
                 localDate: LocalDay.string(yesterday),
                 startedAt: finished.addingTimeInterval(-2_700),
                 finishedAt: finished,
-                exercises: []
+                exercises: progressionHistoryEnabled ? [progressionExercise] : []
             )]
         fixture.checkins.sleep = sleepLogs
         fixture.checkins.weights = weightLogs
