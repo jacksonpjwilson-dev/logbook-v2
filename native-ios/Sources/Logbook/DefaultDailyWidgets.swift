@@ -45,15 +45,16 @@ struct DefaultDailyWidgetView: View {
 
     private var workoutWidget: some View {
         let workout = nextWorkout
-        return DefaultDailyCardSurface(palette: palette) {
-            VStack(spacing: 0) {
+        return GeometryReader { geometry in
+            DefaultDailyCardSurface(palette: palette) {
+                VStack(spacing: 0) {
                 Button(action: openTraining) {
                     WorkoutContent(workout: workout, palette: palette)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityElement(children: .ignore)
-                .accessibilityIdentifier("home-widget-next")
+                .accessibilityIdentifier("next-workout-card-open")
                 .accessibilityLabel("Next workout, \(workout.name), \(workout.exerciseCount) exercises, \(workout.duration.map { "about \($0) minutes" } ?? "estimated duration unavailable"), \(workout.lastCompletion). View Workout.")
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
@@ -93,6 +94,11 @@ struct DefaultDailyWidgetView: View {
             .padding(.horizontal, 13)
             .padding(.bottom, 5)
             }
+            }
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("home-widget-next")
+            .accessibilityLabel("Next workout, \(workout.name), \(workout.exerciseCount) exercises, \(workout.duration.map { "about \($0) minutes" } ?? "estimated duration unavailable"), \(workout.lastCompletion). View Workout.")
+            .accessibilityFrame(geometry.frame(in: .global))
         }
     }
 
