@@ -1,40 +1,26 @@
 # Logbook v2 handoff audit and Default gate
 
-## Training milestone update — implementation in progress
+## Latest Training Phase 2 audit — 2026-11-07
 
-**Review date:** 2026-11-07. Source updated on the isolated `codex/default-theme-gate1` branch. This section records source-level work added for Training System Phase 2; it does not claim runtime verification. This environment is Linux and has no `xcodebuild`, `xcrun`, Swift compiler, or Simulator. The branch CI run is the required compile/runtime check.
+**Branch:** `codex/default-theme-gate1`  
+**Tested implementation commit:** `85783dac2f65767e4d762064df46b9d81cda8c35`  
+**CI evidence:** [run #42](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800), iPhone 16 and iPhone SE.
 
-### Implemented in source for this phase
+The Training source changes are implemented on the isolated development branch. The last successful run built the app and passed 33 unit tests plus 4 UI tests on each available device (37/37 on each). The UI test exercised timer start and app termination/relaunch recovery. Run #41 failed on both devices because the blue timer card showed stale “Ready” text while the workout footer counted down. Commit `85783da` corrected the timer read path; run #42 passed on both devices.
 
-- Multiple named programs, one active program, independent flexible rotations, migration from the legacy single-program rotation, skip without history, and scheduled versus out-of-order session association.
-- Program association is stored on a workout draft so switching programs does not change the origin of a running session. Completion advances only its originating scheduled slot; discard does not advance.
-- Template management now includes per-program ordering, cross-program moves, exercise ordering, custom exercises, tracking mode, planned set/reps/rest configuration, and superset grouping controls.
-- Active sessions retain tracking mode, set data, exercise/session notes, timer state and origin metadata in the existing persistent store. The UI provides exercise expansion, session-only replacement before work begins, optional progression suggestion acceptance, and completion summary.
-- Completed records support set/note edits, soft-delete/restore/permanent deletion and expiry; PR and workout-summary values are derived from visible stored sessions so edits/deletions recalculate immediately. Weighted-and-reps Epley estimates use the first eligible performance as baseline, then one best event per exercise/session for later strict improvements.
-- Training History provides a month calendar and multiple sessions per date, alongside PR and Recently Deleted sections.
-- Added store tests for program isolation/migration/rotation, scheduled and out-of-order completion, partial saves/discard, session-origin preservation, PR baseline and recalculation, deleted-record expiry, alternate tracking modes, timer controls/recovery and superset rest.
-- Added a UI screenshot attachment for the active workout in addition to the four Home pages.
+- [iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13584290732) and [iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583373258) contain six real simulator PNG captures and test reports each.
+- [iPhone 18 Pro artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583483232) contains only the simulator-unavailable report. The test was skipped; this device is untested.
+- Run #26 failed to compile before tests; subsequent simulator runs verify that issue was corrected.
+- Program rotations, sessions, sets, supersets, history, PRs, timer controls and recovery have store-level tests. UI coverage is narrower: Home navigation, Training Split/calendar navigation, workout start, timer and session recovery. Full UI entry/completion, split editor, progression prompt and historical recovery interactions remain to be automated.
+- Home grid geometry was not changed. The iPhone SE / iPhone 16 measurements and 36 pt dock clearance are recorded in `TRAINING_PHASE2.md`.
+- Default visual candidates remain unapproved. No baseline or approved theme was changed. HealthKit stayed disabled; no production configuration or `main` branch was modified.
 
-### Verification state
+This current status supersedes the historical snapshots below. Earlier audit notes are retained as dated project history and may describe older source states.
 
-- Prior run #26 failed compilation before tests on iPhone 16 and iPhone SE. The iPhone 18 Pro matrix entry skipped tests because that simulator was unavailable.
-- Prior run #27 built and executed the Daily Home UI suite on iPhone 16 and iPhone SE; widget-geometry assertions passed on both. Its two failures were the JSON date round-trip timer assertion and the Start Workout navigation assertion. The local source addresses both, but those fixes have not yet passed CI.
-- Run #28 attempted a build on iPhone 16 and iPhone SE but failed before test execution on a misspelled Calendar argument label in `CheckInHistorySettingsScreens.swift`. Both available-device jobs failed to compile; zero tests ran and no screenshot candidates were produced. The source now changes the label to `toGranularity:`; this fix is pending CI.
-- No successful Phase 2 build, unit test, screenshot, iPhone SE result, or active-workout recovery has run against the current Training changes yet. iPhone 18 Pro remains untested.
-- Default theme geometry, the 16 legacy themes and HealthKit-disabled configuration were not intentionally altered. This is a source-level statement pending the full CI run.
-
-### Remaining verification and known limits
-
-- CI must compile and run the expanded suite. Correct any actual compiler/test failures before reporting completion.
-- A simulator UI test now captures Active Workout, but the current workflow only runs the Daily UI test suite; detailed interactions for every editor/history flow remain unverified.
-- "Force quit then reopen" persistence is covered at repository reopen/unit-test level, not yet by an OS-level UI kill/relaunch scenario.
-- Provisional Default visual work remains awaiting human review; these Training changes do not imply visual approval. iPhone 18 Pro remains unavailable/unverified.
-- Authentication, coaching/cloud sync, Food/Sleep/Weight/Supplements, native integration runtime, Watch hardware, physical device, and remaining theme visual acceptance are outside this Training phase.
-
-**Audit date:** 2026-11-06  
+**Original audit snapshot date:** 2026-11-06 (historical; current status is above)  
 **Source package:** `LOGBOOK_CODEX_COMPLETE_VISUAL_HANDOFF_v2.zip`  
 **Authority:** `LOGBOOK_MASTER_SPEC.md` v1.2 and theme addendum §16.  
-**Repository branch in this worktree:** `codex/default-theme-gate1`, created from the isolated QA branch at `8741ee53b9495d5558d6a35b152772fca3fbd646`. No changes were made to `main`. The tested source commit is `9d6a724655218de42f0f4b70f66f9be37c7db12e`. GitHub Actions run: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42274999088.
+**Historical source snapshot:** branch `codex/default-theme-gate1`, commit `9d6a724655218de42f0f4b70f66f9be37c7db12e`, tested in run 42274999088. This historical note is superseded by the current Training Phase 2 source commit above.
 
 ## Environment and evidence limits
 

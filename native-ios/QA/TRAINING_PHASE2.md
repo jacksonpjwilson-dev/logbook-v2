@@ -1,36 +1,47 @@
 # Training System Phase 2 status
 
 **Branch:** `codex/default-theme-gate1`  
-**Scope:** Training workflows and Default Training Home content only. No HealthKit enablement, production configuration changes, or merge to `main`.  
-**Latest completed run:** [Daily Home QA #37](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42391430833), commit `54275530e6a4e3d24218fe2b81bcdb71cf4c391f`.
+**Tested implementation commit:** `85783dac2f65767e4d762064df46b9d81cda8c35`  
+**Latest CI:** [Daily Home QA run #42](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800)  
+**Scope:** Training workflows and Default Training Home content. No HealthKit access, production configuration change, theme redesign, or merge to `main`.
 
-## Implementation status
+## Implementation and verification
 
-| Requirement | Source state | Verification |
+| Area | Implemented behavior | Evidence and remaining coverage |
 |---|---|---|
-| Named programs, exactly one active selection, independent flexible rotations | Implemented, including legacy migration, skip, reorder, cross-program move/delete, out-of-order completion and origin-program draft association | Existing unit tests cover >8 templates, switching, scheduled/partial/out-of-order completion and migration. Added tests cover split reorder, moving/deleting earlier entries and preserving scheduled selection. Pending next CI run. |
-| Template editor and exercise catalog | Implemented: searchable built-in library, custom exercises, reorder, tracking mode, set/reps/rest, superset group/ungroup | Superset rotation/rest and session-only replacement are store-tested. Template editor and library UI are not fully automated. |
-| Active workout | Implemented: top blue timer, 90s default/overrides, five-column weighted table, tracking-specific inputs, expand/collapse/progression, notes, pause, finish/discard, pinned stats, summary | Timer state/controls, override, superset rest and repository reopen have store tests. UI verifies start, Ready, duration control, table, screenshot and Resume entry. Test sequence that typed into a scrolled number field before tapping timer was removed after it failed on simulator keyboard focus. |
-| Workout session, history and recovery | Implemented: autosaved draft, sessions keep originating program, session/exercise notes, multiple same-day sessions, historical set edits, soft delete/restore/purge | Existing and added store tests cover repository reopen, program switch during draft, two same-day sessions and edit persistence. OS-level app termination/relaunch is not verified. |
-| Progression and personal records | Suggestions are explicit acceptance; completed weighted/reps sets derive Epley e1RM, first valid performance is baseline, max one PR per exercise/session, history edits/deletes/restores recalculate | Existing store tests cover acceptance, baseline, one-per-session and recalculation. Added invalid/zero-reps test ensures zero reps cannot complete an active set or create an e1RM record. Pending next CI run. |
-| Recently Deleted | Soft delete, 30-day recovery, expiry purge | Existing expiry test plus new future-date restore guard. Pending next CI run. |
-| Default Training Home | New interactive Workout Split widget shows the upcoming portion in the fixed 2×4 numbered tiles, highlights next, shows each workout's last completion, opens selected workout details, and links to full split. Workout Calendar now shows real month days, session labels/counts, current-week/today styling, month controls and date drill-in | New UI test checks tile, month controls, real calendar navigation and workout detail. Pending next CI run; screen remains a visual review candidate. |
+| Programs and rotation | Named workout programs, one active selection, independent flexible-length rotations, legacy migration, scheduled skip without history, out-of-order completion, discard, and draft association with its original program. Reordering/moving/deleting earlier split items preserves the scheduled item. | Unit tests passed for independent rotations, >8 templates, migration, scheduled/incomplete/discard behavior, program switching during an active draft, and split reordering. The program/editor UI is not fully automated end to end. |
+| Split editor and exercise library | Searchable exercise catalog, custom exercises, template/exercise reordering, tracking modes, sets/reps/rest, and superset grouping. Session-only replacement is allowed before work starts. | Store tests passed for tracking modes, superset ordering/rest, replacement rules and split reordering. Drag/drop, search, and edit controls still need full UI workflow coverage. |
+| Active workout | Current exercise progression, superset rounds, five-column set table, Previous values, exercise/session notes, pinned summary and Finish & Save, discard, completion summary, optional progression acceptance, default/overridden rest, pause/resume/+15/skip/Ready. Draft and absolute rest-timer state persist. | Store tests cover logging/finishing/reopening a workout, progression, timer controls/overrides, supersets, notes/state persistence, and replacement. XCUITest starts a scheduled workout, exercises the timer, terminates the app, relaunches it, resumes the saved session and confirms the timer is still active. The full set-entry-to-summary interaction still lacks an XCUITest. |
+| History and records | Multiple sessions per date, calendar month/date navigation, editable set history, notes, Recently Deleted recovery/expiry, training aggregates, weighted-and-reps Epley estimates, first performance as baseline, one PR per exercise per workout, and recalculation after edits/deletes/restores. | Store tests passed for same-day records/reopen, historical edits/deletion/restore, e1RM baseline/PR rules and 30-day expiry. Full UI tests for calendar session detail, historical editing and Recently Deleted remain. |
+| Default Training Home | Workout Split tiles and real monthly Workout Calendar are interactive. Existing 2-column × 4-row Home grid, 1×1 / 2×1 / 2×2 widget geometry, dock and non-scrolling Home remain unchanged. | Simulator UI tests passed for split tile details, calendar month/date navigation and workout-detail navigation. Captures are review candidates, not approved baselines. |
 
-The approved Home grid dimensions and page placements are unchanged. Run #36 verified the Daily grid geometry on both available simulators; run #37 did not change Home geometry.
+## CI results
 
-## Verified prior simulator evidence
+Run #42 built and tested commit `85783da` on macOS 15.8.2 / iOS Simulator 18.5:
 
-- [Run #36](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42389571701): iPhone 16 and iPhone SE each built and passed 25 unit tests; two of three UI tests passed. The third UI test failed in its synthetic keyboard/field-edit sequence before the rest-timer interaction. Its layout and active-workout screenshots were exported. The current test removes that brittle field sequence and asserts session resume from Training.
-- Run #36 iPhone SE layout measurement: large 212.35 × 212.35 pt; medium measured 211.5 × 101.25 pt (outer element 212.35 × 107.35 pt); small cells 101.85 × 101.85 pt and 102.35 × 101.85 pt. Their lower edge is y=570.43 pt, before the dock at y=606.5 pt.
-- iPhone 18 Pro was unavailable and its tests were skipped. **Untested**, not passed.
-- [Run #26](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42376326674) failed during compilation on iPhone 16 and SE before any tests. Artifacts contain failure reports/logs only.
-- [Run #37](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42391430833) also failed before tests: Swift could not type-check the expanded Workout Calendar day-detail `body`. The aggregate summary is now extracted into a small subview; this correction and the implementation listed above are pending CI.
+- **iPhone SE (3rd generation):** 33 unit + 4 UI tests; **37 passed, 0 failed, 0 skipped**. [Download screenshots and test report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583373258)
+- **iPhone 16:** 33 unit + 4 UI tests; **37 passed, 0 failed, 0 skipped**. [Download screenshots and test report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13584290732)
+- **iPhone 18 Pro:** **untested**. Its test step was skipped because that simulator is unavailable on the macOS 26 runner. [Availability report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583483232)
 
-## Remaining verification and limits
+The UI suite includes the Daily four-page captures, Daily widget interaction, Training split/calendar navigation, and active-workout start plus timer persistence after app termination and relaunch.
 
-- Await next CI results for the new unit cases and Default Training Home interactions, then fix any failures.
-- Run active workout keyboard entry and completion-summary interactions on simulator; unit tests do not prove visual accessibility or clipping.
-- Exercise full split editor, progression prompt, historical editor, calendar detail and Recently Deleted UI end to end.
-- Test OS-level force-close recovery, physical iPhone, Watch/Live Activity, and iPhone 18 Pro when a simulator/device is available.
-- Review actual screenshots for Default Home and active workout. Screenshots are candidates only. No baselines or themes have been approved or changed.
-- Food, Sleep/Weight/Supplements, and Progress & History Home visual discrepancies remain outside this Training-only correction.
+Run #41 initially failed 36/37 on both available devices. Its video showed the blue rest card stuck at “Ready” while the pinned footer timer ran. Commit `85783da` makes the timeline read the latest persisted timer value. Run #42 then passed on both devices, including the relaunch test. The running +15-second behavior is also asserted in the timer unit test.
+
+Run #26 failed compilation on iPhone 16 and SE before tests; 0 tests ran. Later fixes were verified by runs #39 and #42. There is no outstanding iPhone SE build/layout failure. iPhone 18 Pro remains untested.
+
+## Layout measurements
+
+The approved widget geometry was not changed in this phase. Measured on the existing screenshot/UI geometry checks:
+
+- **iPhone SE (3rd generation):** large 212.35 × 212.35 pt; medium outer 212.35 × 107.35 pt (interior 211.5 × 101.25 pt); small cells 101.85 × 101.85 and 102.35 × 101.85 pt. Bottom widgets ended at y=570.43 pt; dock began at y=606.5 pt, leaving about 36 pt clearance.
+- **iPhone 16:** large 268.52 × 268.52 pt; medium outer 268.52 × 129.85 pt (interior 267.5 × 129.25 pt); small cells about 130.18 × 130.18 pt. Dock clearance was about 36 pt.
+
+These are simulator measurements, not approval of Default-theme appearance. Default reference styling and active-workout visuals remain open for your review.
+
+## Remaining validation
+
+- Add XCUITests for editing a split by drag/drop, entering/completing set data through the UI, completion summary, accepting/declining progression, editing a historical session, and restoring a deleted workout.
+- Review the exported Default Home and active-workout PNGs. No baselines were approved or overwritten.
+- Test iPhone 18 Pro when its simulator is available, and test a physical iPhone before beta distribution.
+- Watch/Live Activity hardware behavior, authentication/coaching, cloud sync and non-Training subsystems are not verified by this milestone.
+
