@@ -19,7 +19,8 @@
 
 - Prior run #26 failed compilation before tests on iPhone 16 and iPhone SE. The iPhone 18 Pro matrix entry skipped tests because that simulator was unavailable.
 - Prior run #27 built and executed the Daily Home UI suite on iPhone 16 and iPhone SE; widget-geometry assertions passed on both. Its two failures were the JSON date round-trip timer assertion and the Start Workout navigation assertion. The local source addresses both, but those fixes have not yet passed CI.
-- No Phase 2 build, unit test, screenshot, iPhone SE result, or active-workout recovery has run against the current Training changes yet. iPhone 18 Pro remains untested.
+- Run #28 attempted a build on iPhone 16 and iPhone SE but failed before test execution on a misspelled Calendar argument label in `CheckInHistorySettingsScreens.swift`. Both available-device jobs failed to compile; zero tests ran and no screenshot candidates were produced. The source now changes the label to `toGranularity:`; this fix is pending CI.
+- No successful Phase 2 build, unit test, screenshot, iPhone SE result, or active-workout recovery has run against the current Training changes yet. iPhone 18 Pro remains untested.
 - Default theme geometry, the 16 legacy themes and HealthKit-disabled configuration were not intentionally altered. This is a source-level statement pending the full CI run.
 
 ### Remaining verification and known limits

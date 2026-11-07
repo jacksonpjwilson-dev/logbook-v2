@@ -1,13 +1,13 @@
 # Logbook QA report
 
-This report is updated by `Scripts/run-daily-home-qa.sh` after a simulator test. The last known completed run is #27. The next run is required to validate the current Training Phase 2 source.
+This report is updated by `Scripts/run-daily-home-qa.sh` after a simulator test. The latest completed run is #28.
 
-- Workflow: [Daily Home QA run #27](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42382271551)
-- Tested source commit: `45f42d4a505f58b4d900431e1ae5fc85f43edb6b`
-- iPhone 16: build succeeded; 14 tests passed, 2 failed, 0 skipped. Daily grid/layout assertions passed. Failures were a strict persisted-Date equality in rest-timer recovery and the Home Start Workout action not presenting the active workout.
-- iPhone SE (3rd generation): build succeeded; 14 tests passed, 2 failed, 0 skipped. Daily grid/layout assertions passed, so run #27 did not show an SE geometry failure. Same two failures as iPhone 16.
+- Workflow: [Daily Home QA run #28](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42385984214)
+- Tested source commit: `14cda399d8c2fda1a6f90b5604a2da8e87abd9d3`
+- iPhone 16 and iPhone SE (3rd generation): Xcode build failed before tests because of an invalid `Calendar.isDate` argument label in `CheckInHistorySettingsScreens.swift:198`; the compiler also reported a type-check timeout for the containing History view after the syntax error. **0 tests executed; no screenshot candidates were produced.**
+- The local fix changes the label to `toGranularity:`; it is not verified until a follow-up Actions run succeeds.
 - iPhone 18 Pro: simulator unavailable on its runner; QA tests were skipped. **Untested**, not passed.
-- Artifacts: iPhone 16 ID `13578721172`; iPhone SE ID `13577954498`; unavailable-device report ID `13577769726`. Run #27 artifacts contain real simulator screenshots and Xcode results.
+- Artifacts: iPhone 16 ID `13579413097`; iPhone 18 Pro unavailable-device report ID `13579741521`. The iPhone 16 artifact contains the failed Xcode log; no SE screenshot artifact was produced before this report update.
 - Baselines: unchanged; no candidate has been approved.
 
-The current source includes fixes for the two run #27 failures and Training Phase 2 changes. Those changes are not verified until a new Actions run finishes. The active-workout screenshot capture was added to that test, but there is no result artifact for it yet. See `TRAINING_PHASE2.md` for the detailed status.
+Run #27 separately passed Daily geometry assertions on iPhone 16 and SE but had two test failures on both devices. Its fixes were included in #28, but #28 did not reach test execution. The active-workout screenshot capture is included in the source, but no new screenshot exists yet. See `TRAINING_PHASE2.md` for the detailed status.

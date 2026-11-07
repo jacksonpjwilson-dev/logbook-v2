@@ -195,7 +195,7 @@ struct HistoryScreen: View {
 
             Section("Personal records") {
                 let records = store.state.training.personalRecordEvents.filter {
-                    Calendar.current.isDate($0.date, equalTo: .now, to granularity: .month)
+                    Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month)
                 }.sorted { $0.date > $1.date }
                 if records.isEmpty {
                     Text("No new estimated 1RM records this month. Your first completed workout establishes an exercise baseline.")

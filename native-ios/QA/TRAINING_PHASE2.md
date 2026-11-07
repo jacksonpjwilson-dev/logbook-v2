@@ -1,7 +1,7 @@
 # Training System Phase 2 status
 
 **Branch:** `codex/default-theme-gate1`  
-**Status:** Implementation in progress; simulator verification pending CI.  
+**Status:** Implementation in progress; latest CI build blocked by a corrected Swift syntax error; simulator verification still pending.  
 **Scope:** Training only. No merge, production configuration, HealthKit access, or approved theme changes.
 
 | Requirement | Current source status | Verification |
@@ -37,4 +37,6 @@
 
 ## Limitations
 
-This workspace cannot run Xcode or the iOS Simulator. Do not mark this milestone verified until the new GitHub Actions run completes. The existing workflow emphasizes Daily Home and currently does not automate all workout editor, history-calendar, or active-session interactions. The screenshot artifact is a review candidate, not an approved baseline.
+Run #28 (commit `14cda399`) failed to compile on both iPhone 16 and SE due to an invalid `Calendar.isDate` argument label; no tests ran and no screenshot candidates were produced. The local source corrects it to `toGranularity:`. This environment cannot run Xcode or the iOS Simulator, so that correction and all Training tests remain unverified until the follow-up GitHub Actions run completes.
+
+The existing workflow automates the Daily Home layout and the Home Start Workout route, and it captures an active-workout candidate. It does not yet automate all workout editor, history-calendar, and active-session interactions. The screenshot artifact is a review candidate, not an approved baseline.
