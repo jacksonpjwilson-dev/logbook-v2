@@ -155,10 +155,11 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(timerToggle.waitForExistence(timeout: 5), "The rest timer needs one stable pause/resume control")
         timerToggle.tap()
         let timerPaused = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label CONTAINS[cd] %@", "Resume"),
+            predicate: NSPredicate(format: "value == %@", "Paused"),
             object: timerToggle
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should change the visible timer action to Resume")
+        XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should persist the timer state and expose Resume")
+        XCTAssertEqual(timerToggle.label, "Resume rest timer")
         let pausedRemaining = restTimer.label
         app.terminate()
         app.launch()
@@ -173,13 +174,15 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(recoveredTimer.label, pausedRemaining, "The paused remaining time must survive app termination")
         let resumeTimer = app.buttons["rest-toggle"]
         XCTAssertTrue(resumeTimer.waitForExistence(timeout: 5), "The recovered timer should preserve its paused state")
-        XCTAssertTrue(resumeTimer.label.localizedCaseInsensitiveContains("Resume"))
+        XCTAssertEqual(resumeTimer.value as? String, "Paused")
+        XCTAssertEqual(resumeTimer.label, "Resume rest timer")
         resumeTimer.tap()
         let timerRunning = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label CONTAINS[cd] %@", "Pause"),
+            predicate: NSPredicate(format: "value == %@", "Running"),
             object: resumeTimer
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume and show its Pause action")
+        XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume and expose Pause")
+        XCTAssertEqual(resumeTimer.label, "Pause rest timer")
         XCTAssertNotEqual(recoveredTimer.label, "Ready", "The recovered timer should continue running after resume")
     }
 

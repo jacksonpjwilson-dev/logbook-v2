@@ -246,48 +246,62 @@ struct WorkoutTemplateScreen: View {
                             Text("Add exercises to make this plan ready to start.").foregroundStyle(.secondary)
                         }
                         ForEach(template.exercises) { exercise in
-                            DisclosureGroup(isExpanded: Binding(
-                                get: { expandedExerciseIDs.contains(exercise.id) },
-                                set: { isExpanded in
-                                    if isExpanded { expandedExerciseIDs.insert(exercise.id) }
-                                    else { expandedExerciseIDs.remove(exercise.id) }
+                            VStack(alignment: .leading, spacing: 0) {
+                                Button {
+                                    if expandedExerciseIDs.contains(exercise.id) {
+                                        expandedExerciseIDs.remove(exercise.id)
+                                    } else {
+                                        expandedExerciseIDs.insert(exercise.id)
+                                    }
+                                } label: {
+                                    HStack(alignment: .center, spacing: 12) {
+                                        VStack(alignment: .leading, spacing: 4) {
+                                            Text(exercise.name).font(.headline)
+                                            Text("\(exercise.muscle) · \(exercise.sets.count) sets · \(exercise.trackingMode?.title ?? "Weight + reps") · \(exercise.equipment)")
+                                                .font(.caption).foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: 8)
+                                        Image(systemName: expandedExerciseIDs.contains(exercise.id) ? "chevron.up" : "chevron.down")
+                                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                    }
+                                    .contentShape(Rectangle())
+                                    .padding(.vertical, 5)
                                 }
-                            )) {
-                                Picker("Tracking mode", selection: Binding(
-                                    get: { exercise.trackingMode ?? .weightAndReps },
-                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds, trackingMode: $0) }
-                                )) {
-                                    ForEach(ExerciseTrackingMode.allCases) { mode in Text(mode.title).tag(mode) }
-                                }
-                                .accessibilityIdentifier("planned-exercise-tracking-\(exercise.id.uuidString)")
-                                Stepper("Sets · \(exercise.sets.count)", value: Binding(
-                                    get: { exercise.sets.count },
-                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: $0, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds) }
-                                ), in: 1...30)
-                                .accessibilityIdentifier("planned-exercise-sets-\(exercise.id.uuidString)")
-                                Stepper("Reps · \(exercise.sets.first?.reps ?? 8)", value: Binding(
-                                    get: { exercise.sets.first?.reps ?? 8 },
-                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: $0, restSeconds: exercise.restSeconds) }
-                                ), in: 1...100)
-                                .accessibilityIdentifier("planned-exercise-reps-\(exercise.id.uuidString)")
-                                Stepper("Rest · \(exercise.restSeconds.map { "\($0)s" } ?? "90s default")", value: Binding(
-                                    get: { exercise.restSeconds ?? 90 },
-                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: $0) }
-                                ), in: 15...600, step: 15)
-                                .accessibilityIdentifier("planned-exercise-rest-\(exercise.id.uuidString)")
-                                if exercise.restSeconds != nil {
-                                    Button("Use workout default rest") {
-                                        store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: nil)
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("planned-exercise-\(exercise.id.uuidString)")
+                                .accessibilityValue(expandedExerciseIDs.contains(exercise.id) ? "Expanded" : "Collapsed")
+
+                                if expandedExerciseIDs.contains(exercise.id) {
+                                    Picker("Tracking mode", selection: Binding(
+                                        get: { exercise.trackingMode ?? .weightAndReps },
+                                        set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds, trackingMode: $0) }
+                                    )) {
+                                        ForEach(ExerciseTrackingMode.allCases) { mode in Text(mode.title).tag(mode) }
+                                    }
+                                    .accessibilityIdentifier("planned-exercise-tracking-\(exercise.id.uuidString)")
+                                    Stepper("Sets · \(exercise.sets.count)", value: Binding(
+                                        get: { exercise.sets.count },
+                                        set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: $0, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds) }
+                                    ), in: 1...30)
+                                    .accessibilityIdentifier("planned-exercise-sets-\(exercise.id.uuidString)")
+                                    Stepper("Reps · \(exercise.sets.first?.reps ?? 8)", value: Binding(
+                                        get: { exercise.sets.first?.reps ?? 8 },
+                                        set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: $0, restSeconds: exercise.restSeconds) }
+                                    ), in: 1...100)
+                                    .accessibilityIdentifier("planned-exercise-reps-\(exercise.id.uuidString)")
+                                    Stepper("Rest · \(exercise.restSeconds.map { "\($0)s" } ?? "90s default")", value: Binding(
+                                        get: { exercise.restSeconds ?? 90 },
+                                        set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: $0) }
+                                    ), in: 15...600, step: 15)
+                                    .accessibilityIdentifier("planned-exercise-rest-\(exercise.id.uuidString)")
+                                    if exercise.restSeconds != nil {
+                                        Button("Use workout default rest") {
+                                            store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: nil)
+                                        }
                                     }
                                 }
-                            } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    Text(exercise.name).font(.headline)
-                                Text("\(exercise.muscle) · \(exercise.sets.count) sets · \(exercise.trackingMode?.title ?? "Weight + reps") · \(exercise.equipment)").font(.caption).foregroundStyle(.secondary)
-                                }
                             }
-                            .accessibilityIdentifier("planned-exercise-\(exercise.id.uuidString)")
-                            .accessibilityValue(expandedExerciseIDs.contains(exercise.id) ? "Expanded" : "Collapsed")
+                            .padding(.vertical, 4)
                             .swipeActions {
                                 Button("Remove", role: .destructive) { store.removeExercise(exercise.id, fromTemplate: templateID) }
                             }
@@ -330,7 +344,7 @@ struct WorkoutTemplateScreen: View {
         }
         .navigationBarTitleDisplayMode(.inline)
         .sheet(isPresented: $showExercisePicker) {
-            ExercisePickerScreen { exercise in store.appendExercise(exercise, toTemplate: templateID) }
+            ExercisePickerScreen { exercise in addExercise(exercise) }
                 .presentationDetents([.large]).presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $startSession) {
@@ -343,6 +357,14 @@ struct WorkoutTemplateScreen: View {
             TextField("Workout name", text: $nameDraft)
             Button("Save") { store.renameTemplate(templateID, name: nameDraft) }
             Button("Cancel", role: .cancel) { }
+        }
+    }
+
+    private func addExercise(_ exercise: ExerciseDefinition) {
+        store.appendExercise(exercise, toTemplate: templateID)
+        if let addedID = store.state.training.templates
+            .first(where: { $0.id == templateID })?.exercises.last?.id {
+            expandedExerciseIDs.insert(addedID)
         }
     }
 }
@@ -483,6 +505,7 @@ struct ActiveWorkoutScreen: View {
                                         }
                                         .disabled(!timer.isPaused && remaining == 0)
                                         .accessibilityIdentifier("rest-toggle")
+                                        .accessibilityLabel(timer.isPaused ? "Resume rest timer" : "Pause rest timer")
                                         .accessibilityValue(timer.isPaused ? "Paused" : "Running")
                                         Button("+15 sec") { store.addFifteenSecondsToRestTimer() }
                                             .accessibilityIdentifier("rest-add-15")
@@ -508,28 +531,6 @@ struct ActiveWorkoutScreen: View {
                             .listRowSeparator(.hidden)
                         } header: {
                             Text("Rest")
-                        }
-                        Section("Workout notes") {
-                            TextField("Notes for this workout", text: Binding(
-                                get: { session.notes },
-                                set: { store.updateWorkoutNotes($0) }
-                            ), axis: .vertical)
-                                .lineLimit(2...5)
-                                .accessibilityIdentifier("active-workout-notes")
-                        }
-                        Section {
-                            HStack {
-                                Label("\(session.exercises.flatMap(\.sets).filter(\.completed).count) / \(session.exercises.flatMap(\.sets).count) sets", systemImage: "checkmark.circle.fill")
-                                Spacer()
-                                TimelineView(.periodic(from: .now, by: 1)) { context in
-                                    Text(elapsed(session, now: context.date)).monospacedDigit().fontWeight(.semibold)
-                                }
-                            }
-                            HStack {
-                                Button { session.pausedAt == nil ? store.pauseWorkout() : store.resumeWorkout() } label: { Label(session.pausedAt == nil ? "Pause" : "Resume", systemImage: session.pausedAt == nil ? "pause.fill" : "play.fill") }
-                                Spacer()
-                                Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus") }
-                            }
                         }
                         ForEach(session.exercises) { exercise in
                             let isExpanded = (expandedExerciseID ?? focusedExerciseID) == exercise.id
@@ -597,6 +598,28 @@ struct ActiveWorkoutScreen: View {
                                     }
                                 }
                             }
+                        }
+                        Section {
+                            HStack {
+                                Label("\(session.exercises.flatMap(\.sets).filter(\.completed).count) / \(session.exercises.flatMap(\.sets).count) sets", systemImage: "checkmark.circle.fill")
+                                Spacer()
+                                TimelineView(.periodic(from: .now, by: 1)) { context in
+                                    Text(elapsed(session, now: context.date)).monospacedDigit().fontWeight(.semibold)
+                                }
+                            }
+                            HStack {
+                                Button { session.pausedAt == nil ? store.pauseWorkout() : store.resumeWorkout() } label: { Label(session.pausedAt == nil ? "Pause" : "Resume", systemImage: session.pausedAt == nil ? "pause.fill" : "play.fill") }
+                                Spacer()
+                                Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus") }
+                            }
+                        }
+                        Section("Workout notes") {
+                            TextField("Notes for this workout", text: Binding(
+                                get: { session.notes },
+                                set: { store.updateWorkoutNotes($0) }
+                            ), axis: .vertical)
+                                .lineLimit(2...5)
+                                .accessibilityIdentifier("active-workout-notes")
                         }
                         Section {
                             Button("Discard workout", role: .destructive) { showDiscardConfirmation = true }
