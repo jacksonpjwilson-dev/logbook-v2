@@ -159,9 +159,15 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     func testDefaultTrainingHomeShowsSplitTilesAndNavigableWorkoutCalendar() throws {
-        let app = launchApp()
+        // This isolated fixture contains eight real synthetic plan records so the
+        // screenshot exercises every tile in the approved 2-column × 4-row grid.
+        let app = launchApp(trainingSplitCount: 8)
         app.buttons["Training page"].tap()
 
+        let allSplitTiles = (1...8).map { app.buttons["training-split-workout-\($0)"] }
+        for tile in allSplitTiles {
+            XCTAssertTrue(tile.waitForExistence(timeout: 5), "All eight synthetic workout tiles should render in the full split candidate")
+        }
         let firstWorkout = app.buttons["training-split-workout-1"]
         XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5), "The split widget must show a tappable numbered workout tile")
         XCTAssertGreaterThanOrEqual(firstWorkout.frame.height, 27, "Split rows should use the available four-row grid height")
@@ -382,10 +388,11 @@ final class DailyHomeUITests: XCTestCase {
         field.typeText(value)
     }
 
-    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false) -> XCUIApplication {
+    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         if progressionHistory { app.launchArguments.append("--qa-progression-history") }
+        if trainingSplitCount == 8 { app.launchArguments.append("--qa-training-split-eight") }
         app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
         app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()

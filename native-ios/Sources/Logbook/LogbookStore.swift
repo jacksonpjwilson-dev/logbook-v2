@@ -87,6 +87,11 @@ final class LogbookStore: ObservableObject {
         }
         let templateID = UUID(uuidString: "F0D8D0A0-33A2-4E7F-8B0A-318BE1F79F51")!
         let template = WorkoutTemplate(id: templateID, name: "Upper Body", exercises: exercises)
+        let fullSplitNames = ["Upper Body", "Lower Body", "Push", "Pull", "Legs", "Upper Accessory", "Lower Accessory", "Full Body"]
+        let fullSplitFixture = ProcessInfo.processInfo.arguments.contains("--qa-training-split-eight")
+        let qaTemplates = fullSplitFixture
+            ? [template] + fullSplitNames.dropFirst().map { WorkoutTemplate(name: $0, exercises: exercises) }
+            : [template]
         let supplementID = UUID(uuidString: "D1B2B4F8-9B2A-493C-B60E-41E3587799A8")!
         let supplement = Supplement(id: supplementID, name: "Creatine", schedule: "daily")
         var sleepLogs: [SleepLog] = []
@@ -105,9 +110,9 @@ final class LogbookStore: ObservableObject {
         guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return }
         let finished = calendar.date(bySettingHour: 16, minute: 20, second: 0, of: yesterday) ?? yesterday
         var fixture = state
-        fixture.training.templates = [template]
+        fixture.training.templates = qaTemplates
         fixture.training.rotationIndex = 0
-        let qaProgram = WorkoutProgram(name: "QA Program", templateIDs: [templateID], rotationIndex: 0)
+        let qaProgram = WorkoutProgram(name: "QA Program", templateIDs: qaTemplates.map(\.id), rotationIndex: 0)
         fixture.training.programs = [qaProgram]
         fixture.training.activeProgramID = qaProgram.id
         let progressionSets = [WorkoutSet(weightKg: 60, reps: 8, completed: true)]
