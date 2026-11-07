@@ -107,6 +107,9 @@ final class LogbookStore: ObservableObject {
         var fixture = state
         fixture.training.templates = [template]
         fixture.training.rotationIndex = 0
+        let qaProgram = WorkoutProgram(name: "QA Program", templateIDs: [templateID], rotationIndex: 0)
+        fixture.training.programs = [qaProgram]
+        fixture.training.activeProgramID = qaProgram.id
         fixture.training.completedSessions = [WorkoutSession(
                 templateID: templateID,
                 templateName: template.name,
