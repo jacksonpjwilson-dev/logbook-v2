@@ -147,7 +147,7 @@ final class DailyHomeUITests: XCTestCase {
         }
         XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before pausing")
         app.buttons["rest-pause"].tap()
-        XCTAssertTrue(app.buttons["rest-resume"].exists, "Pausing should expose the resume action")
+        XCTAssertTrue(app.buttons["rest-resume"].waitForExistence(timeout: 5), "Pausing should expose the resume action")
         let pausedRemaining = restTimer.label
         app.terminate()
         app.launch()
@@ -161,7 +161,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(recoveredTimer.waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
         XCTAssertEqual(recoveredTimer.label, pausedRemaining, "The paused remaining time must survive app termination")
         let resumeTimer = app.buttons["rest-resume"]
-        XCTAssertTrue(resumeTimer.exists, "The recovered timer should preserve its paused state")
+        XCTAssertTrue(resumeTimer.waitForExistence(timeout: 5), "The recovered timer should preserve its paused state")
         resumeTimer.tap()
         XCTAssertTrue(app.buttons["rest-pause"].waitForExistence(timeout: 5), "The recovered timer should resume into its running state")
         XCTAssertNotEqual(recoveredTimer.label, "Ready", "The recovered timer should continue running after resume")
@@ -365,7 +365,15 @@ final class DailyHomeUITests: XCTestCase {
         replaceText(in: historyReps, with: "8")
         let completionToggles = app.buttons.matching(identifier: "history-set-complete")
         completionToggles.firstMatch.tap()
-        XCTAssertTrue(completionToggles.firstMatch.label.localizedCaseInsensitiveContains("incomplete"), "Historical set completion should update immediately")
+        let historicalCompletionUpdated = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "label CONTAINS[cd] %@", "incomplete"),
+            object: completionToggles.firstMatch
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [historicalCompletionUpdated], timeout: 5),
+            .completed,
+            "Historical set completion should update after the store publishes its edit"
+        )
         let notes = app.textFields["history-workout-notes"]
         XCTAssertTrue(notes.exists)
         notes.tap()
