@@ -128,6 +128,7 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(timerWeight, in: app)
         replaceText(in: timerWeight, with: "40")
         dismissKeyboard(in: app)
+        attachScreenshot(of: app, named: "Training-Active-Workout-Set-Entry-Candidate")
         let completeFirstSet = app.buttons.matching(identifier: "Mark set complete").firstMatch
         XCTAssertTrue(completeFirstSet.waitForExistence(timeout: 5), "A planned set should be available to start its configured rest timer")
         completeFirstSet.tap()
