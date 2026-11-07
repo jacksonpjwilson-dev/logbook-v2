@@ -280,6 +280,57 @@ struct ActiveWorkoutScreen: View {
                                 Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus") }
                             }
                         }
+                        Section {
+                            TimelineView(.periodic(from: .now, by: 1)) { context in
+                                let timer = session.restTimer ?? WorkoutRestTimer()
+                                let remaining = timer.remainingSeconds(at: context.date)
+                                VStack(alignment: .leading, spacing: 9) {
+                                    HStack(alignment: .firstTextBaseline) {
+                                        Label("Rest timer", systemImage: "timer")
+                                            .font(.subheadline.weight(.semibold))
+                                        Spacer()
+                                        Text(remaining > 0 ? restTime(remaining) : "Ready")
+                                            .font(.system(.title3, design: .rounded, weight: .semibold).monospacedDigit())
+                                            .accessibilityIdentifier("rest-timer-value")
+                                    }
+                                    ProgressView(value: timer.baseDurationSeconds > 0
+                                        ? Double(min(timer.baseDurationSeconds, remaining)) / Double(timer.baseDurationSeconds)
+                                        : 0)
+                                        .tint(Color.blue)
+                                    HStack(spacing: 8) {
+                                        if timer.isPaused {
+                                            Button { store.resumeRestTimer() } label: { Label("Resume", systemImage: "play.fill") }
+                                                .accessibilityIdentifier("rest-resume")
+                                        } else {
+                                            Button { store.pauseRestTimer() } label: { Label("Pause", systemImage: "pause.fill") }
+                                                .disabled(remaining == 0)
+                                                .accessibilityIdentifier("rest-pause")
+                                        }
+                                        Button("+15 sec") { store.addFifteenSecondsToRestTimer() }
+                                            .accessibilityIdentifier("rest-add-15")
+                                        Button("Skip") { store.skipRestTimer() }
+                                            .disabled(remaining == 0)
+                                            .accessibilityIdentifier("rest-skip")
+                                        Spacer(minLength: 0)
+                                        Menu("\(timer.baseDurationSeconds)s") {
+                                            ForEach([60, 90, 120, 150, 180], id: \.self) { seconds in
+                                                Button("\(seconds) seconds") { store.setWorkoutRestDuration(seconds) }
+                                            }
+                                        }
+                                        .accessibilityLabel("Default rest duration, \(timer.baseDurationSeconds) seconds")
+                                        .accessibilityIdentifier("rest-duration-menu")
+                                    }
+                                    .font(.caption.weight(.medium))
+                                }
+                                .padding(12)
+                                .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            }
+                            .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
+                            .listRowBackground(Color.clear)
+                            .listRowSeparator(.hidden)
+                        } header: {
+                            Text("Rest")
+                        }
                         ForEach(session.exercises) { exercise in
                             Section {
                                 ForEach(exercise.sets) { set in
@@ -295,18 +346,17 @@ struct ActiveWorkoutScreen: View {
                             }
                         }
                         Section {
-                            Button {
-                                let result = store.finishWorkout(confirmIncomplete: false)
-                                if result == -1 { dismiss() }
-                                else if result > 0 { incompleteCount = result; showFinishConfirmation = true }
-                            } label: {
-                                Label("Finish & Save", systemImage: "checkmark.circle.fill").frame(maxWidth: .infinity, alignment: .center)
-                            }
-                            .font(.headline)
                             Button("Discard workout", role: .destructive) { showDiscardConfirmation = true }
                                 .frame(maxWidth: .infinity, alignment: .center)
                         } footer: {
                             Text("The full plan is saved, including unfinished sets. Only completed sets count toward workout statistics.")
+                        }
+                    }
+                    .safeAreaInset(edge: .bottom, spacing: 0) {
+                        ActiveWorkoutSummaryBar(session: session) {
+                            let result = store.finishWorkout(confirmIncomplete: false)
+                            if result == -1 { dismiss() }
+                            else if result > 0 { incompleteCount = result; showFinishConfirmation = true }
                         }
                     }
                     .navigationTitle(session.templateName)
@@ -336,6 +386,50 @@ struct ActiveWorkoutScreen: View {
         let end = session.pausedAt ?? now
         let seconds = max(0, Int(end.timeIntervalSince(session.startedAt) - session.pausedSeconds))
         return String(format: "%02d:%02d", seconds / 60, seconds % 60)
+    }
+
+    private func restTime(_ seconds: Int) -> String {
+        String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+}
+
+private struct ActiveWorkoutSummaryBar: View {
+    let session: WorkoutSession
+    let finish: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 1)) { context in
+            let sets = session.exercises.flatMap(\.sets)
+            let completed = sets.filter(\.completed)
+            let wallElapsed = max(0, context.date.timeIntervalSince(session.startedAt))
+            let pausedNow = session.pausedAt.map { max(0, context.date.timeIntervalSince($0)) } ?? 0
+            let activeSeconds = max(0, Int(wallElapsed - session.pausedSeconds - pausedNow))
+            let volume = completed.reduce(0.0) { total, set in
+                total + ((set.weightKg ?? 0) * Double(set.reps))
+            }
+            HStack(spacing: 12) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Active \(String(format: "%d:%02d", activeSeconds / 60, activeSeconds % 60))")
+                        .font(.caption.weight(.semibold).monospacedDigit())
+                    Text("\(completed.count)/\(sets.count) sets · \(Int(volume)) kg")
+                        .font(.caption2).foregroundStyle(.secondary).lineLimit(1)
+                }
+                Spacer(minLength: 4)
+                Button(action: finish) {
+                    Label("Finish & Save", systemImage: "checkmark.circle.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .padding(.horizontal, 13)
+                        .padding(.vertical, 10)
+                }
+                .buttonStyle(.borderedProminent)
+                .accessibilityIdentifier("finish-workout")
+            }
+            .padding(.horizontal, 16)
+            .padding(.top, 9)
+            .padding(.bottom, 8)
+            .background(.regularMaterial)
+            .overlay(alignment: .top) { Rectangle().fill(.quaternary).frame(height: 0.5) }
+        }
     }
 }
 
