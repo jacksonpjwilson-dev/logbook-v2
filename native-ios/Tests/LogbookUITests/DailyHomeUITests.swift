@@ -145,7 +145,10 @@ final class DailyHomeUITests: XCTestCase {
         for _ in 0..<8 {
             addTime.tap()
         }
-        XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before termination")
+        XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before pausing")
+        app.buttons["rest-pause"].tap()
+        XCTAssertTrue(app.buttons["rest-resume"].exists, "Pausing should expose the resume action")
+        let pausedRemaining = restTimer.label
         app.terminate()
         app.launch()
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 10), "The app should reopen to Home after termination")
@@ -156,7 +159,12 @@ final class DailyHomeUITests: XCTestCase {
         resumeWorkout.tap()
         let recoveredTimer = app.descendants(matching: .any)["rest-timer-value"]
         XCTAssertTrue(recoveredTimer.waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
-        XCTAssertNotEqual(recoveredTimer.label, "Ready", "The running rest timer must recover after app termination")
+        XCTAssertEqual(recoveredTimer.label, pausedRemaining, "The paused remaining time must survive app termination")
+        let resumeTimer = app.buttons["rest-resume"]
+        XCTAssertTrue(resumeTimer.exists, "The recovered timer should preserve its paused state")
+        resumeTimer.tap()
+        XCTAssertTrue(app.buttons["rest-pause"].waitForExistence(timeout: 5), "The recovered timer should resume into its running state")
+        XCTAssertNotEqual(recoveredTimer.label, "Ready", "The recovered timer should continue running after resume")
     }
 
     func testDefaultTrainingHomeShowsSplitTilesAndNavigableWorkoutCalendar() throws {
