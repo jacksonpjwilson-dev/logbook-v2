@@ -1,28 +1,45 @@
 # Logbook QA report
 
-## Latest completed run
+## Last fully green baseline
 
 **Run:** [Daily Home QA #42](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800)  
-**Tested source commit:** `85783dac2f65767e4d762064df46b9d81cda8c35`  
-**Result:** Build and tests passed on iPhone 16 and iPhone SE (3rd generation). Each ran 33 unit tests and 4 UI tests: **37 passed, 0 failed, 0 skipped**.
+**Tested app-source commit:** `85783dac2f65767e4d762064df46b9d81cda8c35`  
+**Result:** iPhone 16 and iPhone SE (3rd generation), iOS 18.5, each passed 33 unit + 4 UI tests: **37 passed, 0 failed, 0 skipped**. The iPhone 18 Pro step was skipped and remains **untested**.
 
-- [iPhone 16 screenshot and test artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13584290732)
-- [iPhone SE screenshot and test artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583373258)
-- [iPhone 18 Pro availability report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583483232) — simulator unavailable; test step skipped, **untested**.
+## Latest completed Training UI attempt
 
-The active-workout UI test starts a workout, starts the rest timer, terminates and relaunches the app, resumes the saved workout and confirms the timer remains active. Run #41 had exposed a stale “Ready” label in the top timer card; the fix is in commit `85783da` and passed on both available devices in #42.
+**Run:** [Daily Home QA #66](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418581935)  
+**Commit:** `7492512db7cb1085c90ccee193d376289561f781`  
+**Build:** succeeded on iPhone 16 and SE.  
+**Unit tests:** 34 passed, 0 failed on each device.  
+**UI tests:** 7 cases per device:
+- iPhone 16: 4 passed, 3 failed — timer Pause/Resume UI state, history completion-label assertion, and drag-reorder assertion.
+- iPhone SE: 3 passed, 4 failed — three set-entry queries did not find fields in the then-current collapsed exercise UI, plus planned-exercise control discovery.
+- iPhone 18 Pro: skipped; **untested**.
 
-## What the workflow verifies
+The test logs showed progression-suggestion acceptance passing on iPhone 16 in runs #65 and #66. Run #65 also passed split reorder, search and custom exercise creation on iPhone 16, though the full run failed. Run #66 demonstrates that UI test coverage is active but not yet reliable/green.
 
-The four Home pages and fixed widget geometry, Daily widget navigation, Training Split and calendar navigation, and active-workout timer/session recovery. The artifacts contain actual simulator PNGs and test logs. Screenshots remain candidates for human review; the workflow never approves or overwrites a baseline.
+Current source/test fixes are on branch head `5fa556da6da8775d26bffeb5c56cf899f6fd035b`; their simulator run #71 is queued. Do not call these fixes verified until run #71 finishes. The last fully green app-source baseline therefore remains #42.
 
-Run #26 failed compilation before tests (0 tests ran). Runs #39 and #42 passed all 37 tests on both available devices. See `TRAINING_PHASE2.md` for detailed implementation coverage, measurements and remaining UI tests.
+## Screenshot candidates
 
-## Open work
+All captures are real simulator screenshots with synthetic QA data. None are approved baselines:
+- [Run #65 iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418302117/artifacts/13593435114)
+- [Run #65 iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418302117/artifacts/13592459439)
+- [Run #58 local review gallery](`/workspace/logbook-training-review/index.html`) and [ZIP](`/workspace/logbook-training-review.zip`), containing Daily Home, Training Home with one and eight real fixture workouts, and active-workout initial position. These predate the expanded-first-exercise source fix.
 
-- Full XCUITest workflows for split drag/drop editing, set entry and completion summary, progression acceptance, historical editing and Recently Deleted restoration.
-- Human review of Default-theme and active-workout appearance.
-- iPhone 18 Pro simulator validation and physical-device checks.
-- Food, Sleep, Weight, Supplements, complete History, cloud/authentication and coaching remain outside this Training verification.
+Fresh captures from runs #69–#71 are pending. Keep the exact run, device and commit attached to every screenshot.
 
-No theme or screenshot baseline has been approved or replaced.
+## Scope and open work
+
+- Finish iPhone 16 and SE end-to-end UI checks for drag/drop, exercise selection/prescription, set entry, timer pause/resume, progression, completion summary, historical editing and Recently Deleted recovery.
+- Capture fresh screenshots of Daily Home, Training Home, active workout set entry and summary/history screens.
+- Visually review Default against source art; no screenshot baseline or visual approval has been granted.
+- The Training Split screenshot with one actual workout has empty unused positions by design under master spec §2.3. The 8-workout synthetic screenshot fills all eight positions. Do not add fabricated workout tiles.
+- iPhone 18 Pro simulator, physical iPhone/Watch, full visual/theme acceptance, non-Training workflows, authentication/coaching/cloud behavior remain unverified or incomplete.
+
+## Automated workflow history
+
+Runs #63–#66 expose the recent UI issues; runs #67–#71 contain sequential accessibility, expanded-exercise, timer, history and test-selector corrections. At the time of this update #67–#68 were active and #69–#71 queued. See [all workflow runs](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/workflows/daily-home-qa.yml).
+
+No HealthKit access, production data/configuration change, main-branch edit, theme redesign or screenshot-baseline approval occurred.

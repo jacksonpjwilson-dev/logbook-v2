@@ -2,13 +2,13 @@
 
 Source: `native-ios/QA/REQUIREMENTS_TRACEABILITY.csv`; requirements counted: **61**.
 
-This is a count of tracker rows, not a completion percentage. `VERIFIED` reflects only evidence that meets the individual row's acceptance criteria; visual approval is tracked separately.
+This is a count of tracker rows, not a completion percentage. `VERIFIED` requires requirement-specific evidence; visual approval is tracked separately.
 
 | Status | Requirements |
 |---|---:|
 | VERIFIED | 0 |
-| IMPLEMENTED — UNVERIFIED | 18 |
-| IN PROGRESS | 20 |
+| IMPLEMENTED — UNVERIFIED | 12 |
+| IN PROGRESS | 26 |
 | NOT STARTED | 21 |
 | BLOCKED | 2 |
 
@@ -18,13 +18,13 @@ This is a count of tracker rows, not a completion percentage. `VERIFIED` reflect
 |---|---:|---:|---:|---:|---:|---:|
 | Accounts / Authentication | 3 | 0 | 0 | 0 | 3 | 0 |
 | Coaching | 9 | 0 | 0 | 0 | 9 | 0 |
-| Data safety / persistence | 5 | 0 | 0 | 2 | 3 | 0 |
-| Food / Nutrition | 7 | 0 | 0 | 4 | 3 | 0 |
+| Data safety / persistence | 5 | 0 | 2 | 0 | 3 | 0 |
+| Food / Nutrition | 7 | 0 | 4 | 0 | 3 | 0 |
 | Home / Visuals | 9 | 0 | 5 | 4 | 0 | 0 |
 | Native Apple integrations | 5 | 0 | 0 | 3 | 1 | 1 |
 | Quality / Release | 2 | 0 | 0 | 1 | 0 | 1 |
 | Settings / UX | 3 | 0 | 0 | 2 | 1 | 0 |
 | Sleep / Weight / Supplements / Habits | 5 | 0 | 0 | 4 | 1 | 0 |
-| Training | 13 | 0 | 13 | 0 | 0 | 0 |
+| Training | 13 | 0 | 1 | 12 | 0 | 0 |
 
-The tracker contains **no VERIFIED rows** yet because current evidence does not cover every acceptance criterion in its rows. The test suite has passed on two simulator devices, but it does not verify the whole specification. Human visual acceptance is pending. Inspect row-level evidence and next actions before planning; never infer a completion percentage from counts.
+The tracker contains no VERIFIED rows: the available tests do not cover each row’s complete acceptance criteria, and Default visual approval is pending. The latest full UI run (#66) failed; targeted follow-up commits are not verified until runs #69–#71 finish. See row-level evidence and next actions before planning.

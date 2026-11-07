@@ -1,5 +1,19 @@
 # Logbook v2 handoff audit and Default gate
 
+## Current Training UI verification — 2026-11-07
+
+The current UI workflow milestone is not green. Branch `codex/default-theme-gate1` retains run #42 (`85783dac2f65767e4d762064df46b9d81cda8c35`) as the last fully green app-source baseline. Run #66 (`7492512db7cb1085c90ccee193d376289561f781`) compiled and passed 34 unit tests on iPhone 16 and SE but failed UI cases on both. iPhone 18 Pro remains skipped/untested. See the current test-by-test record in [REPORT.md](REPORT.md) and [TRAINING_PHASE2.md](TRAINING_PHASE2.md).
+
+Runs #65–#66 verified some flows partially on iPhone 16: the split editor reorder/search/custom exercise workflow and explicit progression acceptance each passed in one run; subsequent full-run failures show the drag assertion is intermittent. Completion-summary UI opened, but historical completion assertion used an incorrect expected label. Timer pause state and small-device set-entry access remain unresolved in those runs.
+
+Commits `8e20443`, `33e5356` and `5fa556d` contain targeted UI-state and test-selector corrections. The current source head is not considered verified until the queued simulator run completes. Home exterior geometry and the approved theme catalogue were not changed.
+
+The Training Split’s empty unused positions when the synthetic program has one real workout match master spec §2.3 (“for fewer than 8 items, leave room rather than fabricating tiles”). The 8-workout fixture capture fills all eight positions. No invented workout content was added.
+
+No visual baseline was approved. Original binary references remain outside the GitHub repository; see `docs/handoff-v2/themes/REFERENCE_INDEX.md` for the exact 26 filenames and target folders. HealthKit remains disabled, and no production configuration or main branch changed.
+
+---
+
 ## Latest Training Phase 2 audit — 2026-11-07
 
 **Branch:** `codex/default-theme-gate1`  
