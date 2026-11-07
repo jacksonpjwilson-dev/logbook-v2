@@ -124,9 +124,16 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
-        app.buttons["rest-add-15"].tap()
-        app.buttons["rest-add-15"].tap()
-        XCTAssertNotEqual(restTimer.label, "Ready", "The timer can be running before closing the app")
+        for _ in 0..<2 {
+            let addTime = app.buttons["rest-add-15"]
+            XCTAssertTrue(addTime.isHittable, "The timer extension control should be interactive")
+            addTime.tap()
+            let timerStarted = XCTNSPredicateExpectation(
+                predicate: NSPredicate(format: "label != %@", "Ready"),
+                object: restTimer
+            )
+            XCTAssertEqual(XCTWaiter.wait(for: [timerStarted], timeout: 5), .completed, "The visible timer should update before testing recovery")
+        }
         app.terminate()
         app.launch()
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 10), "The app should reopen to Home after termination")
