@@ -403,7 +403,9 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
 
 struct WorkoutRestTimer: Codable, Hashable {
     var baseDurationSeconds = 90
+    var activeDurationSeconds: Int?
     var endsAt: Date?
+    var currentDurationSeconds: Int { activeDurationSeconds ?? baseDurationSeconds }
     var pausedRemainingSeconds: Int?
 
     var isPaused: Bool { pausedRemainingSeconds != nil }
@@ -418,6 +420,7 @@ struct WorkoutRestTimer: Codable, Hashable {
 
     mutating func start(seconds: Int? = nil, at date: Date = .now) {
         let duration = min(600, max(0, seconds ?? baseDurationSeconds))
+        activeDurationSeconds = duration
         endsAt = date.addingTimeInterval(TimeInterval(duration))
         pausedRemainingSeconds = nil
     }
@@ -435,6 +438,7 @@ struct WorkoutRestTimer: Codable, Hashable {
     }
 
     mutating func addFifteenSeconds(at date: Date = .now) {
+        activeDurationSeconds = min(600, currentDurationSeconds + 15)
         if let pausedRemainingSeconds {
             self.pausedRemainingSeconds = min(600, pausedRemainingSeconds + 15)
         } else {
