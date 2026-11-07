@@ -466,14 +466,16 @@ struct ActiveWorkoutScreen: View {
                                         : 0)
                                         .tint(Color.blue)
                                     HStack(spacing: 8) {
-                                        if timer.isPaused {
-                                            Button { store.resumeRestTimer() } label: { Label("Resume", systemImage: "play.fill") }
-                                                .accessibilityIdentifier("rest-resume")
-                                        } else {
-                                            Button { store.pauseRestTimer() } label: { Label("Pause", systemImage: "pause.fill") }
-                                                .disabled(remaining == 0)
-                                                .accessibilityIdentifier("rest-pause")
+                                        Button {
+                                            if timer.isPaused { store.resumeRestTimer() }
+                                            else { store.pauseRestTimer() }
+                                        } label: {
+                                            Label(timer.isPaused ? "Resume" : "Pause",
+                                                  systemImage: timer.isPaused ? "play.fill" : "pause.fill")
                                         }
+                                        .disabled(!timer.isPaused && remaining == 0)
+                                        .accessibilityIdentifier("rest-toggle")
+                                        .accessibilityValue(timer.isPaused ? "Paused" : "Running")
                                         Button("+15 sec") { store.addFifteenSecondsToRestTimer() }
                                             .accessibilityIdentifier("rest-add-15")
                                         Button("Skip") { store.skipRestTimer() }

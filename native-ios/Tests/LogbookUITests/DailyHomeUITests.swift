@@ -151,8 +151,14 @@ final class DailyHomeUITests: XCTestCase {
             addTime.tap()
         }
         XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before pausing")
-        app.buttons["rest-pause"].tap()
-        XCTAssertTrue(app.buttons["rest-resume"].waitForExistence(timeout: 5), "Pausing should expose the resume action")
+        let timerToggle = app.buttons["rest-toggle"]
+        XCTAssertTrue(timerToggle.waitForExistence(timeout: 5), "The rest timer needs one stable pause/resume control")
+        timerToggle.tap()
+        let timerPaused = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Paused"),
+            object: timerToggle
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should preserve the timer and expose its paused state")
         let pausedRemaining = restTimer.label
         app.terminate()
         app.launch()
@@ -165,10 +171,15 @@ final class DailyHomeUITests: XCTestCase {
         let recoveredTimer = app.descendants(matching: .any)["rest-timer-value"]
         XCTAssertTrue(recoveredTimer.waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
         XCTAssertEqual(recoveredTimer.label, pausedRemaining, "The paused remaining time must survive app termination")
-        let resumeTimer = app.buttons["rest-resume"]
+        let resumeTimer = app.buttons["rest-toggle"]
         XCTAssertTrue(resumeTimer.waitForExistence(timeout: 5), "The recovered timer should preserve its paused state")
+        XCTAssertEqual(resumeTimer.value as? String, "Paused")
         resumeTimer.tap()
-        XCTAssertTrue(app.buttons["rest-pause"].waitForExistence(timeout: 5), "The recovered timer should resume into its running state")
+        let timerRunning = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "Running"),
+            object: resumeTimer
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume into its running state")
         XCTAssertNotEqual(recoveredTimer.label, "Ready", "The recovered timer should continue running after resume")
     }
 
@@ -403,7 +414,7 @@ final class DailyHomeUITests: XCTestCase {
         let completionToggles = app.buttons.matching(identifier: "history-set-complete")
         completionToggles.firstMatch.tap()
         let historicalCompletionUpdated = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label CONTAINS[cd] %@", "incomplete"),
+            predicate: NSPredicate(format: "label == %@", "Mark set complete"),
             object: completionToggles.firstMatch
         )
         XCTAssertEqual(
