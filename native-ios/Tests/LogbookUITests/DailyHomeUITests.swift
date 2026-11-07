@@ -318,7 +318,11 @@ final class DailyHomeUITests: XCTestCase {
 
         let finish = app.buttons["finish-workout"]
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
-        finish.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let firstWeight = app.textFields["Weight in kilograms"].firstMatch
+        scrollToElement(firstWeight, in: app)
+        replaceText(in: firstWeight, with: "40")
+        dismissKeyboard(in: app)
+        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
         let saveButtons = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save"))
         XCTAssertTrue(saveButtons.count > 0, "Unfinished planned sets should require explicit save confirmation")
         let confirmSave = app.buttons["confirm-finish-workout"]
@@ -335,8 +339,10 @@ final class DailyHomeUITests: XCTestCase {
 
         app.buttons["History tab"].tap()
         let historyRows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-workout-"))
-        XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History")
-        for _ in 0..<5 where !historyRows.firstMatch.isHittable { app.swipeUp() }
+        let historyList = app.collectionViews.firstMatch
+        for _ in 0..<12 where !historyRows.firstMatch.exists { historyList.swipeUp() }
+        XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
+        for _ in 0..<5 where !historyRows.firstMatch.isHittable { historyList.swipeUp() }
         XCTAssertTrue(historyRows.firstMatch.isHittable)
         historyRows.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
@@ -367,7 +373,10 @@ final class DailyHomeUITests: XCTestCase {
 
     private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
         let list = app.collectionViews.firstMatch
-        for _ in 0..<8 where !element.isHittable {
+        let pinnedFooter = app.buttons["finish-workout"]
+        for _ in 0..<10 {
+            let aboveFooter = !pinnedFooter.exists || element.frame.maxY < pinnedFooter.frame.minY - 8
+            if element.isHittable && aboveFooter { return }
             if towardTop { list.swipeDown() } else { list.swipeUp() }
         }
     }

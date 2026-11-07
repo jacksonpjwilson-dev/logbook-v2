@@ -13,16 +13,25 @@ final class LogbookStore: ObservableObject {
     private let repository: LogbookRepository
     private(set) var canEdit = true
 
+    private static func bundledJSON(named name: String) -> URL? {
+        Bundle.main.url(forResource: name, withExtension: "json")
+            ?? Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Resources")
+    }
+
     init(repository: LogbookRepository = .shared) {
         self.repository = repository
         do {
             var loaded = try repository.load()
-            if loaded.training.exercises.isEmpty, let url = Bundle.main.url(forResource: "exercise-catalog", withExtension: "json"),
-               let data = try? Data(contentsOf: url), let catalogue = try? JSONDecoder().decode([ExerciseDefinition].self, from: data) {
+            if loaded.training.exercises.isEmpty,
+               let url = Self.bundledJSON(named: "exercise-catalog"),
+               let data = try? Data(contentsOf: url),
+               let catalogue = try? JSONDecoder().decode([ExerciseDefinition].self, from: data) {
                 loaded.training.exercises = catalogue
             }
-            if loaded.nutrition.foods.isEmpty, let url = Bundle.main.url(forResource: "food-catalog", withExtension: "json"),
-               let data = try? Data(contentsOf: url), let foods = try? JSONDecoder().decode([FoodDefinition].self, from: data) {
+            if loaded.nutrition.foods.isEmpty,
+               let url = Self.bundledJSON(named: "food-catalog"),
+               let data = try? Data(contentsOf: url),
+               let foods = try? JSONDecoder().decode([FoodDefinition].self, from: data) {
                 loaded.nutrition.foods = foods
             }
             let migratedDailyLayout = loaded.home.migrateUntouchedDailyLayout()

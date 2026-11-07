@@ -3,6 +3,12 @@ import XCTest
 
 @MainActor
 final class LogbookStoreTests: XCTestCase {
+    func testBundledExerciseAndFoodCatalogsLoadForAnEmptyRepository() {
+        let store = LogbookStore(repository: temporaryRepository())
+        XCTAssertTrue(store.state.training.exercises.contains { $0.id == "builtin-2" && $0.name == "Flat barbell bench press" })
+        XCTAssertFalse(store.state.nutrition.foods.isEmpty)
+    }
+
     func testFoodAdditionRequiresQuantityConfirmationAndPersistsSnapshot() throws {
         let repository = temporaryRepository()
         let store = LogbookStore(repository: repository)
