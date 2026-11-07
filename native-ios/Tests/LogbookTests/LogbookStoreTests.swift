@@ -51,6 +51,82 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(saved.exercises.first?.sets.first?.completed, true)
     }
 
+    func testRestTimerPauseExtensionResumeAndSkipUseAbsoluteTime() {
+        let start = Date(timeIntervalSince1970: 10_000)
+        var timer = WorkoutRestTimer()
+        XCTAssertEqual(timer.remainingSeconds(at: start), 0)
+
+        timer.start(at: start)
+        XCTAssertEqual(timer.remainingSeconds(at: start), 90)
+        XCTAssertEqual(timer.remainingSeconds(at: start.addingTimeInterval(20)), 70)
+
+        timer.pause(at: start.addingTimeInterval(20))
+        XCTAssertTrue(timer.isPaused)
+        XCTAssertEqual(timer.remainingSeconds(at: start.addingTimeInterval(60)), 70)
+        timer.addFifteenSeconds(at: start.addingTimeInterval(60))
+        XCTAssertEqual(timer.remainingSeconds(at: start.addingTimeInterval(60)), 85)
+
+        timer.resume(at: start.addingTimeInterval(120))
+        XCTAssertFalse(timer.isPaused)
+        XCTAssertEqual(timer.remainingSeconds(at: start.addingTimeInterval(120)), 85)
+        timer.skip(at: start.addingTimeInterval(121))
+        XCTAssertEqual(timer.remainingSeconds(at: start.addingTimeInterval(121)), 0)
+        XCTAssertEqual(timer.remainingSeconds(at: start.addingTimeInterval(180)), 0)
+    }
+
+    func testSupersetRestBeginsOnlyAfterEveryExerciseCompletesTheRound() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let group = UUID()
+        var first = PlannedExercise(exerciseID: "test-a", name: "Press", muscle: "Chest", equipment: "Barbell", sets: [PlannedSet()])
+        first.supersetID = group
+        var second = PlannedExercise(exerciseID: "test-b", name: "Row", muscle: "Back", equipment: "Cable", sets: [PlannedSet()])
+        second.supersetID = group
+        let template = WorkoutTemplate(name: "A/B", exercises: [first, second])
+        store.startWorkout(template)
+        let active = try XCTUnwrap(store.state.training.activeSession)
+        let press = try XCTUnwrap(active.exercises.first)
+        let row = try XCTUnwrap(active.exercises.last)
+
+        store.updateSet(exerciseID: press.id, setID: press.sets[0].id, weightKg: 30, reps: 10)
+        XCTAssertTrue(store.toggleSet(exerciseID: press.id, setID: press.sets[0].id))
+        XCTAssertNil(store.state.training.activeSession?.restTimer?.endsAt, "Do not rest between exercises within a superset round")
+
+        store.updateSet(exerciseID: row.id, setID: row.sets[0].id, weightKg: 30, reps: 10)
+        XCTAssertTrue(store.toggleSet(exerciseID: row.id, setID: row.sets[0].id))
+        XCTAssertGreaterThan(try XCTUnwrap(store.state.training.activeSession?.restTimer?.endsAt), .now)
+    }
+
+    func testOldActiveSessionPayloadDecodesWithoutRestTimerFields() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let templateID = try XCTUnwrap(store.addTemplate(name: "Legacy"))
+        let exercise = ExerciseDefinition(id: "legacy-row", name: "Row", group: "Back", equipment: "Cable")
+        store.appendExercise(exercise, toTemplate: templateID)
+        store.startWorkout(try XCTUnwrap(store.state.training.templates.first))
+
+        let encoded = try JSONEncoder.logbook.encode(store.state)
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        var training = try XCTUnwrap(object["training"] as? [String: Any])
+        var active = try XCTUnwrap(training["activeSession"] as? [String: Any])
+        active.removeValue(forKey: "restTimer")
+        if var exercises = active["exercises"] as? [[String: Any]] {
+            exercises = exercises.map { row in
+                var row = row
+                row.removeValue(forKey: "restSeconds")
+                return row
+            }
+            active["exercises"] = exercises
+        }
+        training["activeSession"] = active
+        object["training"] = training
+        let legacyPayload = try JSONSerialization.data(withJSONObject: object)
+
+        let reopened = try JSONDecoder.logbook.decode(LogbookState.self, from: legacyPayload)
+        XCTAssertNil(reopened.training.activeSession?.restTimer)
+        XCTAssertNil(reopened.training.activeSession?.exercises.first?.restSeconds)
+    }
+
     func testApprovedThemeAndWidgetInventoryCounts() {
         XCTAssertEqual(LogbookTheme.allCases.count, 17)
         XCTAssertEqual(LogbookTheme.allCases.filter { $0 != .defaultTheme }.count, 16, "Preserve all existing themes while staging v2 Default")
