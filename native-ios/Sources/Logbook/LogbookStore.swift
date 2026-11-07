@@ -289,10 +289,23 @@ final class LogbookStore: ObservableObject {
     }
 
     func resumeRestTimer() {
+        guard state.training.activeSession?.pausedAt == nil else { return }
         transact { state in
+            guard state.training.activeSession?.pausedAt == nil else { return }
             var timer = state.training.activeSession?.restTimer ?? WorkoutRestTimer()
             timer.resume()
             state.training.activeSession?.restTimer = timer
+        }
+    }
+
+    func updateWorkoutNotes(_ notes: String) {
+        transact { $0.training.activeSession?.notes = notes }
+    }
+
+    func updateExerciseNotes(_ notes: String, exerciseID: UUID) {
+        transact { state in
+            guard let index = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+            state.training.activeSession?.exercises[index].notes = notes
         }
     }
 
