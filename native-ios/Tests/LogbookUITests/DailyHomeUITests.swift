@@ -468,7 +468,11 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
-        let list = app.collectionViews.firstMatch
+        // A presented active-workout sheet sits above the Training screen's
+        // collection view. Scrolling firstMatch moves the obscured page behind
+        // the sheet; the last collection view is the visible modal's List.
+        let lists = app.collectionViews
+        let list = lists.element(boundBy: max(0, lists.count - 1))
         let pinnedFooter = app.buttons["finish-workout"]
         for _ in 0..<10 {
             if element.exists {
