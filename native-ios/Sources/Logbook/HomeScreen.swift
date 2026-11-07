@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 12326)
-Total output lines: 941
-
 import SwiftUI
 
 struct HomeScreen: View {
@@ -81,6 +78,7 @@ struct HomeScreen: View {
                 if !isEditing, store.state.training.activeSession != nil {
                     Button { path = [.training] } label: {
                         Label("Resume", systemImage: "play.fill")
+
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.horizontal, 11).padding(.vertical, 8)
                             .background(palette.accentColor.opacity(0.82), in: Capsule())
@@ -161,6 +159,7 @@ struct HomeScreen: View {
             }
         }
         .padding(.vertical, 9)
+
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Home Screen pages")
     }
@@ -241,6 +240,7 @@ private struct HomePageGrid: View {
                             .offset(x: -7, y: 7)
                             .accessibilityLabel("Remove \(widget.kind.title) widget")
                         }
+
                     }
                     .frame(width: width, height: height)
                     .position(
@@ -321,6 +321,7 @@ private struct HomeWidgetCard: View {
         case .meals:
             let count = state.nutrition.logs.filter { $0.date == today }.count
             return ("\(count) food entries", "across \(state.nutrition.meals.count) meals")
+
         case .nextWorkout:
             if let active = state.training.activeSession { return (active.templateName, "Workout in progress · Tap to open Training") }
             let templates = state.training.templates
@@ -401,6 +402,7 @@ private struct HomeWidgetCard: View {
     private var visibleHeaderTitle: String {
         guard state.home.theme == .defaultTheme, widget.size == .small else {
             return widget.variant ?? widget.kind.title.uppercased()
+
         }
         if widget.variant == "Habits Streak" { return "HABITS" }
         if widget.variant == "Daily Check-in" { return "CHECK-IN" }
@@ -448,11 +450,40 @@ private struct HomeWidgetCard: View {
                         .font(.system(size: 9, weight: .medium, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.75)
-           …326 tokens truncated…completedSessions.contains { $0.localDate == day }
+                } else {
+                    Text("Set target").font(.system(size: 9, weight: .medium, design: .rounded))
+                }
+            }
+            .foregroundStyle(palette.textColor)
+            if let goal, goal > 0 {
+                ProgressView(value: min(1, consumed / goal)).tint(color)
+            }
+        }
+    }
+
+    private func macroPill(_ title: String, value: Double, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Capsule().fill(color.opacity(0.9)).frame(height: 4)
+            Text("\(Int(value)) g").font(.system(size: 11, weight: .bold, design: .rounded)).foregroundStyle(palette.textColor)
+            Text(title).font(.system(size: 9, weight: .medium)).foregroundStyle(palette.mutedColor)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func weekStart() -> String {
+        let components = Calendar.current.dateComponents([.yearForWeekOfYear, .weekOfYear], from: .now)
+        return LocalDay.string(Calendar.current.date(from: components) ?? .now)
+    }
+
+    private func hasWorkout(on offset: Int) -> Bool {
+        guard let date = Calendar.current.date(byAdding: .day, value: offset, to: .now) else { return false }
+        let day = LocalDay.string(date)
+        return state.training.completedSessions.contains { $0.localDate == day }
     }
 
     private func weightValue(_ kg: Double) -> Double { state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
 }
+
 
 private struct CaloriesMacroVisual: View {
     let state: LogbookState
@@ -533,6 +564,7 @@ struct ThemeBackdrop: View {
             ZStack {
                 tokens.backgroundBase
                 Image(tokens.backgroundAsset)
+
                     .resizable()
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
@@ -613,6 +645,7 @@ struct HomeEditorScreen: View {
                             .onTapGesture { selectedPageID = page.id }
                             Spacer()
                             if selectedPageID == page.id { Image(systemName: "checkmark.circle.fill").foregroundStyle(.blue) }
+
                         }
                         .contentShape(Rectangle())
                         .onTapGesture { selectedPageID = page.id }
@@ -693,6 +726,7 @@ struct HomeEditorScreen: View {
                 Text("This will move \(tidyMoveCount) widget\(tidyMoveCount == 1 ? "" : "s") to fill open positions. You can undo the layout afterward.")
             }
             .onAppear { selectedPageID = selectedPageID ?? store.state.home.pages.first?.id }
+
         }
     }
 
@@ -773,6 +807,7 @@ struct HomeEditorScreen: View {
 struct WidgetGalleryScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
+
     let pageID: UUID?
     @State private var search = ""
     @State private var family = "All"
@@ -853,6 +888,7 @@ struct WidgetGalleryScreen: View {
     private func add(_ kind: WidgetKind) {
         guard let pageID else { return }
         guard store.addHomeWidget(kind, size: size, pageID: pageID) else {
+
             errorMessage = "This page has no open position for a \(size.title.lowercased()) widget. Choose a smaller size or add another page."
             return
         }
@@ -914,3 +950,4 @@ private struct WidgetSizePreview: View {
         .shadow(color: .black.opacity(selected ? 0.15 : 0.06), radius: 4, x: 0, y: 2)
     }
 }
+
