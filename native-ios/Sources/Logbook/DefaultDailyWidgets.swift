@@ -46,6 +46,7 @@ struct DefaultDailyWidgetView: View {
     private var workoutWidget: some View {
         let workout = nextWorkout
         return GeometryReader { geometry in
+            let compact = geometry.size.width < 245
             DefaultDailyCardSurface(palette: palette) {
                 VStack(spacing: 0) {
                 Button(action: openTraining) {
