@@ -23,7 +23,6 @@ targets:
       - Shared/SharedStateFile.swift
       - Shared/WatchSnapshot.swift
       - Shared/WorkoutActivityAttributes.swift
-    resources:
       - path: Resources/exercise-catalog.json
         buildPhase: resources
       - path: Resources/food-catalog.json
