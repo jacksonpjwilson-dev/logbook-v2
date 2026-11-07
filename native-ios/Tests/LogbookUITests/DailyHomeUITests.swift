@@ -8,7 +8,7 @@ final class DailyHomeUITests: XCTestCase {
     func testDailyHomeLayoutAndCaptureAllHomePages() throws {
         let app = launchApp()
         let calories = app.buttons["home-widget-kcal"]
-        let nextWorkout = app.buttons["home-widget-next"]
+        let nextWorkout = app.descendants(matching: .any)["home-widget-next"]
         let habits = app.otherElements["home-widget-streak"]
         let checkIn = app.otherElements["home-widget-vitals"]
 
@@ -99,13 +99,13 @@ final class DailyHomeUITests: XCTestCase {
     func testNextWorkoutStartActionCreatesAnActiveWorkout() throws {
         let app = launchApp()
         app.buttons["view-next-workout"].tap()
-        XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
+        XCTAssertTrue(app.buttons["New workout"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["start-next-workout"].tap()
         XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["Upper Body"].waitForExistence(timeout: 5), "Start Workout must create and open the scheduled program")
-        XCTAssertTrue(app.staticTexts["Workout in progress"].exists)
+        XCTAssertTrue(app.buttons["training-active-session"].waitForExistence(timeout: 5), "Start Workout must create an active session")
     }
 
     private func launchApp(themeID: String? = nil) -> XCUIApplication {

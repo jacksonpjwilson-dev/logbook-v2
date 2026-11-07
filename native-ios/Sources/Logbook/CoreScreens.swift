@@ -24,6 +24,7 @@ struct TrainingScreen: View {
                         }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("training-active-session")
                 }
             }
 
