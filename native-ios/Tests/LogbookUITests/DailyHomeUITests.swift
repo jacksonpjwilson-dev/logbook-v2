@@ -124,16 +124,18 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
-        let addTime = app.buttons["rest-add-15"]
-        XCTAssertTrue(addTime.isHittable, "The timer extension control should be interactive")
-        addTime.tap()
+        let completeFirstSet = app.buttons.matching(identifier: "Mark set complete").firstMatch
+        XCTAssertTrue(completeFirstSet.waitForExistence(timeout: 5), "A planned set should be available to start its configured rest timer")
+        completeFirstSet.tap()
         let timerStarted = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "label != %@", "Ready"),
             object: restTimer
         )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerStarted], timeout: 5), .completed, "The visible timer should update before testing recovery")
-        // The first +15 starts the timer from Ready. Keep the recovery window long
-        // enough that slower simulator launches cannot consume the whole interval.
+        XCTAssertEqual(XCTWaiter.wait(for: [timerStarted], timeout: 5), .completed, "Completing a set should start its configured rest interval")
+        let addTime = app.buttons["rest-add-15"]
+        XCTAssertTrue(addTime.isHittable, "The timer extension control should be interactive")
+        // The test fixture starts a 90-second exercise rest; extend it to 210 seconds
+        // so simulator relaunch latency cannot turn this recovery test into a timer-expiry test.
         for _ in 0..<8 {
             addTime.tap()
         }
@@ -210,11 +212,11 @@ final class DailyHomeUITests: XCTestCase {
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
-        search.typeText("Bench Press")
+        search.typeText("Flat barbell bench press")
         let result = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "exercise-picker-result-")).firstMatch
-        XCTAssertTrue(result.waitForExistence(timeout: 5), "Search should find the built-in Bench Press exercise")
+        XCTAssertTrue(result.waitForExistence(timeout: 5), "Search should find the catalog's Flat barbell bench press exercise")
         result.tap()
-        XCTAssertTrue(app.staticTexts["Bench Press"].waitForExistence(timeout: 5), "Selecting a search result should persist it in the workout plan")
+        XCTAssertTrue(app.staticTexts["Flat barbell bench press"].waitForExistence(timeout: 5), "Selecting a search result should persist it in the workout plan")
 
         app.buttons["workout-template-add-exercise"].tap()
         app.buttons["exercise-picker-create-custom"].tap()
@@ -245,7 +247,11 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(weight.exists)
         XCTAssertNotEqual(weight.value as? String, "62.5", "Suggested load must not be applied before explicit acceptance")
         suggestion.tap()
-        let accepted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "value == %@", "62.5"), object: weight)
+        let accepted = XCTNSPredicateExpectation(predicate: NSPredicate { object, _ in
+            guard let field = object as? XCUIElement else { return false }
+            if let number = field.value as? NSNumber { return number.doubleValue == 62.5 }
+            return Double(String(describing: field.value ?? "")) == 62.5
+        }, object: weight)
         XCTAssertEqual(XCTWaiter.wait(for: [accepted], timeout: 5), .completed, "Accepting the suggestion should update the session set weights")
         attachScreenshot(of: app, named: "Training-Progression-Acceptance-Candidate")
     }
@@ -261,7 +267,7 @@ final class DailyHomeUITests: XCTestCase {
 
         let finish = app.buttons["finish-workout"]
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
-        finish.tap()
+        finish.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         let saveButtons = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save"))
         XCTAssertTrue(saveButtons.count > 0, "Unfinished planned sets should require explicit save confirmation")
         let confirmSave = saveButtons.element(boundBy: saveButtons.count - 1)
