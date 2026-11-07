@@ -224,6 +224,7 @@ struct WorkoutTemplateScreen: View {
     let templateID: UUID
     @State private var showExercisePicker = false
     @State private var startSession = false
+    @State private var expandedExerciseIDs = Set<UUID>()
     @State private var editingName = false
     @State private var nameDraft = ""
 
@@ -245,7 +246,13 @@ struct WorkoutTemplateScreen: View {
                             Text("Add exercises to make this plan ready to start.").foregroundStyle(.secondary)
                         }
                         ForEach(template.exercises) { exercise in
-                            DisclosureGroup {
+                            DisclosureGroup(isExpanded: Binding(
+                                get: { expandedExerciseIDs.contains(exercise.id) },
+                                set: { isExpanded in
+                                    if isExpanded { expandedExerciseIDs.insert(exercise.id) }
+                                    else { expandedExerciseIDs.remove(exercise.id) }
+                                }
+                            )) {
                                 Picker("Tracking mode", selection: Binding(
                                     get: { exercise.trackingMode ?? .weightAndReps },
                                     set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds, trackingMode: $0) }
@@ -280,6 +287,7 @@ struct WorkoutTemplateScreen: View {
                                 }
                             }
                             .accessibilityIdentifier("planned-exercise-\(exercise.id.uuidString)")
+                            .accessibilityValue(expandedExerciseIDs.contains(exercise.id) ? "Expanded" : "Collapsed")
                             .swipeActions {
                                 Button("Remove", role: .destructive) { store.removeExercise(exercise.id, fromTemplate: templateID) }
                             }

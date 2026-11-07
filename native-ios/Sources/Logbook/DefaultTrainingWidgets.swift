@@ -77,12 +77,23 @@ struct DefaultTrainingWidgetView: View {
                 GeometryReader { geometry in
                     let rowSpacing: CGFloat = 5
                     let cellHeight = max(27, (geometry.size.height - rowSpacing * 3) / 4)
-                    LazyVGrid(columns: [GridItem(.flexible(), spacing: rowSpacing), GridItem(.flexible(), spacing: rowSpacing)], spacing: rowSpacing) {
-                        ForEach(Array(upcoming.enumerated()), id: \.element.id) { offset, template in
-                            splitTile(template, offset: offset, cellHeight: cellHeight)
-                        }
-                        ForEach(upcoming.count..<8, id: \.self) { _ in
-                            Color.clear.frame(maxWidth: .infinity).frame(height: cellHeight)
+                    // Use eager rows so all eight approved split positions are present
+                    // in the accessibility tree on compact devices as well as rendered.
+                    VStack(spacing: rowSpacing) {
+                        ForEach(0..<4, id: \.self) { row in
+                            HStack(spacing: rowSpacing) {
+                                ForEach(0..<2, id: \.self) { column in
+                                    let offset = row * 2 + column
+                                    if offset < upcoming.count {
+                                        splitTile(upcoming[offset], offset: offset, cellHeight: cellHeight)
+                                    } else {
+                                        Color.clear
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: cellHeight)
+                                            .accessibilityHidden(true)
+                                    }
+                                }
+                            }
                         }
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

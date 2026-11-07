@@ -126,7 +126,7 @@ final class DailyHomeUITests: XCTestCase {
             NSPredicate(format: "identifier BEGINSWITH %@", "active-exercise-header-")
         ).firstMatch
         XCTAssertTrue(activeExerciseHeader.waitForExistence(timeout: 5), "The active workout should render its current exercise")
-        XCTAssertEqual(activeExerciseHeader.value as? String, "Expanded", "The current exercise must be expanded when a session starts")
+        XCTAssertEqual((activeExerciseHeader.value as? String)?.lowercased(), "expanded", "The current exercise must be expanded when a session starts")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
         let timerWeight = inputField(app, labelled: "Weight in kilograms")
@@ -282,8 +282,12 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["custom-exercise-save"].tap()
         XCTAssertTrue(app.staticTexts["QA Cable Fly"].waitForExistence(timeout: 5), "A custom exercise should return to the persisted workout plan")
 
-        // Open the selected catalog exercise and edit its real planned prescription.
-        app.staticTexts["Flat barbell bench press"].tap()
+        // Open the selected catalog exercise through its stable disclosure row.
+        let exerciseRow = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "planned-exercise-", "Flat barbell bench press")
+        ).firstMatch
+        XCTAssertTrue(exerciseRow.waitForExistence(timeout: 5), "The selected exercise has an identifiable disclosure row")
+        if (exerciseRow.value as? String)?.lowercased() != "expanded" { exerciseRow.tap() }
         let sets = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-sets-")
         ).firstMatch
@@ -431,8 +435,8 @@ final class DailyHomeUITests: XCTestCase {
             .completed,
             "Historical set completion should update after the store publishes its edit"
         )
-        let notes = app.textFields["history-workout-notes"]
-        XCTAssertTrue(notes.exists)
+        let notes = app.descendants(matching: .any)["history-workout-notes"]
+        XCTAssertTrue(notes.waitForExistence(timeout: 5), "Workout notes remain editable in the multiline history field")
         notes.tap()
         notes.typeText("QA history edit")
         app.buttons["Delete workout"].tap()
