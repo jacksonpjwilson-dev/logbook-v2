@@ -285,11 +285,10 @@ final class DailyHomeUITests: XCTestCase {
         let suggestion = app.buttons["accept-progression-suggestion"]
         XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "The newly saved completed set should produce an optional next-session suggestion")
         let suggestedText = suggestion.label
-        let suggestedLoad = suggestedText
-            .components(separatedBy: "·").last?
-            .replacingOccurrences(of: "kg", with: "")
-            .trimmingCharacters(in: .whitespaces)
-            .flatMap(Double.init)
+        let suggestedLoad: Double? = {
+            guard let raw = suggestedText.components(separatedBy: "·").last else { return nil }
+            return Double(raw.replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces))
+        }()
         XCTAssertNotNil(suggestedLoad, "The suggestion should expose its proposed load: \(suggestedText)")
         let weight = app.textFields["Weight in kilograms"].firstMatch
         XCTAssertTrue(weight.exists)
