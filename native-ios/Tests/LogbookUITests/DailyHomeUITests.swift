@@ -122,6 +122,11 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(restTimer.label, "Ready", "A new workout starts in the Ready timer state")
         XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
+        let activeExerciseHeader = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "active-exercise-header-")
+        ).firstMatch
+        XCTAssertTrue(activeExerciseHeader.waitForExistence(timeout: 5), "The active workout should render its current exercise")
+        XCTAssertEqual(activeExerciseHeader.value as? String, "Expanded", "The current exercise must be expanded when a session starts")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
         let timerWeight = inputField(app, labelled: "Weight in kilograms")
@@ -422,8 +427,16 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
+        let stablePrefix: String
+        switch label {
+        case "Weight in kilograms": stablePrefix = "workout-set-weight-"
+        case "Repetitions": stablePrefix = "workout-set-reps-"
+        case "history-set-weight": stablePrefix = "history-set-weight"
+        case "history-set-reps": stablePrefix = "history-set-reps"
+        default: stablePrefix = label
+        }
         let matching = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier == %@ OR label CONTAINS[cd] %@", label, label)
+            NSPredicate(format: "identifier == %@ OR identifier BEGINSWITH %@ OR label CONTAINS[cd] %@", label, stablePrefix, label)
         )
         return matching.firstMatch
     }

@@ -653,11 +653,22 @@ struct ActiveWorkoutScreen: View {
                 Button("Discard workout", role: .destructive) { store.discardWorkout(); dismiss() }
                 Button("Keep working", role: .cancel) { }
             }
-            .onAppear { if session == nil { onStart?() } }
+            .onAppear {
+                if session == nil { onStart?() }
+                expandCurrentExerciseIfNeeded()
+            }
+            .onChange(of: session?.id) { _, _ in
+                expandCurrentExerciseIfNeeded()
+            }
             .onChange(of: focusedExerciseID) { _, newID in
                 if newID != nil { expandedExerciseID = newID }
             }
         }
+    }
+
+    private func expandCurrentExerciseIfNeeded() {
+        guard expandedExerciseID == nil, let session else { return }
+        expandedExerciseID = focusedExerciseID ?? session.exercises.first?.id
     }
 
     @ViewBuilder
