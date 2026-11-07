@@ -252,18 +252,22 @@ struct WorkoutTemplateScreen: View {
                                 )) {
                                     ForEach(ExerciseTrackingMode.allCases) { mode in Text(mode.title).tag(mode) }
                                 }
+                                .accessibilityIdentifier("planned-exercise-tracking-\(exercise.id.uuidString)")
                                 Stepper("Sets · \(exercise.sets.count)", value: Binding(
                                     get: { exercise.sets.count },
                                     set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: $0, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds) }
                                 ), in: 1...30)
+                                .accessibilityIdentifier("planned-exercise-sets-\(exercise.id.uuidString)")
                                 Stepper("Reps · \(exercise.sets.first?.reps ?? 8)", value: Binding(
                                     get: { exercise.sets.first?.reps ?? 8 },
                                     set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: $0, restSeconds: exercise.restSeconds) }
                                 ), in: 1...100)
+                                .accessibilityIdentifier("planned-exercise-reps-\(exercise.id.uuidString)")
                                 Stepper("Rest · \(exercise.restSeconds.map { "\($0)s" } ?? "90s default")", value: Binding(
                                     get: { exercise.restSeconds ?? 90 },
                                     set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: $0) }
                                 ), in: 15...600, step: 15)
+                                .accessibilityIdentifier("planned-exercise-rest-\(exercise.id.uuidString)")
                                 if exercise.restSeconds != nil {
                                     Button("Use workout default rest") {
                                         store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: nil)
@@ -275,6 +279,7 @@ struct WorkoutTemplateScreen: View {
                                 Text("\(exercise.muscle) · \(exercise.sets.count) sets · \(exercise.trackingMode?.title ?? "Weight + reps") · \(exercise.equipment)").font(.caption).foregroundStyle(.secondary)
                                 }
                             }
+                            .accessibilityIdentifier("planned-exercise-\(exercise.id.uuidString)")
                             .swipeActions {
                                 Button("Remove", role: .destructive) { store.removeExercise(exercise.id, fromTemplate: templateID) }
                             }
