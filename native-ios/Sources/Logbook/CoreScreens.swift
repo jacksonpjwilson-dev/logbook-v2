@@ -438,7 +438,7 @@ struct ActiveWorkoutScreen: View {
                     List {
                         Section {
                             TimelineView(.periodic(from: .now, by: 1)) { context in
-                                let timer = session.restTimer ?? WorkoutRestTimer()
+                                let timer = store.state.training.activeSession?.restTimer ?? session.restTimer ?? WorkoutRestTimer()
                                 let remaining = timer.remainingSeconds(at: context.date)
                                 VStack(alignment: .leading, spacing: 9) {
                                     HStack(alignment: .firstTextBaseline) {
