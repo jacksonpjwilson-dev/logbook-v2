@@ -124,6 +124,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
+        let timerWeight = app.textFields["Weight in kilograms"].firstMatch
+        replaceText(in: timerWeight, with: "40")
         let completeFirstSet = app.buttons.matching(identifier: "Mark set complete").firstMatch
         XCTAssertTrue(completeFirstSet.waitForExistence(timeout: 5), "A planned set should be available to start its configured rest timer")
         completeFirstSet.tap()
@@ -235,7 +237,7 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     func testProgressionSuggestionRequiresAndAppliesExplicitAcceptance() throws {
-        let app = launchApp(progressionHistory: true)
+        let app = launchApp()
         app.buttons["Training tab"].tap()
         let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
         XCTAssertTrue(template.waitForExistence(timeout: 5))
@@ -243,11 +245,32 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
         app.buttons["workout-template-start"].tap()
 
+        // Create a real prior workout through the UI so the next session exercises the
+        // same history lookup used in normal use, rather than depending on hidden seed data.
+        let firstSetWeight = app.textFields["Weight in kilograms"].firstMatch
+        XCTAssertTrue(firstSetWeight.waitForExistence(timeout: 5))
+        replaceText(in: firstSetWeight, with: "60")
+        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
+        let finish = app.buttons["finish-workout"]
+        XCTAssertTrue(finish.waitForExistence(timeout: 5))
+        finish.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+        let confirm = app.buttons["confirm-finish-workout"]
+        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Saving a partially completed workout requires an explicit confirmation")
+        confirm.tap()
+        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
+        app.buttons["workout-summary-done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        let nextTemplate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
+        XCTAssertTrue(nextTemplate.waitForExistence(timeout: 5))
+        nextTemplate.tap()
+        app.buttons["workout-template-start"].tap()
+
         let suggestion = app.buttons["accept-progression-suggestion"]
-        XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "A matching prior completed set should produce an optional suggestion")
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "The newly saved completed set should produce an optional next-session suggestion")
         let weight = app.textFields["Weight in kilograms"].firstMatch
         XCTAssertTrue(weight.exists)
-        XCTAssertNotEqual(weight.value as? String, "62.5", "Suggested load must not be applied before explicit acceptance")
+        XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), 62.5, "Suggested load must not be applied before explicit acceptance")
         suggestion.tap()
         let accepted = XCTNSPredicateExpectation(predicate: NSPredicate { object, _ in
             guard let field = object as? XCUIElement else { return false }
@@ -272,7 +295,7 @@ final class DailyHomeUITests: XCTestCase {
         finish.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         let saveButtons = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save"))
         XCTAssertTrue(saveButtons.count > 0, "Unfinished planned sets should require explicit save confirmation")
-        let confirmSave = saveButtons.element(boundBy: saveButtons.count - 1)
+        let confirmSave = app.buttons["confirm-finish-workout"]
         XCTAssertTrue(confirmSave.waitForExistence(timeout: 5))
         confirmSave.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))

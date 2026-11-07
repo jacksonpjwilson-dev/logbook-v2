@@ -629,6 +629,7 @@ struct ActiveWorkoutScreen: View {
                     showCompletionSummary = completedSessionForSummary != nil
                     if completedSessionForSummary == nil { dismiss() }
                 }
+                .accessibilityIdentifier("confirm-finish-workout")
                 Button("Return to workout", role: .cancel) { }
             } message: { Text("\(incompleteCount) planned sets will remain saved as unfinished. Only completed sets count in statistics.") }
             .confirmationDialog("Discard this workout?", isPresented: $showDiscardConfirmation, titleVisibility: .visible) {
