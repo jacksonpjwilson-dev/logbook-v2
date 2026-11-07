@@ -24,8 +24,10 @@ targets:
       - Shared/WatchSnapshot.swift
       - Shared/WorkoutActivityAttributes.swift
     resources:
-      - Resources/exercise-catalog.json
-      - Resources/food-catalog.json
+      - path: Resources/exercise-catalog.json
+        buildPhase: resources
+      - path: Resources/food-catalog.json
+        buildPhase: resources
     entitlements:
       path: Config/Logbook.entitlements
       properties:
