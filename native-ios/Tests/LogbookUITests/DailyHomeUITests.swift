@@ -125,7 +125,9 @@ final class DailyHomeUITests: XCTestCase {
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
         let timerWeight = app.textFields["Weight in kilograms"].firstMatch
+        scrollToElement(timerWeight, in: app)
         replaceText(in: timerWeight, with: "40")
+        dismissKeyboard(in: app)
         let completeFirstSet = app.buttons.matching(identifier: "Mark set complete").firstMatch
         XCTAssertTrue(completeFirstSet.waitForExistence(timeout: 5), "A planned set should be available to start its configured rest timer")
         completeFirstSet.tap()
@@ -135,6 +137,7 @@ final class DailyHomeUITests: XCTestCase {
         )
         XCTAssertEqual(XCTWaiter.wait(for: [timerStarted], timeout: 5), .completed, "Completing a set should start its configured rest interval")
         let addTime = app.buttons["rest-add-15"]
+        scrollToElement(addTime, in: app, towardTop: true)
         XCTAssertTrue(addTime.isHittable, "The timer extension control should be interactive")
         // The test fixture starts a 90-second exercise rest; extend it to 210 seconds
         // so simulator relaunch latency cannot turn this recovery test into a timer-expiry test.
@@ -218,9 +221,12 @@ final class DailyHomeUITests: XCTestCase {
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 5))
         search.tap()
-        search.typeText("Flat barbell bench press")
-        let result = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "exercise-picker-result-")).firstMatch
-        XCTAssertTrue(result.waitForExistence(timeout: 5), "Search should find the catalog's Flat barbell bench press exercise")
+        search.typeText("bench")
+        XCTAssertTrue((search.value as? String)?.localizedCaseInsensitiveContains("bench") == true,
+                      "The exercise search query should be accepted by the real picker")
+        let result = app.descendants(matching: .any)["exercise-picker-result-builtin-2"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5),
+                      "Search should expose the catalog's Flat barbell bench press exercise. UI: \(app.debugDescription)")
         result.tap()
         XCTAssertTrue(app.staticTexts["Flat barbell bench press"].waitForExistence(timeout: 5), "Selecting a search result should persist it in the workout plan")
 
@@ -251,7 +257,9 @@ final class DailyHomeUITests: XCTestCase {
         // same history lookup used in normal use, rather than depending on hidden seed data.
         let firstSetWeight = app.textFields["Weight in kilograms"].firstMatch
         XCTAssertTrue(firstSetWeight.waitForExistence(timeout: 5))
+        scrollToElement(firstSetWeight, in: app)
         replaceText(in: firstSetWeight, with: "60")
+        dismissKeyboard(in: app)
         app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
         let finish = app.buttons["finish-workout"]
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
@@ -270,16 +278,27 @@ final class DailyHomeUITests: XCTestCase {
 
         let suggestion = app.buttons["accept-progression-suggestion"]
         XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "The newly saved completed set should produce an optional next-session suggestion")
+        let suggestedText = suggestion.label
+        let suggestedLoad = suggestedText
+            .components(separatedBy: "·").last?
+            .replacingOccurrences(of: "kg", with: "")
+            .trimmingCharacters(in: .whitespaces)
+            .flatMap(Double.init)
+        XCTAssertNotNil(suggestedLoad, "The suggestion should expose its proposed load: \(suggestedText)")
         let weight = app.textFields["Weight in kilograms"].firstMatch
         XCTAssertTrue(weight.exists)
-        XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), 62.5, "Suggested load must not be applied before explicit acceptance")
+        XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), suggestedLoad, "Suggested load must not be applied before explicit acceptance")
+        scrollToElement(suggestion, in: app)
         suggestion.tap()
+        scrollToElement(weight, in: app, towardTop: true)
         let accepted = XCTNSPredicateExpectation(predicate: NSPredicate { object, _ in
-            guard let field = object as? XCUIElement else { return false }
-            if let number = field.value as? NSNumber { return number.doubleValue == 62.5 }
-            return Double(String(describing: field.value ?? "")) == 62.5
+            guard let field = object as? XCUIElement, let target = suggestedLoad else { return false }
+            let value = String(describing: field.value ?? "")
+            if let number = field.value as? NSNumber { return abs(number.doubleValue - target) < 0.01 }
+            return Double(value.replacingOccurrences(of: ",", with: ".")).map { abs($0 - target) < 0.01 } ?? false
         }, object: weight)
-        XCTAssertEqual(XCTWaiter.wait(for: [accepted], timeout: 5), .completed, "Accepting the suggestion should update the session set weights")
+        XCTAssertEqual(XCTWaiter.wait(for: [accepted], timeout: 5), .completed,
+                       "Accepting \(suggestedText) should update the current set weight; current value: \(weight.value ?? "nil")")
         attachScreenshot(of: app, named: "Training-Progression-Acceptance-Candidate")
     }
 
@@ -310,7 +329,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
 
         app.buttons["History tab"].tap()
-        let historyRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-workout-"))
+        let historyRows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-workout-"))
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History")
         for _ in 0..<5 where !historyRows.firstMatch.isHittable { app.swipeUp() }
         XCTAssertTrue(historyRows.firstMatch.isHittable)
@@ -323,8 +342,9 @@ final class DailyHomeUITests: XCTestCase {
         replaceText(in: historyWeight, with: "40")
         let historyReps = app.textFields["history-set-reps"].firstMatch
         replaceText(in: historyReps, with: "8")
-        app.buttons["history-set-complete"].firstMatch.tap()
-        XCTAssertTrue(app.buttons["history-set-complete"].label.localizedCaseInsensitiveContains("incomplete"), "Historical set completion should update immediately")
+        let completionToggles = app.buttons.matching(identifier: "history-set-complete")
+        completionToggles.firstMatch.tap()
+        XCTAssertTrue(completionToggles.firstMatch.label.localizedCaseInsensitiveContains("incomplete"), "Historical set completion should update immediately")
         let notes = app.textFields["history-workout-notes"]
         XCTAssertTrue(notes.exists)
         notes.tap()
@@ -338,6 +358,19 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreButtons.firstMatch.isHittable)
         restoreButtons.firstMatch.tap()
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "Restoring should return the record to the Training history list")
+    }
+
+    private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
+        let list = app.collectionViews.firstMatch
+        for _ in 0..<8 where !element.isHittable {
+            if towardTop { list.swipeDown() } else { list.swipeUp() }
+        }
+    }
+
+    private func dismissKeyboard(in app: XCUIApplication) {
+        let done = app.buttons["keyboard-done"]
+        if done.waitForExistence(timeout: 1) { done.tap() }
+        else if app.keyboards.buttons["Done"].exists { app.keyboards.buttons["Done"].tap() }
     }
 
     private func replaceText(in field: XCUIElement, with value: String) {

@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct TrainingScreen: View {
     @EnvironmentObject private var store: LogbookStore
@@ -604,7 +605,16 @@ struct ActiveWorkoutScreen: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .accessibilityIdentifier("keyboard-done")
+                }
+            }
             .sheet(isPresented: $showExercisePicker) {
                 ExercisePickerScreen { exercise in
                     if let replacingExerciseID {
