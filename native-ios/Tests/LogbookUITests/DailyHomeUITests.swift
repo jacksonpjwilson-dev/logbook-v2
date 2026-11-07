@@ -99,7 +99,7 @@ final class DailyHomeUITests: XCTestCase {
     func testNextWorkoutStartActionCreatesAnActiveWorkout() throws {
         let app = launchApp()
         app.buttons["view-next-workout"].tap()
-        XCTAssertTrue(app.staticTexts["training-workouts-heading"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
+        XCTAssertTrue(app.buttons["New workout"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["start-next-workout"].tap()
