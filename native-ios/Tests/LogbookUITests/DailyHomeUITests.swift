@@ -72,7 +72,10 @@ final class DailyHomeUITests: XCTestCase {
 
     func testDailySmallWidgetRegionsOpenTheirMatchingCheckInSections() throws {
         let app = launchApp()
-        app.buttons["habit-sleep"].tap()
+        let habitSleep = app.buttons["habit-sleep"]
+        XCTAssertTrue(habitSleep.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(habitSleep.frame.height, 20, "Habit rows need a reliable touch target")
+        habitSleep.tap()
         XCTAssertTrue(app.buttons["Save sleep"].waitForExistence(timeout: 5), "Habits Sleep region must open Sleep controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
@@ -114,6 +117,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restTimer.waitForExistence(timeout: 5), "Starting Workout opens the active session with its rest card")
         XCTAssertEqual(restTimer.label, "Ready", "A new workout starts in the Ready timer state")
         XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
+        XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
     }
 

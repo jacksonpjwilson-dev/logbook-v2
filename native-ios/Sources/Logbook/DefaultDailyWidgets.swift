@@ -393,6 +393,8 @@ private struct HabitsContent: View {
             .frame(height: compact ? 18 : 19)
         }
         .buttonStyle(.plain)
+        .frame(maxWidth: .infinity, minHeight: compact ? 20 : 24)
+        .contentShape(Rectangle())
         .accessibilityIdentifier("habit-\(section.rawValue)")
         .accessibilityLabel(accessibilityLabel(title: title, value: value, section: section))
     }
