@@ -377,8 +377,12 @@ final class DailyHomeUITests: XCTestCase {
         let list = app.collectionViews.firstMatch
         let pinnedFooter = app.buttons["finish-workout"]
         for _ in 0..<10 {
-            let aboveFooter = !pinnedFooter.exists || element.frame.maxY < pinnedFooter.frame.minY - 8
-            if element.isHittable && aboveFooter { return }
+            if element.exists {
+                let aboveFooter = !pinnedFooter.exists || element.frame.maxY < pinnedFooter.frame.minY - 8
+                if element.isHittable && aboveFooter { return }
+            }
+            // Lazy List rows may not enter the accessibility tree until they are
+            // scrolled into view; avoid reading a missing element's frame first.
             if towardTop { list.swipeDown() } else { list.swipeUp() }
         }
     }

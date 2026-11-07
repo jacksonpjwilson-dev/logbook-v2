@@ -14,8 +14,15 @@ final class LogbookStore: ObservableObject {
     private(set) var canEdit = true
 
     private static func bundledJSON(named name: String) -> URL? {
-        Bundle.main.url(forResource: name, withExtension: "json")
-            ?? Bundle.main.url(forResource: name, withExtension: "json", subdirectory: "Resources")
+        var bundles = [Bundle.main, Bundle(for: LogbookStore.self)]
+        bundles.append(contentsOf: Bundle.allBundles)
+        bundles.append(contentsOf: Bundle.allFrameworks)
+        var visited = Set<String>()
+        for bundle in bundles where visited.insert(bundle.bundleURL.standardizedFileURL.path).inserted {
+            if let url = bundle.url(forResource: name, withExtension: "json") { return url }
+            if let url = bundle.url(forResource: name, withExtension: "json", subdirectory: "Resources") { return url }
+        }
+        return nil
     }
 
     init(repository: LogbookRepository = .shared) {
