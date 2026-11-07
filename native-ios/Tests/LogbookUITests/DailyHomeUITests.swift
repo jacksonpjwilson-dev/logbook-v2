@@ -124,7 +124,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
-        let timerWeight = app.textFields["Weight in kilograms"].firstMatch
+        let timerWeight = inputField(app, labelled: "Weight in kilograms")
         scrollToElement(timerWeight, in: app)
         replaceText(in: timerWeight, with: "40")
         dismissKeyboard(in: app)
@@ -262,7 +262,7 @@ final class DailyHomeUITests: XCTestCase {
 
         // Create a real prior workout through the UI so the next session exercises the
         // same history lookup used in normal use, rather than depending on hidden seed data.
-        let firstSetWeight = app.textFields["Weight in kilograms"].firstMatch
+        let firstSetWeight = inputField(app, labelled: "Weight in kilograms")
         XCTAssertTrue(firstSetWeight.waitForExistence(timeout: 5))
         scrollToElement(firstSetWeight, in: app)
         replaceText(in: firstSetWeight, with: "60")
@@ -291,7 +291,7 @@ final class DailyHomeUITests: XCTestCase {
             return Double(raw.replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces))
         }()
         XCTAssertNotNil(suggestedLoad, "The suggestion should expose its proposed load: \(suggestedText)")
-        let weight = app.textFields["Weight in kilograms"].firstMatch
+        let weight = inputField(app, labelled: "Weight in kilograms")
         XCTAssertTrue(weight.exists)
         XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), suggestedLoad, "Suggested load must not be applied before explicit acceptance")
         scrollToElement(suggestion, in: app)
@@ -325,8 +325,8 @@ final class DailyHomeUITests: XCTestCase {
         replaceText(in: firstWeight, with: "40")
         dismissKeyboard(in: app)
         app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        let saveButtons = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save"))
-        XCTAssertTrue(saveButtons.count > 0, "Unfinished planned sets should require explicit save confirmation")
+        XCTAssertTrue(finish.isHittable, "Finish & Save should remain reachable after set entry")
+        finish.tap()
         let confirmSave = app.buttons["confirm-finish-workout"]
         XCTAssertTrue(confirmSave.waitForExistence(timeout: 5))
         confirmSave.tap()
@@ -350,10 +350,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Training-History-Detail-Candidate")
 
-        let historyWeight = app.textFields["history-set-weight"].firstMatch
+        let historyWeight = inputField(app, labelled: "history-set-weight")
         XCTAssertTrue(historyWeight.waitForExistence(timeout: 5))
         replaceText(in: historyWeight, with: "40")
-        let historyReps = app.textFields["history-set-reps"].firstMatch
+        let historyReps = inputField(app, labelled: "history-set-reps")
         replaceText(in: historyReps, with: "8")
         let completionToggles = app.buttons.matching(identifier: "history-set-complete")
         completionToggles.firstMatch.tap()
@@ -371,6 +371,13 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreButtons.firstMatch.isHittable)
         restoreButtons.firstMatch.tap()
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "Restoring should return the record to the Training history list")
+    }
+
+    private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
+        let matching = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier == %@ OR label == %@", label, label)
+        )
+        return matching.firstMatch
     }
 
     private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
