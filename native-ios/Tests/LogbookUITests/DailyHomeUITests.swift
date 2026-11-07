@@ -240,8 +240,17 @@ final class DailyHomeUITests: XCTestCase {
             .matching(NSPredicate(format: "label CONTAINS[cd] %@", "reorder"))
         XCTAssertGreaterThanOrEqual(reorderHandles.count, 2, "Edit mode should expose a drag handle for each workout row. UI: \(app.debugDescription)")
         let sourceHandle = reorderHandles.element(boundBy: 0)
-        sourceHandle.press(forDuration: 1.0, thenDragTo: rows.element(boundBy: 1))
-        XCTAssertEqual(rows.element(boundBy: 0).identifier, secondID, "Dragging a workout row should update the saved split order")
+        let destinationHandle = reorderHandles.element(boundBy: 1)
+        sourceHandle.press(forDuration: 1.2, thenDragTo: destinationHandle)
+        let reordered = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "identifier == %@", secondID),
+            object: rows.element(boundBy: 0)
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [reordered], timeout: 5),
+            .completed,
+            "Dragging a workout handle should update the saved split order"
+        )
         XCTAssertNotEqual(rows.element(boundBy: 0).identifier, firstID)
         app.buttons["Done"].tap()
 
@@ -275,7 +284,7 @@ final class DailyHomeUITests: XCTestCase {
 
         // Open the selected catalog exercise and edit its real planned prescription.
         app.staticTexts["Flat barbell bench press"].tap()
-        let sets = app.steppers.matching(
+        let sets = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-sets-")
         ).firstMatch
         XCTAssertTrue(sets.waitForExistence(timeout: 5), "The selected exercise exposes its planned set configuration")
@@ -284,7 +293,7 @@ final class DailyHomeUITests: XCTestCase {
         else { sets.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
         XCTAssertTrue(app.staticTexts["Sets · 4"].waitForExistence(timeout: 5), "Set-count customization should update the saved plan")
 
-        let reps = app.steppers.matching(
+        let reps = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-reps-")
         ).firstMatch
         XCTAssertTrue(reps.waitForExistence(timeout: 5))
@@ -293,7 +302,7 @@ final class DailyHomeUITests: XCTestCase {
         else { reps.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
         XCTAssertTrue(app.staticTexts["Reps · 9"].waitForExistence(timeout: 5), "Rep-count customization should update the saved plan")
 
-        let rest = app.steppers.matching(
+        let rest = app.descendants(matching: .any).matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-rest-")
         ).firstMatch
         XCTAssertTrue(rest.waitForExistence(timeout: 5))
