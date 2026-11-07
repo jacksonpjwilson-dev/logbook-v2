@@ -576,6 +576,8 @@ struct ActiveWorkoutScreen: View {
                                     }
                                 }
                                 .buttonStyle(.plain)
+                                .accessibilityIdentifier("active-exercise-header-\(exercise.id.uuidString)")
+                                .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
                                 .contextMenu {
                                     if exercise.hasStarted != true && exercise.sets.allSatisfy({ !$0.completed && $0.weightKg == nil }) {
                                         Button("Replace exercise", systemImage: "arrow.2.squarepath") {
@@ -862,12 +864,14 @@ private struct WorkoutSetEditor: View {
         TextField("kg", value: weight, format: .number.precision(.fractionLength(0...2)))
             .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity)
             .accessibilityLabel("Weight in kilograms")
+            .accessibilityIdentifier("workout-set-weight-\(set.id.uuidString)")
     }
 
     private var repsField: some View {
         TextField("Reps", value: reps, format: .number)
             .keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity)
             .accessibilityLabel("Repetitions")
+            .accessibilityIdentifier("workout-set-reps-\(set.id.uuidString)")
     }
 
     private var weight: Binding<Double> {
