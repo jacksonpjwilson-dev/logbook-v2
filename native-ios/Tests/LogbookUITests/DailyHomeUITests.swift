@@ -123,6 +123,37 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
+
+        app.buttons["Close"].tap()
+        let resumeWorkout = app.buttons["training-active-session"]
+        XCTAssertTrue(resumeWorkout.waitForExistence(timeout: 5), "Closing the active sheet leaves a non-intrusive Resume Workout entry")
+        resumeWorkout.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["rest-timer-value"].waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
+    }
+
+    func testDefaultTrainingHomeShowsSplitTilesAndNavigableWorkoutCalendar() throws {
+        let app = launchApp()
+        app.buttons["Training page"].tap()
+
+        let firstWorkout = app.buttons["training-split-workout-1"]
+        XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5), "The split widget must show a tappable numbered workout tile")
+        XCTAssertTrue(app.buttons["training-split-full"].exists, "The complete split remains available from the fixed-size widget")
+        let monthLabel = app.staticTexts["training-calendar-month-label"]
+        XCTAssertTrue(monthLabel.exists)
+        let currentMonth = monthLabel.label
+        app.buttons["training-calendar-next"].tap()
+        XCTAssertNotEqual(monthLabel.label, currentMonth, "The in-widget calendar month control must change the displayed month")
+        app.buttons["training-calendar-previous"].tap()
+        XCTAssertEqual(monthLabel.label, currentMonth)
+
+        attachScreenshot(of: app, named: "Home-Training-Default-Interactive-Candidate")
+        let calendarDay = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-calendar-day-")).firstMatch
+        XCTAssertTrue(calendarDay.waitForExistence(timeout: 5), "The compact calendar must expose tappable dates")
+        calendarDay.tap()
+        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Selecting a date opens the full calendar and its session history")
+        app.buttons["Done"].tap()
+        firstWorkout.tap()
+        XCTAssertTrue(app.buttons["Start Upper Body"].waitForExistence(timeout: 5), "Tapping a split tile opens its workout details without changing the scheduled workout")
     }
 
     private func launchApp(themeID: String? = nil) -> XCUIApplication {

@@ -252,6 +252,53 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertTrue(store.state.training.personalRecordEvents.isEmpty, "Non-weight-and-reps activities do not produce estimated 1RM records")
     }
 
+    func testProgressionSuggestionOnlyChangesSessionAfterExplicitAcceptance() throws {
+        let repository = temporaryRepository()
+        let exerciseID = "progression-acceptance"
+        let previous = completedSession(at: Date(timeIntervalSince1970: 1_800_000_000), exerciseID: exerciseID, name: "Bench Press", sets: [(60, 8)])
+        var seededState = LogbookState.empty
+        seededState.training.completedSessions = [previous]
+        try repository.save(seededState)
+        let store = LogbookStore(repository: repository)
+
+        let exercise = PlannedExercise(exerciseID: exerciseID, name: "Bench Press", muscle: "Chest", equipment: "Barbell", sets: [PlannedSet(), PlannedSet()])
+        store.startWorkout(WorkoutTemplate(name: "Progression", exercises: [exercise]))
+        let active = try XCTUnwrap(store.state.training.activeSession)
+        let row = try XCTUnwrap(active.exercises.first)
+
+        XCTAssertTrue(row.sets.allSatisfy { $0.weightKg == nil }, "A suggestion does not silently prefill the user's workout")
+        XCTAssertFalse(store.acceptProgressionSuggestion(exerciseID: row.id, weightKg: 0))
+        XCTAssertTrue(store.acceptProgressionSuggestion(exerciseID: row.id, weightKg: 62.5))
+        XCTAssertTrue(store.state.training.activeSession?.exercises.first?.sets.allSatisfy { $0.weightKg == 62.5 } == true)
+
+        store.updateSet(exerciseID: row.id, setID: row.sets[0].id, weightKg: 65, reps: 8)
+        XCTAssertFalse(store.acceptProgressionSuggestion(exerciseID: row.id, weightKg: 67.5), "An accepted set cannot be overwritten by a later suggestion")
+    }
+
+    func testZeroOrInvalidRepsCannotCompleteASetOrCreateAnEstimatedOneRepMaxRecord() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let planned = PlannedExercise(exerciseID: "invalid-reps", name: "Press", muscle: "Chest", equipment: "Barbell", sets: [PlannedSet()])
+        store.startWorkout(WorkoutTemplate(name: "Invalid entry", exercises: [planned]))
+        let active = try XCTUnwrap(store.state.training.activeSession)
+        let row = try XCTUnwrap(active.exercises.first)
+        let set = try XCTUnwrap(row.sets.first)
+        store.updateSet(exerciseID: row.id, setID: set.id, weightKg: 100, reps: 0)
+        XCTAssertFalse(store.toggleSet(exerciseID: row.id, setID: set.id))
+        XCTAssertEqual(store.state.training.activeSession?.exercises.first?.sets.first?.reps, 0)
+        XCTAssertEqual(store.state.training.activeSession?.exercises.first?.sets.first?.completed, false)
+
+        let date = Date(timeIntervalSince1970: 1_800_000_000)
+        var historical = LogbookState.empty
+        historical.training.completedSessions = [
+            completedSession(at: date, exerciseID: "invalid-reps", name: "Press", sets: [(100, 0)]),
+            completedSession(at: date.addingTimeInterval(86_400), exerciseID: "invalid-reps", name: "Press", sets: [(90, 10)])
+        ]
+        try repository.save(historical)
+        let history = LogbookStore(repository: repository)
+        XCTAssertTrue(history.state.training.personalRecordEvents.isEmpty, "A zero-rep historical set is excluded, and the next valid workout establishes baseline")
+    }
+
     func testRestTimerPauseExtensionResumeAndSkipUseAbsoluteTime() {
         let start = Date(timeIntervalSince1970: 10_000)
         var timer = WorkoutRestTimer()

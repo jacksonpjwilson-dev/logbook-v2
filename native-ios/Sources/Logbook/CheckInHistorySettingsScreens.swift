@@ -383,7 +383,7 @@ private struct HistoryWorkoutSetEditor: View {
     private var repsField: some View {
         TextField("Reps", value: Binding(
             get: { set.reps },
-            set: { update(weight: set.weightKg, reps: max(1, $0), completed: set.completed, duration: nil, distance: set.distanceMeters) }
+            set: { update(weight: set.weightKg, reps: $0, completed: set.completed, duration: nil, distance: set.distanceMeters) }
         ), format: .number)
             .keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(width: 64).accessibilityLabel("Repetitions")
     }
@@ -396,8 +396,14 @@ private struct HistoryWorkoutSetEditor: View {
 struct WorkoutCalendarScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
-    @State private var month = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .now
-    @State private var selectedDate = Calendar.current.startOfDay(for: .now)
+    @State private var month: Date
+    @State private var selectedDate: Date
+
+    init(initialDate: Date = .now) {
+        let calendar = Calendar.current
+        _month = State(initialValue: calendar.date(from: calendar.dateComponents([.year, .month], from: initialDate)) ?? initialDate)
+        _selectedDate = State(initialValue: calendar.startOfDay(for: initialDate))
+    }
 
     private let calendar = Calendar.current
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
@@ -421,9 +427,17 @@ struct WorkoutCalendarScreen: View {
     }
 
     private var weekdaySymbols: [String] {
-        let symbols = DateFormatter().veryShortWeekdaySymbols ?? ["S", "M", "T", "W", "T", "F", "S"]
+        let formatter = DateFormatter()
+        let symbols: [String] = formatter.veryShortWeekdaySymbols ?? ["S", "M", "T", "W", "T", "F", "S"]
+        guard !symbols.isEmpty else { return [] }
         let offset = max(0, calendar.firstWeekday - 1)
-        return (0..<symbols.count).map { symbols[($0 + offset) % symbols.count] }
+        var ordered: [String] = []
+        ordered.reserveCapacity(symbols.count)
+        for index in symbols.indices {
+            let symbolIndex = (index + offset) % symbols.count
+            ordered.append(symbols[symbolIndex])
+        }
+        return ordered
     }
 
     var body: some View {
@@ -436,6 +450,7 @@ struct WorkoutCalendarScreen: View {
                         Spacer()
                         VStack(spacing: 3) {
                             Text(month.formatted(.dateTime.month(.wide).year())).font(.headline)
+                                .accessibilityIdentifier("training-calendar-month-label")
                             Text("\(monthSessionCount) workouts completed").font(.caption).foregroundStyle(.secondary)
                         }
                         Spacer()
@@ -464,23 +479,7 @@ struct WorkoutCalendarScreen: View {
                         if selectedSessions.isEmpty {
                             Text("No completed workouts on this date.").font(.subheadline).foregroundStyle(.secondary)
                         } else {
-                            let completedSets = selectedSessions.reduce(0) { total, session in
-                                total + session.exercises.flatMap(\.sets).filter(\.completed).count
-                            }
-                            let volumeKg = selectedSessions.reduce(0.0) { total, session in
-                                total + session.exercises.flatMap(\.sets).filter(\.completed).reduce(0.0) { subtotal, set in
-                                    subtotal + (set.weightKg ?? 0) * Double(set.reps)
-                                }
-                            }
-                            let unit = store.state.home.preferredWeightUnit
-                            let volume = unit == "lb" ? volumeKg * 2.2046226218 : volumeKg
-                            HStack {
-                                Label("\(selectedSessions.count) workouts", systemImage: "dumbbell.fill")
-                                Spacer()
-                                Text("\(completedSets) sets · \(Int(volume)) \(unit) volume")
-                            }
-                            .font(.caption.weight(.medium))
-                            .foregroundStyle(.secondary)
+                            WorkoutDaySessionSummary(sessions: selectedSessions, weightUnit: store.state.home.preferredWeightUnit)
                             ForEach(selectedSessions) { session in
                                 NavigationLink(destination: WorkoutHistoryDetailScreen(sessionID: session.id)) {
                                     HStack {
@@ -539,6 +538,43 @@ struct WorkoutCalendarScreen: View {
               let start = calendar.date(from: calendar.dateComponents([.year, .month], from: next)) else { return }
         month = start
         selectedDate = start
+    }
+}
+
+private struct WorkoutDaySessionSummary: View {
+    let sessions: [WorkoutSession]
+    let weightUnit: String
+
+    private var completedSets: Int {
+        var count = 0
+        for session in sessions {
+            for exercise in session.exercises {
+                count += exercise.sets.filter(\.completed).count
+            }
+        }
+        return count
+    }
+
+    private var volume: Int {
+        var kg = 0.0
+        for session in sessions {
+            for exercise in session.exercises {
+                for set in exercise.sets where set.completed {
+                    kg += (set.weightKg ?? 0) * Double(set.reps)
+                }
+            }
+        }
+        return Int(weightUnit == "lb" ? kg * 2.2046226218 : kg)
+    }
+
+    var body: some View {
+        HStack {
+            Label("\(sessions.count) workouts", systemImage: "dumbbell.fill")
+            Spacer()
+            Text("\(completedSets) sets · \(volume) \(weightUnit) volume")
+        }
+        .font(.caption.weight(.medium))
+        .foregroundStyle(.secondary)
     }
 }
 

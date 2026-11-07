@@ -464,7 +464,7 @@ final class LogbookStore: ObservableObject {
             guard let exerciseIndex = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }),
                   let setIndex = state.training.activeSession?.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
             state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].weightKg = weightKg
-            state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].reps = max(1, reps)
+            state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].reps = max(0, reps)
             state.training.activeSession?.exercises[exerciseIndex].hasStarted = true
         }
     }
@@ -633,7 +633,7 @@ final class LogbookStore: ObservableObject {
                   let exerciseIndex = state.training.completedSessions[sessionIndex].exercises.firstIndex(where: { $0.id == exerciseID }),
                   let setIndex = state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
             state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].weightKg = weightKg.flatMap { $0 > 0 ? $0 : nil }
-            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].reps = max(1, reps)
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].reps = max(0, reps)
             state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].completed = completed
             state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].durationSeconds = durationSeconds
             state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].distanceMeters = distanceMeters

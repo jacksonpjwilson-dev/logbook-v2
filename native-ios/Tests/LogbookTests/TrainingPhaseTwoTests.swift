@@ -180,6 +180,26 @@ final class TrainingPhaseTwoTests: XCTestCase {
         XCTAssertEqual(reopenedEvening.exercises.first?.notes, "Edited evening exercise note")
     }
 
+    func testCurrentExerciseAdvancesThroughPlannedSetsAndSupersetRounds() throws {
+        let group = UUID()
+        let first = WorkoutExercise(exerciseID: "progress-a", name: "Press", muscle: "Chest", equipment: "Barbell", sets: [WorkoutSet(), WorkoutSet()], supersetID: group)
+        let second = WorkoutExercise(exerciseID: "progress-b", name: "Row", muscle: "Back", equipment: "Cable", sets: [WorkoutSet(), WorkoutSet()], supersetID: group)
+        let third = WorkoutExercise(exerciseID: "progress-c", name: "Fly", muscle: "Chest", equipment: "Cable", sets: [WorkoutSet()])
+        var session = WorkoutSession(templateName: "Progression", templateVersion: 1, localDate: "2026-11-07", startedAt: Date(timeIntervalSince1970: 1_800_000_000), exercises: [first, second, third])
+
+        XCTAssertEqual(session.currentExerciseID, first.id)
+        session.exercises[0].sets[0].completed = true
+        XCTAssertEqual(session.currentExerciseID, second.id, "Complete every exercise in the current superset round before advancing")
+        session.exercises[1].sets[0].completed = true
+        XCTAssertEqual(session.currentExerciseID, first.id)
+        session.exercises[0].sets[1].completed = true
+        XCTAssertEqual(session.currentExerciseID, second.id)
+        session.exercises[1].sets[1].completed = true
+        XCTAssertEqual(session.currentExerciseID, third.id, "Completing the final superset round advances to the next exercise")
+        session.exercises[2].sets[0].completed = true
+        XCTAssertEqual(session.currentExerciseID, third.id, "The final completed exercise remains the current exercise")
+    }
+
     private func temporaryRepository() -> LogbookRepository {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("LogbookTrainingPhase2-\(UUID().uuidString)", isDirectory: true)
         return LogbookRepository(url: directory.appendingPathComponent("state.json"))

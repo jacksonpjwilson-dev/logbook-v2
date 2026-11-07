@@ -429,25 +429,7 @@ struct ActiveWorkoutScreen: View {
     var onStart: (() -> Void)?
 
     private var session: WorkoutSession? { store.state.training.activeSession }
-    private var focusedExerciseID: UUID? {
-        guard let session else { return nil }
-        var visitedSupersets = Set<UUID>()
-        for exercise in session.exercises {
-            if let groupID = exercise.supersetID {
-                guard visitedSupersets.insert(groupID).inserted else { continue }
-                let members = session.exercises.filter { $0.supersetID == groupID }
-                let rounds = members.map { $0.sets.count }.max() ?? 0
-                for round in 0..<rounds {
-                    if let next = members.first(where: { $0.sets.indices.contains(round) && !$0.sets[round].completed }) {
-                        return next.id
-                    }
-                }
-            } else if exercise.sets.contains(where: { !$0.completed }) {
-                return exercise.id
-            }
-        }
-        return session.exercises.last?.id
-    }
+    private var focusedExerciseID: UUID? { session?.currentExerciseID }
 
     var body: some View {
         NavigationStack {
@@ -871,7 +853,7 @@ private struct WorkoutSetEditor: View {
     }
 
     private var reps: Binding<Int> {
-        Binding(get: { set.reps }, set: { store.updateSet(exerciseID: exercise.id, setID: set.id, weightKg: set.weightKg, reps: max(1, $0)) })
+        Binding(get: { set.reps }, set: { store.updateSet(exerciseID: exercise.id, setID: set.id, weightKg: set.weightKg, reps: $0) })
     }
 
     private var duration: Binding<Int> {

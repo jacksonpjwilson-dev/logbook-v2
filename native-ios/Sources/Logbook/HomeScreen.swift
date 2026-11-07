@@ -187,6 +187,18 @@ private struct HomePageGrid: View {
         }
     }
 
+    private var usesApprovedTrainingLayout: Bool {
+        guard page.name == "Training", store.state.home.theme == .defaultTheme,
+              page.widgets.count == 2 else { return false }
+        let expected = HomeState.defaultPages[1].widgets
+        return expected.allSatisfy { item in
+            page.widgets.contains {
+                $0.kind == item.kind && $0.size == item.size && $0.row == item.row &&
+                    $0.column == item.column && $0.variant == item.variant
+            }
+        }
+    }
+
     var body: some View {
         GeometryReader { proxy in
             // One scalar controls both axes: the eight cells are true squares.
@@ -211,6 +223,15 @@ private struct HomePageGrid: View {
                                 openTraining: { open(.training) },
                                 openCheckIn: openCheckIn,
                                 startWorkout: startWorkout
+                            )
+                            .frame(width: width, height: height)
+                            .disabled(editing)
+                        } else if usesApprovedTrainingLayout {
+                            DefaultTrainingWidgetView(
+                                widget: widget,
+                                palette: store.state.home.theme.palette,
+                                state: store.state,
+                                openTraining: { open(.training) }
                             )
                             .frame(width: width, height: height)
                             .disabled(editing)

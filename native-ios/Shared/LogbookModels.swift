@@ -498,6 +498,27 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
     var scheduledTemplateID: UUID? = nil
     var wasScheduledWorkout: Bool? = nil
     var deletedAt: Date? = nil
+
+    /// The first exercise with planned work remaining. Supersets progress by
+    /// round, so every member's set N is completed before set N+1 begins.
+    var currentExerciseID: UUID? {
+        var visitedSupersets = Set<UUID>()
+        for exercise in exercises {
+            if let groupID = exercise.supersetID {
+                guard visitedSupersets.insert(groupID).inserted else { continue }
+                let members = exercises.filter { $0.supersetID == groupID }
+                let rounds = members.map { $0.sets.count }.max() ?? 0
+                for round in 0..<rounds {
+                    if let next = members.first(where: { $0.sets.indices.contains(round) && !$0.sets[round].completed }) {
+                        return next.id
+                    }
+                }
+            } else if exercise.sets.contains(where: { !$0.completed }) {
+                return exercise.id
+            }
+        }
+        return exercises.last?.id
+    }
 }
 
 struct WorkoutProgram: Codable, Identifiable, Hashable {
