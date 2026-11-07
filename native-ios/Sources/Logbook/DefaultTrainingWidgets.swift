@@ -71,6 +71,8 @@ struct DefaultTrainingWidgetView: View {
                     .foregroundStyle(palette.mutedColor)
                     .frame(maxWidth: .infinity, alignment: .center)
                 Spacer(minLength: 0)
+            } else if upcoming.count == 1, let onlyWorkout = upcoming.first {
+                featuredSplitTile(onlyWorkout)
             } else {
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 5), GridItem(.flexible(), spacing: 5)], spacing: 5) {
                     ForEach(Array(upcoming.enumerated()), id: \.element.id) { offset, template in
@@ -103,6 +105,69 @@ struct DefaultTrainingWidgetView: View {
         .shadow(color: .black.opacity(tokens.shadowOpacity), radius: tokens.cardShadowRadius, x: 0, y: 7)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("home-widget-workout-split")
+    }
+
+    private func featuredSplitTile(_ template: WorkoutTemplate) -> some View {
+        let muscles = Array(Set(template.exercises.map(\.muscle).filter { !$0.isEmpty })).sorted().joined(separator: " · ")
+        let sets = template.exercises.reduce(0) { $0 + $1.sets.count }
+        let minutes = template.exercises.isEmpty ? nil : max(1, sets * 2 + template.exercises.count * 2 + 5)
+        let isNext = template.id == scheduledID
+
+        return Button { selectedTemplate = template } label: {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 6) {
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 8, weight: .bold))
+                    Text(isNext ? "UP NEXT" : "WORKOUT")
+                        .font(.system(size: 8, weight: .semibold, design: .rounded))
+                        .tracking(0.45)
+                    Spacer(minLength: 0)
+                    Text("1")
+                        .font(.system(size: 9, weight: .bold, design: .rounded).monospacedDigit())
+                        .frame(width: 22, height: 22)
+                        .background(palette.accentColor.opacity(0.14), in: Circle())
+                }
+                .foregroundStyle(palette.accentColor)
+
+                Text(template.name)
+                    .font(.system(size: 19, weight: .semibold, design: .rounded))
+                    .foregroundStyle(palette.textColor)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.8)
+
+                if !muscles.isEmpty {
+                    Text(muscles)
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(palette.mutedColor)
+                        .lineLimit(2)
+                }
+
+                HStack(spacing: 12) {
+                    Label("\(template.exercises.count) exercises", systemImage: "dumbbell")
+                    if let minutes { Label("~\(minutes) min", systemImage: "clock") }
+                }
+                .font(.system(size: 9, weight: .medium, design: .rounded))
+                .foregroundStyle(palette.mutedColor)
+
+                Spacer(minLength: 0)
+
+                HStack {
+                    Text("Open workout")
+                    Spacer()
+                    Image(systemName: "arrow.up.right").font(.system(size: 8, weight: .semibold))
+                }
+                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                .foregroundStyle(palette.accentColor)
+            }
+            .padding(12)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .background(palette.accentColor.opacity(0.07), in: RoundedRectangle(cornerRadius: 13, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 13, style: .continuous).stroke(palette.accentColor.opacity(0.2), lineWidth: 0.8))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Workout 1, \(template.name), \(template.exercises.count) exercises\(minutes.map { ", about \($0) minutes" } ?? ""). Open workout.")
+        .accessibilityIdentifier("training-split-workout-1")
     }
 
     private func splitTile(_ template: WorkoutTemplate, offset: Int) -> some View {

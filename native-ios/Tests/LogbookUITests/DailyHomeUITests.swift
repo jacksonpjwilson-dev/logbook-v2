@@ -137,6 +137,8 @@ final class DailyHomeUITests: XCTestCase {
 
         let firstWorkout = app.buttons["training-split-workout-1"]
         XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5), "The split widget must show a tappable numbered workout tile")
+        XCTAssertGreaterThan(firstWorkout.frame.height, 120, "A single-workout split should use the available widget space for readable details")
+        XCTAssertTrue(firstWorkout.label.contains("4 exercises"), "The featured workout should expose its exercise count")
         XCTAssertTrue(app.buttons["training-split-full"].exists, "The complete split remains available from the fixed-size widget")
         let monthLabel = app.staticTexts["training-calendar-month-label"]
         XCTAssertTrue(monthLabel.exists)
