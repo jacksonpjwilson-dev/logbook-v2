@@ -371,6 +371,7 @@ struct PlannedExercise: Codable, Identifiable, Hashable {
     var equipment: String
     var sets: [PlannedSet] = (0..<3).map { _ in PlannedSet() }
     var supersetID: UUID?
+    var restSeconds: Int? = nil
 }
 
 struct WorkoutTemplate: Codable, Identifiable, Hashable {
@@ -397,6 +398,59 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
     var sets: [WorkoutSet]
     var supersetID: UUID?
     var notes = ""
+    var restSeconds: Int? = nil
+}
+
+struct WorkoutRestTimer: Codable, Hashable {
+    var baseDurationSeconds = 90
+    var endsAt: Date?
+    var pausedRemainingSeconds: Int?
+
+    var isPaused: Bool { pausedRemainingSeconds != nil }
+
+    func remainingSeconds(at date: Date = .now) -> Int {
+        if let pausedRemainingSeconds { return max(0, pausedRemainingSeconds) }
+        guard let endsAt else { return 0 }
+        return max(0, Int(ceil(endsAt.timeIntervalSince(date))))
+    }
+
+    var isRunning: Bool { endsAt.map { pausedRemainingSeconds == nil && $0 > .now } ?? false }
+
+    mutating func start(seconds: Int? = nil, at date: Date = .now) {
+        let duration = min(600, max(0, seconds ?? baseDurationSeconds))
+        endsAt = date.addingTimeInterval(TimeInterval(duration))
+        pausedRemainingSeconds = nil
+    }
+
+    mutating func pause(at date: Date = .now) {
+        guard let endsAt, pausedRemainingSeconds == nil else { return }
+        pausedRemainingSeconds = max(0, Int(ceil(endsAt.timeIntervalSince(date))))
+        self.endsAt = nil
+    }
+
+    mutating func resume(at date: Date = .now) {
+        guard let pausedRemainingSeconds else { return }
+        endsAt = date.addingTimeInterval(TimeInterval(max(0, pausedRemainingSeconds)))
+        self.pausedRemainingSeconds = nil
+    }
+
+    mutating func addFifteenSeconds(at date: Date = .now) {
+        if let pausedRemainingSeconds {
+            self.pausedRemainingSeconds = min(600, pausedRemainingSeconds + 15)
+        } else {
+            let remaining = remainingSeconds(at: date)
+            endsAt = date.addingTimeInterval(TimeInterval(min(600, remaining + 15)))
+        }
+    }
+
+    mutating func skip(at date: Date = .now) {
+        endsAt = date
+        pausedRemainingSeconds = nil
+    }
+
+    mutating func setBaseDuration(_ seconds: Int) {
+        baseDurationSeconds = min(600, max(15, seconds))
+    }
 }
 
 struct WorkoutSession: Codable, Identifiable, Hashable {
@@ -411,6 +465,7 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
     var pausedSeconds = 0.0
     var notes = ""
     var exercises: [WorkoutExercise]
+    var restTimer: WorkoutRestTimer? = nil
 }
 
 struct TrainingState: Codable {
