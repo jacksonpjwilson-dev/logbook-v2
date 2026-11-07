@@ -64,7 +64,12 @@ enum StoreFileError: LocalizedError {
 extension JSONEncoder {
     static var logbook: JSONEncoder {
         let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            let formatter = ISO8601DateFormatter()
+            formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            var container = encoder.singleValueContainer()
+            try container.encode(formatter.string(from: date))
+        }
         encoder.outputFormatting = [.sortedKeys]
         return encoder
     }
@@ -73,7 +78,21 @@ extension JSONEncoder {
 extension JSONDecoder {
     static var logbook: JSONDecoder {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let container = try decoder.singleValueContainer()
+            let value = try container.decode(String.self)
+            let fractionalFormatter = ISO8601DateFormatter()
+            fractionalFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+            if let date = fractionalFormatter.date(from: value) { return date }
+            // Keep reading files written by earlier builds with whole-second ISO-8601 dates.
+            let legacyFormatter = ISO8601DateFormatter()
+            legacyFormatter.formatOptions = [.withInternetDateTime]
+            if let date = legacyFormatter.date(from: value) { return date }
+            throw DecodingError.dataCorruptedError(
+                in: container,
+                debugDescription: "Expected an ISO-8601 date with or without fractional seconds."
+            )
+        }
         return decoder
     }
 }
