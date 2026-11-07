@@ -1,0 +1,929 @@
+{
+  "schema_version": "0.2",
+  "status": "PROVISIONAL: engineering starting values, NOT pixel-verified or user-approved",
+  "authoritative_reference_priority": [
+    "user-approved screenshots",
+    "approved Home geometry and content rules",
+    "tokens only after screenshot review"
+  ],
+  "categories": {
+    "defaults": [
+      "default",
+      "classic-white",
+      "classic-dark",
+      "classic-blue",
+      "classic-green",
+      "soft-slate",
+      "soft-ivory",
+      "graphite-linen",
+      "pearl-mist"
+    ],
+    "glass": [
+      "black-glass",
+      "white-glass",
+      "blue-glass",
+      "grey-glass",
+      "champagne-glass",
+      "alpine-glass"
+    ],
+    "featured": [
+      "soft-ivory",
+      "ember-dusk",
+      "forest-studio",
+      "aurora-pulse",
+      "sandstone-minimal"
+    ]
+  },
+  "themes": {
+    "default": {
+      "id": "default",
+      "name": "Default",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "very light blue/white native iOS",
+      "reference_images": [
+        "../references/defaults/default_CONCEPT.png",
+        "../references/defaults/default_COMPOSITE_CROP.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#f3f7fc",
+        "surface_tint": "#d6e4f5",
+        "accent_primary": "#7faee2",
+        "foreground_or_secondary": "#25456e"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/default_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "classic-white": {
+      "id": "classic-white",
+      "name": "Classic White",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "white / neutral silver",
+      "reference_images": [
+        "../references/defaults/classic-white_COMPOSITE_CROP.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#ffffff",
+        "surface_tint": "#eef0f3",
+        "accent_primary": "#b7bdc6",
+        "foreground_or_secondary": "#242a32"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/classic-white_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "classic-dark": {
+      "id": "classic-dark",
+      "name": "Classic Dark",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "black and graphite",
+      "reference_images": [
+        "../references/defaults/classic-dark_COMPOSITE_CROP.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#101114",
+        "surface_tint": "#262b32",
+        "accent_primary": "#818a96",
+        "foreground_or_secondary": "#e6e9ed"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/classic-dark_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "classic-blue": {
+      "id": "classic-blue",
+      "name": "Classic Blue",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "medium/dark blue",
+      "reference_images": [
+        "../references/defaults/classic-blue_COMPOSITE_CROP.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#082a50",
+        "surface_tint": "#1d5687",
+        "accent_primary": "#65a8dc",
+        "foreground_or_secondary": "#e4f3ff"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/classic-blue_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "classic-green": {
+      "id": "classic-green",
+      "name": "Classic Green",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "deep forest green",
+      "reference_images": [
+        "../references/defaults/classic-green_COMPOSITE_CROP.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#092c24",
+        "surface_tint": "#1d5f4b",
+        "accent_primary": "#78b8a0",
+        "foreground_or_secondary": "#e3f3e7"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/classic-green_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "soft-slate": {
+      "id": "soft-slate",
+      "name": "Soft Slate",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "blue-grey slate",
+      "reference_images": [
+        "../references/defaults/soft-slate_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#182e40",
+        "surface_tint": "#38546f",
+        "accent_primary": "#7795b1",
+        "foreground_or_secondary": "#e2eaf2"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/soft-slate_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "soft-ivory": {
+      "id": "soft-ivory",
+      "name": "Soft Ivory",
+      "categories": [
+        "defaults",
+        "featured"
+      ],
+      "visual_direction": "off-white, pale green grey",
+      "reference_images": [
+        "../references/defaults/soft-ivory_CONCEPT.png",
+        "../references/featured/soft-ivory_SHARED_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#f9f8f4",
+        "surface_tint": "#e9ebe5",
+        "accent_primary": "#b0beb7",
+        "foreground_or_secondary": "#405a55"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/soft-ivory_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "graphite-linen": {
+      "id": "graphite-linen",
+      "name": "Graphite Linen",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "neutral dark graphite",
+      "reference_images": [
+        "../references/defaults/graphite-linen_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#1b1c1f",
+        "surface_tint": "#34363a",
+        "accent_primary": "#8b8d91",
+        "foreground_or_secondary": "#f0f0f2"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/graphite-linen_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "pearl-mist": {
+      "id": "pearl-mist",
+      "name": "Pearl Mist",
+      "categories": [
+        "defaults"
+      ],
+      "visual_direction": "pale silver sage",
+      "reference_images": [
+        "../references/defaults/pearl-mist_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#f4f8f7",
+        "surface_tint": "#dce8e6",
+        "accent_primary": "#9aafa8",
+        "foreground_or_secondary": "#425854"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/pearl-mist_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "black-glass": {
+      "id": "black-glass",
+      "name": "Black Glass",
+      "categories": [
+        "glass"
+      ],
+      "visual_direction": "deep black, charcoal, cold silver-blue",
+      "reference_images": [
+        "../references/glass/black-glass.png"
+      ],
+      "reference_quality": "latest supplied screenshot left large concept",
+      "palette_provisional": {
+        "background_base": "#080f18",
+        "surface_tint": "#202d3c",
+        "accent_primary": "#657f98",
+        "foreground_or_secondary": "#d9effe"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/black-glass_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "white-glass": {
+      "id": "white-glass",
+      "name": "White Glass",
+      "categories": [
+        "glass"
+      ],
+      "visual_direction": "frosted white silver-blue",
+      "reference_images": [
+        "../references/glass/white-glass_THUMBNAIL_ONLY.png"
+      ],
+      "reference_quality": "latest supplied screenshot thumbnail only \u2014 HIGH RES BLOCKER",
+      "palette_provisional": {
+        "background_base": "#f9fcff",
+        "surface_tint": "#dde8f0",
+        "accent_primary": "#9dbbd3",
+        "foreground_or_secondary": "#34495f"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/white-glass_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "blue-glass": {
+      "id": "blue-glass",
+      "name": "Blue Glass",
+      "categories": [
+        "glass"
+      ],
+      "visual_direction": "icy white and blue",
+      "reference_images": [
+        "../references/glass/blue-glass_THUMBNAIL_ONLY.png"
+      ],
+      "reference_quality": "latest supplied screenshot thumbnail only \u2014 HIGH RES BLOCKER",
+      "palette_provisional": {
+        "background_base": "#d5eafb",
+        "surface_tint": "#8fc7ef",
+        "accent_primary": "#3d99dc",
+        "foreground_or_secondary": "#204b72"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/blue-glass_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "grey-glass": {
+      "id": "grey-glass",
+      "name": "Grey Glass",
+      "categories": [
+        "glass"
+      ],
+      "visual_direction": "smoky silver and charcoal",
+      "reference_images": [
+        "../references/glass/grey-glass_THUMBNAIL_ONLY.png"
+      ],
+      "reference_quality": "latest supplied screenshot thumbnail only \u2014 HIGH RES BLOCKER",
+      "palette_provisional": {
+        "background_base": "#303a46",
+        "surface_tint": "#5b6879",
+        "accent_primary": "#96aaba",
+        "foreground_or_secondary": "#e9f5ff"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/grey-glass_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "champagne-glass": {
+      "id": "champagne-glass",
+      "name": "Champagne Glass",
+      "categories": [
+        "glass"
+      ],
+      "visual_direction": "champagne, taupe, warm gold",
+      "reference_images": [
+        "../references/glass/champagne-glass_THUMBNAIL_ONLY.png"
+      ],
+      "reference_quality": "latest supplied screenshot thumbnail only \u2014 HIGH RES BLOCKER",
+      "palette_provisional": {
+        "background_base": "#f4e9db",
+        "surface_tint": "#d3b89a",
+        "accent_primary": "#a5794e",
+        "foreground_or_secondary": "#583b2b"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/champagne-glass_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "alpine-glass": {
+      "id": "alpine-glass",
+      "name": "Alpine Glass",
+      "categories": [
+        "glass"
+      ],
+      "visual_direction": "frosted alpine pale blue",
+      "reference_images": [
+        "../references/glass/alpine-glass_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#1b3d5b",
+        "surface_tint": "#4a7b9e",
+        "accent_primary": "#a0d3ed",
+        "foreground_or_secondary": "#e5f5ff"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/alpine-glass_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "ember-dusk": {
+      "id": "ember-dusk",
+      "name": "Ember Dusk",
+      "categories": [
+        "featured"
+      ],
+      "visual_direction": "burgundy, rust, ember",
+      "reference_images": [
+        "../references/featured/ember-dusk_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#2c101c",
+        "surface_tint": "#64243a",
+        "accent_primary": "#dc5c34",
+        "foreground_or_secondary": "#ffd19a"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/ember-dusk_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "forest-studio": {
+      "id": "forest-studio",
+      "name": "Forest Studio",
+      "categories": [
+        "featured"
+      ],
+      "visual_direction": "moss, sage, dark forest",
+      "reference_images": [
+        "../references/featured/forest-studio_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#10241c",
+        "surface_tint": "#234336",
+        "accent_primary": "#779565",
+        "foreground_or_secondary": "#d7e5bd"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/forest-studio_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "aurora-pulse": {
+      "id": "aurora-pulse",
+      "name": "Aurora Pulse",
+      "categories": [
+        "featured"
+      ],
+      "visual_direction": "navy, teal, cyan, electric purple",
+      "reference_images": [
+        "../references/featured/aurora-pulse_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#050f2a",
+        "surface_tint": "#104d6f",
+        "accent_primary": "#05c9bf",
+        "foreground_or_secondary": "#8647d6"
+      },
+      "materials_provisional": {
+        "widget_surface": "translucent frosted",
+        "blur_radius_points": 24,
+        "surface_opacity": 0.7,
+        "corner_radius_points": 22,
+        "border_opacity": 0.45,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/aurora-pulse_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    },
+    "sandstone-minimal": {
+      "id": "sandstone-minimal",
+      "name": "Sandstone Minimal",
+      "categories": [
+        "featured"
+      ],
+      "visual_direction": "warm ivory and sand",
+      "reference_images": [
+        "../references/featured/sandstone-minimal_CONCEPT.png"
+      ],
+      "reference_quality": "concept",
+      "palette_provisional": {
+        "background_base": "#f9eee2",
+        "surface_tint": "#dfb99d",
+        "accent_primary": "#b77e5a",
+        "foreground_or_secondary": "#54352c"
+      },
+      "materials_provisional": {
+        "widget_surface": "subtle translucent or native card",
+        "blur_radius_points": 12,
+        "surface_opacity": 0.86,
+        "corner_radius_points": 22,
+        "border_opacity": 0.24,
+        "shadow_style": "very soft diffuse"
+      },
+      "typography_provisional": {
+        "family_preference": "SF Pro Rounded",
+        "dynamic_type_required": true,
+        "exact_weights_sizes": "VISUAL_VERIFY"
+      },
+      "icon_rules": {
+        "symbol_source": "SF Symbols where corresponding approved icon exists",
+        "dock_icons": "same coordinated palette and material as in-theme widget icons",
+        "not_allowed": "rainbow/multicolor category icon plates",
+        "accessibility": "inactive vs active distinguishable without relying solely on colour"
+      },
+      "progress_indicator_rules": {
+        "calorie_ring": "dominant theme accent",
+        "protein_bar": "related but distinguishable shade",
+        "carbs_bar": "related restrained shade",
+        "fat_bar": "related restrained shade",
+        "status_semantics": "retain contrast and meaning across themes"
+      },
+      "background_artwork": "../backgrounds/sandstone-minimal_PROVISIONAL_BLUR.jpg",
+      "value_confidence": "LOW \u2014 conceptual starting palette and material values; not exact image measurement"
+    }
+  },
+  "duplicate_memberships": {
+    "soft-ivory": [
+      "defaults",
+      "featured"
+    ]
+  },
+  "notes": [
+    "Category entries=20; unique theme IDs=19.",
+    "The word Glass removed from renamed default themes; dedicated Glass themes remain distinct.",
+    "Latest screenshot Black Glass high-res left preview; other four are low-resolution thumbnails only and require full-resolution originals for precise matching.",
+    "Background jpgs are derived provisional abstract blurs, not approved asset extractions.",
+    "Mockup screen content frequently disagrees with approved Home geometry and must NOT be copied."
+  ]
+}
