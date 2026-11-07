@@ -423,7 +423,7 @@ final class DailyHomeUITests: XCTestCase {
 
     private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
         let matching = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier == %@ OR label == %@", label, label)
+            NSPredicate(format: "identifier == %@ OR label CONTAINS[cd] %@", label, label)
         )
         return matching.firstMatch
     }
