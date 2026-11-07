@@ -48,6 +48,7 @@ struct TrainingScreen: View {
             } header: {
                 HStack {
                     Text("Your workouts")
+                        .accessibilityIdentifier("training-workouts-heading")
                     Spacer()
                     Button { showCreate = true } label: { Label("New", systemImage: "plus") }
                         .labelStyle(.titleAndIcon)
