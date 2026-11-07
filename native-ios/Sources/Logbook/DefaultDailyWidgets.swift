@@ -68,7 +68,9 @@ struct DefaultDailyWidgetView: View {
                         openTraining()
                     }
                 } label: {
-                    Text(state.training.activeSession == nil ? (workout.template == nil ? "Plan Workout" : "Start Workout") : "Resume")
+                    Text(state.training.activeSession == nil
+                        ? (workout.template == nil ? (compact ? "Plan" : "Plan Workout") : (compact ? "Start" : "Start Workout"))
+                        : "Resume")
                         .font(.system(size: 10, weight: .semibold))
                         .foregroundStyle(palette.onAccentColor)
                         .padding(.horizontal, 10)
@@ -77,6 +79,9 @@ struct DefaultDailyWidgetView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("start-next-workout")
+                .accessibilityLabel(state.training.activeSession == nil
+                    ? (workout.template == nil ? "Plan workout" : "Start workout")
+                    : "Resume active workout")
 
                 Spacer(minLength: 0)
 
@@ -440,7 +445,9 @@ private struct CheckInContent: View {
                     HStack {
                         Text("DAILY CHECK-IN")
                             .font(.system(size: compact ? 7.3 : 8, weight: .semibold))
-                            .tracking(0.35)
+                            .tracking(compact ? 0.15 : 0.35)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.65)
                             .foregroundStyle(palette.mutedColor)
                         Spacer()
                         Button { openCheckIn(.supplements) } label: {
@@ -461,7 +468,7 @@ private struct CheckInContent: View {
                     Button { openCheckIn(.supplements) } label: {
                         HStack(spacing: 4) {
                             Image(systemName: "pills.fill").font(.system(size: 8, weight: .medium)).foregroundStyle(palette.accentColor)
-                            Text("Supplements")
+                            Text(compact ? "Supps" : "Supplements")
                                 .font(.system(size: compact ? 7.5 : 8.5, weight: .medium))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.65)

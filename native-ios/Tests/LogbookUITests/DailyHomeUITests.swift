@@ -21,7 +21,11 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(nextWorkout.label.contains("4 exercises"))
         XCTAssertTrue(nextWorkout.label.contains("minutes"))
         XCTAssertTrue(app.buttons["start-next-workout"].exists)
+        XCTAssertEqual(app.buttons["start-next-workout"].label, "Start workout")
         XCTAssertTrue(app.buttons["view-next-workout"].exists)
+        let checkInTitle = app.staticTexts["DAILY CHECK-IN"]
+        XCTAssertTrue(checkInTitle.exists)
+        XCTAssertLessThan(checkInTitle.frame.height, 13, "The check-in heading should stay on one line in its fixed square cell")
         XCTAssertTrue(app.buttons["habit-sleep"].exists)
         XCTAssertTrue(app.buttons["habit-weight"].exists)
         XCTAssertTrue(app.buttons["habit-supplements"].exists)
