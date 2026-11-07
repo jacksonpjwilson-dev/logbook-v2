@@ -262,8 +262,10 @@ final class DailyHomeUITests: XCTestCase {
         let finish = app.buttons["finish-workout"]
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
         finish.tap()
-        let confirmSave = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save")).lastMatch
-        XCTAssertTrue(confirmSave.waitForExistence(timeout: 5), "Unfinished planned sets should require explicit save confirmation")
+        let saveButtons = app.buttons.matching(NSPredicate(format: "label == %@", "Finish & Save"))
+        XCTAssertTrue(saveButtons.count > 0, "Unfinished planned sets should require explicit save confirmation")
+        let confirmSave = saveButtons.element(boundBy: saveButtons.count - 1)
+        XCTAssertTrue(confirmSave.waitForExistence(timeout: 5))
         confirmSave.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Sets completed")).firstMatch.exists)
