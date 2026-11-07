@@ -45,14 +45,17 @@ struct DefaultDailyWidgetView: View {
 
     private var workoutWidget: some View {
         let workout = nextWorkout
-        return ZStack(alignment: .bottom) {
-            Button(action: openTraining) {
-                WorkoutContent(workout: workout, palette: palette)
-            }
-            .buttonStyle(.plain)
-            .accessibilityElement(children: .ignore)
-            .accessibilityIdentifier("home-widget-next")
-            .accessibilityLabel("Next workout, \(workout.name), \(workout.exerciseCount) exercises, \(workout.duration.map { "about \($0) minutes" } ?? "estimated duration unavailable"), \(workout.lastCompletion). View Workout.")
+        return DefaultDailyCardSurface(palette: palette) {
+            VStack(spacing: 0) {
+                Button(action: openTraining) {
+                    WorkoutContent(workout: workout, palette: palette)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .ignore)
+                .accessibilityIdentifier("home-widget-next")
+                .accessibilityLabel("Next workout, \(workout.name), \(workout.exerciseCount) exercises, \(workout.duration.map { "about \($0) minutes" } ?? "estimated duration unavailable"), \(workout.lastCompletion). View Workout.")
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             HStack(spacing: 8) {
                 Button {
@@ -84,9 +87,12 @@ struct DefaultDailyWidgetView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("view-next-workout")
+                .frame(minWidth: 94, minHeight: 30, alignment: .trailing)
+                .contentShape(Rectangle())
             }
             .padding(.horizontal, 13)
-            .padding(.bottom, 10)
+            .padding(.bottom, 5)
+            }
         }
     }
 
@@ -273,48 +279,46 @@ private struct WorkoutContent: View {
     let palette: ThemePalette
 
     var body: some View {
-        DefaultDailyCardSurface(palette: palette) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack(spacing: 5) {
-                    Image(systemName: "dumbbell.fill").font(.system(size: 9, weight: .semibold)).foregroundStyle(palette.accentColor)
-                    Text("NEXT WORKOUT").font(.system(size: 8.5, weight: .semibold)).tracking(0.65)
-                    Spacer()
-                    if !workout.position.isEmpty {
-                        Text(workout.position).font(.system(size: 8, weight: .medium)).foregroundStyle(palette.mutedColor)
-                    }
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: 5) {
+                Image(systemName: "dumbbell.fill").font(.system(size: 9, weight: .semibold)).foregroundStyle(palette.accentColor)
+                Text("NEXT WORKOUT").font(.system(size: 8.5, weight: .semibold)).tracking(0.65)
+                Spacer()
+                if !workout.position.isEmpty {
+                    Text(workout.position).font(.system(size: 8, weight: .medium)).foregroundStyle(palette.mutedColor)
                 }
-                .foregroundStyle(palette.mutedColor)
-                Text(workout.name)
-                    .font(.system(size: 18, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.76)
-                    .foregroundStyle(palette.textColor)
-                    .padding(.top, 3)
-                Text(workout.muscles)
-                    .font(.system(size: 9, weight: .regular))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                    .foregroundStyle(palette.mutedColor)
-                    .padding(.top, 2)
-                HStack(spacing: 4) {
-                    Image(systemName: "clock").font(.system(size: 8, weight: .medium))
-                    Text("\(workout.exerciseCount) exercises")
-                    Text("·")
-                    Text(workout.duration.map { "~\($0) min" } ?? "Duration —")
-                    Text("·")
-                    Text("Last \(workout.lastCompletion)")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.65)
-                }
-                .font(.system(size: 7.8, weight: .regular))
+            }
+            .foregroundStyle(palette.mutedColor)
+            Text(workout.name)
+                .font(.system(size: 18, weight: .semibold, design: .rounded))
+                .lineLimit(1)
+                .minimumScaleFactor(0.76)
+                .foregroundStyle(palette.textColor)
+                .padding(.top, 3)
+            Text(workout.muscles)
+                .font(.system(size: 9, weight: .regular))
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
                 .foregroundStyle(palette.mutedColor)
                 .padding(.top, 2)
-                Spacer(minLength: 0)
+            HStack(spacing: 4) {
+                Image(systemName: "clock").font(.system(size: 8, weight: .medium))
+                Text("\(workout.exerciseCount) exercises")
+                Text("·")
+                Text(workout.duration.map { "~\($0) min" } ?? "Duration —")
+                Text("·")
+                Text("Last \(workout.lastCompletion)")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.65)
             }
-            .padding(.horizontal, 12)
-            .padding(.top, 10)
-            .padding(.bottom, 38)
+            .font(.system(size: 7.8, weight: .regular))
+            .foregroundStyle(palette.mutedColor)
+            .padding(.top, 2)
+            Spacer(minLength: 0)
         }
+        .padding(.horizontal, 12)
+        .padding(.top, 10)
+        .padding(.bottom, 7)
     }
 }
 
