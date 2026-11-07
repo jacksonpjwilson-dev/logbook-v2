@@ -202,9 +202,12 @@ final class DailyHomeUITests: XCTestCase {
         let firstID = rows.element(boundBy: 0).identifier
         let secondID = rows.element(boundBy: 1).identifier
         app.buttons["Edit"].tap()
-        let dragSource = rows.element(boundBy: 0).coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5))
-        let dropAfterSecondRow = rows.element(boundBy: 1).coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.9))
-        dragSource.press(forDuration: 1.0, thenDragTo: dropAfterSecondRow)
+        let reorderHandles = app.descendants(matching: .any)
+            .matching(NSPredicate(format: "label CONTAINS[cd] %@", "reorder"))
+        XCTAssertGreaterThanOrEqual(reorderHandles.count, 2, "Edit mode should expose a drag handle for each workout row. UI: \(app.debugDescription)")
+        let sourceHandle = reorderHandles.element(boundBy: 0)
+        let dropAfterSecondRow = rows.element(boundBy: 1).coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
+        sourceHandle.press(forDuration: 1.0, thenDragTo: dropAfterSecondRow)
         XCTAssertEqual(rows.element(boundBy: 0).identifier, secondID, "Dragging a workout row should update the saved split order")
         XCTAssertNotEqual(rows.element(boundBy: 0).identifier, firstID)
         app.buttons["Done"].tap()
