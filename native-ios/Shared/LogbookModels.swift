@@ -347,6 +347,23 @@ struct HomeState: Codable {
     }
 }
 
+enum ExerciseTrackingMode: String, Codable, CaseIterable, Identifiable {
+    case weightAndReps = "weight-reps"
+    case repsOnly = "reps"
+    case duration = "duration"
+    case weightAndDistance = "weight-distance"
+
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .weightAndReps: "Weight + reps"
+        case .repsOnly: "Reps only"
+        case .duration: "Duration"
+        case .weightAndDistance: "Weight + distance"
+        }
+    }
+}
+
 struct ExerciseDefinition: Codable, Identifiable, Hashable {
     var id: String
     var name: String
@@ -355,6 +372,7 @@ struct ExerciseDefinition: Codable, Identifiable, Hashable {
     var equipment: String
     var description: String = ""
     var isCustom = false
+    var trackingMode: ExerciseTrackingMode? = .weightAndReps
 }
 
 struct PlannedSet: Codable, Identifiable, Hashable {
@@ -372,6 +390,7 @@ struct PlannedExercise: Codable, Identifiable, Hashable {
     var sets: [PlannedSet] = (0..<3).map { _ in PlannedSet() }
     var supersetID: UUID?
     var restSeconds: Int? = nil
+    var trackingMode: ExerciseTrackingMode? = nil
 }
 
 struct WorkoutTemplate: Codable, Identifiable, Hashable {
@@ -387,6 +406,8 @@ struct WorkoutSet: Codable, Identifiable, Hashable {
     var reps: Int = 8
     var completed = false
     var kind = "working"
+    var durationSeconds: Int? = nil
+    var distanceMeters: Double? = nil
 }
 
 struct WorkoutExercise: Codable, Identifiable, Hashable {
@@ -399,6 +420,8 @@ struct WorkoutExercise: Codable, Identifiable, Hashable {
     var supersetID: UUID?
     var notes = ""
     var restSeconds: Int? = nil
+    var hasStarted: Bool? = false
+    var trackingMode: ExerciseTrackingMode? = nil
 }
 
 struct WorkoutRestTimer: Codable, Hashable {
@@ -470,6 +493,26 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
     var notes = ""
     var exercises: [WorkoutExercise]
     var restTimer: WorkoutRestTimer? = nil
+    /// Captured at start so changing the active program never reassigns a draft.
+    var programID: UUID? = nil
+    var scheduledTemplateID: UUID? = nil
+    var wasScheduledWorkout: Bool? = nil
+    var deletedAt: Date? = nil
+}
+
+struct WorkoutProgram: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var name: String
+    var templateIDs: [UUID] = []
+    var rotationIndex = 0
+
+    func scheduledTemplate(in templates: [WorkoutTemplate]) -> WorkoutTemplate? {
+        guard !templateIDs.isEmpty else { return nil }
+        let index = ((rotationIndex % templateIDs.count) + templateIDs.count) % templateIDs.count
+        guard templateIDs.indices.contains(index) else { return nil }
+        let id = templateIDs[index]
+        return templates.first { $0.id == id }
+    }
 }
 
 struct TrainingState: Codable {
@@ -478,6 +521,88 @@ struct TrainingState: Codable {
     var completedSessions: [WorkoutSession] = []
     var activeSession: WorkoutSession?
     var rotationIndex = 0
+    /// Nil on older installations; LogbookStore migrates the legacy single rotation lazily.
+    var programs: [WorkoutProgram]? = nil
+    var activeProgramID: UUID? = nil
+
+    var availablePrograms: [WorkoutProgram] {
+        if let programs, !programs.isEmpty { return programs }
+        let legacyID = UUID(uuidString: "A989A0DF-8E57-4DEB-BB52-66B9BD039999") ?? UUID()
+        return [WorkoutProgram(id: legacyID, name: "Program 1", templateIDs: templates.map(\.id), rotationIndex: rotationIndex)]
+    }
+
+    var activeProgram: WorkoutProgram? {
+        let programs = availablePrograms
+        return programs.first { $0.id == activeProgramID } ?? programs.first
+    }
+
+    var scheduledTemplate: WorkoutTemplate? {
+        activeProgram?.scheduledTemplate(in: templates)
+    }
+
+    var visibleCompletedSessions: [WorkoutSession] {
+        completedSessions.filter { $0.deletedAt == nil }
+    }
+
+    func recentlyDeletedSessions(asOf date: Date = .now) -> [WorkoutSession] {
+        completedSessions.filter {
+            guard let deletedAt = $0.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60
+        }.sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
+    }
+
+    var personalRecordEvents: [WorkoutPersonalRecord] {
+        let sessions = visibleCompletedSessions.sorted {
+            ($0.finishedAt ?? $0.startedAt) < ($1.finishedAt ?? $1.startedAt)
+        }
+        var bestByExercise: [String: Double] = [:]
+        var events: [WorkoutPersonalRecord] = []
+        for session in sessions {
+            var sessionBest: [String: (weight: Double, reps: Int, estimated: Double)] = [:]
+            for exercise in session.exercises {
+                guard (exercise.trackingMode ?? .weightAndReps) == .weightAndReps else { continue }
+                for set in exercise.sets where set.completed {
+                    guard let weight = set.weightKg, weight > 0, set.reps > 0 else { continue }
+                    let estimate = weight * (1 + Double(set.reps) / 30)
+                    if estimate > (sessionBest[exercise.exerciseID]?.estimated ?? 0) {
+                        sessionBest[exercise.exerciseID] = (weight, set.reps, estimate)
+                    }
+                }
+            }
+            for (exerciseID, performance) in sessionBest.sorted(by: { $0.key < $1.key }) {
+                guard let previousBest = bestByExercise[exerciseID] else {
+                    bestByExercise[exerciseID] = performance.estimated
+                    continue
+                }
+                if performance.estimated > previousBest {
+                    events.append(WorkoutPersonalRecord(
+                        sessionID: session.id,
+                        exerciseID: exerciseID,
+                        exerciseName: session.exercises.first(where: { $0.exerciseID == exerciseID })?.name ?? exerciseID,
+                        date: session.finishedAt ?? session.startedAt,
+                        weightKg: performance.weight,
+                        reps: performance.reps,
+                        estimatedOneRepMaxKg: performance.estimated,
+                        previousBestKg: previousBest
+                    ))
+                    bestByExercise[exerciseID] = performance.estimated
+                }
+            }
+        }
+        return events
+    }
+}
+
+struct WorkoutPersonalRecord: Identifiable, Hashable {
+    var id: String { "\(sessionID.uuidString)-\(exerciseID)" }
+    var sessionID: UUID
+    var exerciseID: String
+    var exerciseName: String
+    var date: Date
+    var weightKg: Double
+    var reps: Int
+    var estimatedOneRepMaxKg: Double
+    var previousBestKg: Double
 }
 
 struct NutritionTargets: Codable, Hashable {

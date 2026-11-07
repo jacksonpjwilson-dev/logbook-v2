@@ -29,6 +29,7 @@ struct HomeScreen: View {
                                 },
                                 startWorkout: { template in
                                     store.startWorkout(template)
+                                    store.requestActiveWorkoutPresentation()
                                     path = [.training]
                                 },
                                 remove: { id in store.removeHomeWidget(id, pageID: page.id) }
@@ -78,7 +79,6 @@ struct HomeScreen: View {
                 if !isEditing, store.state.training.activeSession != nil {
                     Button { path = [.training] } label: {
                         Label("Resume", systemImage: "play.fill")
-
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.horizontal, 11).padding(.vertical, 8)
                             .background(palette.accentColor.opacity(0.82), in: Capsule())
@@ -159,7 +159,6 @@ struct HomeScreen: View {
             }
         }
         .padding(.vertical, 9)
-
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Home Screen pages")
     }
@@ -240,7 +239,6 @@ private struct HomePageGrid: View {
                             .offset(x: -7, y: 7)
                             .accessibilityLabel("Remove \(widget.kind.title) widget")
                         }
-
                     }
                     .frame(width: width, height: height)
                     .position(
@@ -321,30 +319,35 @@ private struct HomeWidgetCard: View {
         case .meals:
             let count = state.nutrition.logs.filter { $0.date == today }.count
             return ("\(count) food entries", "across \(state.nutrition.meals.count) meals")
-
         case .nextWorkout:
             if let active = state.training.activeSession { return (active.templateName, "Workout in progress · Tap to open Training") }
-            let templates = state.training.templates
-            if templates.indices.contains(state.training.rotationIndex) {
-                let position = state.training.rotationIndex + 1
-                return ("\(position). \(templates[state.training.rotationIndex].name)", "Workout \(position) of \(templates.count) · Tap to open Training")
+            if let template = state.training.scheduledTemplate {
+                let templates = state.training.activeProgram?.templateIDs.compactMap { id in state.training.templates.first { $0.id == id } } ?? []
+                let position = templates.firstIndex { $0.id == template.id }.map { $0 + 1 } ?? 1
+                return ("\(position). \(template.name)", "Workout \(position) of \(templates.count) · Tap to open Training")
             }
             return ("No workout planned", "Create a plan in Training")
         case .workoutSplit, .upcomingPlan, .volumeTrend, .muscleGroups, .restTimer:
             if let active = state.training.activeSession { return (active.templateName, "Workout in progress") }
-            if let template = state.training.templates.first { return (template.name, "\(state.training.templates.count) workout plan\(state.training.templates.count == 1 ? "" : "s")") }
+            if let template = state.training.scheduledTemplate {
+                let count = state.training.activeProgram?.templateIDs.count ?? 0
+                return (template.name, "Next in \(state.training.activeProgram?.name ?? "Program") · \(count) workout\(count == 1 ? "" : "s")")
+            }
             return ("No workout planned", "Create a plan in Training")
         case .thisWeek:
-            let sessions = state.training.completedSessions.filter { $0.localDate >= weekStart() }
+            let sessions = state.training.visibleCompletedSessions.filter { $0.localDate >= weekStart() }
             return ("\(sessions.count) workouts", "completed this week")
         case .lastWorkout:
-            if let last = state.training.completedSessions.max(by: { ($0.finishedAt ?? .distantPast) < ($1.finishedAt ?? .distantPast) }) {
+            if let last = state.training.visibleCompletedSessions.max(by: { ($0.finishedAt ?? .distantPast) < ($1.finishedAt ?? .distantPast) }) {
                 return (last.templateName, last.localDate)
             }
             return ("No sessions yet", "Your completed workouts will appear here")
         case .personalRecords:
-            let records = state.training.completedSessions.flatMap(\.exercises).flatMap(\.sets).filter(\.completed).count
-            return ("\(records) logged sets", "Personal records build from completed sets")
+            let records = state.training.personalRecordEvents.filter { Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month) }.sorted { $0.date > $1.date }
+            if let featured = records.first {
+                return ("\(records.count) PR\(records.count == 1 ? "" : "s") this month", "\(featured.exerciseName) · e1RM \(Int(featured.estimatedOneRepMaxKg)) kg")
+            }
+            return ("No PRs this month", "First completed workout sets your baseline")
         case .lastNight, .sleepChart, .sleepConsistency:
             guard let sleep = state.checkins.sleep.max(by: { $0.wakeDate < $1.wakeDate }) else { return ("No sleep logged", "Add a check-in when you wake") }
             return (String(format: "%.1f hours", Double(sleep.durationMinutes) / 60), "last recorded sleep")
@@ -402,7 +405,6 @@ private struct HomeWidgetCard: View {
     private var visibleHeaderTitle: String {
         guard state.home.theme == .defaultTheme, widget.size == .small else {
             return widget.variant ?? widget.kind.title.uppercased()
-
         }
         if widget.variant == "Habits Streak" { return "HABITS" }
         if widget.variant == "Daily Check-in" { return "CHECK-IN" }
@@ -478,12 +480,11 @@ private struct HomeWidgetCard: View {
     private func hasWorkout(on offset: Int) -> Bool {
         guard let date = Calendar.current.date(byAdding: .day, value: offset, to: .now) else { return false }
         let day = LocalDay.string(date)
-        return state.training.completedSessions.contains { $0.localDate == day }
+        return state.training.visibleCompletedSessions.contains { $0.localDate == day }
     }
 
     private func weightValue(_ kg: Double) -> Double { state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
 }
-
 
 private struct CaloriesMacroVisual: View {
     let state: LogbookState
@@ -564,7 +565,6 @@ struct ThemeBackdrop: View {
             ZStack {
                 tokens.backgroundBase
                 Image(tokens.backgroundAsset)
-
                     .resizable()
                     .scaledToFill()
                     .frame(width: proxy.size.width, height: proxy.size.height)
@@ -645,7 +645,6 @@ struct HomeEditorScreen: View {
                             .onTapGesture { selectedPageID = page.id }
                             Spacer()
                             if selectedPageID == page.id { Image(systemName: "checkmark.circle.fill").foregroundStyle(.blue) }
-
                         }
                         .contentShape(Rectangle())
                         .onTapGesture { selectedPageID = page.id }
@@ -726,7 +725,6 @@ struct HomeEditorScreen: View {
                 Text("This will move \(tidyMoveCount) widget\(tidyMoveCount == 1 ? "" : "s") to fill open positions. You can undo the layout afterward.")
             }
             .onAppear { selectedPageID = selectedPageID ?? store.state.home.pages.first?.id }
-
         }
     }
 
@@ -807,7 +805,6 @@ struct HomeEditorScreen: View {
 struct WidgetGalleryScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
-
     let pageID: UUID?
     @State private var search = ""
     @State private var family = "All"
@@ -888,7 +885,6 @@ struct WidgetGalleryScreen: View {
     private func add(_ kind: WidgetKind) {
         guard let pageID else { return }
         guard store.addHomeWidget(kind, size: size, pageID: pageID) else {
-
             errorMessage = "This page has no open position for a \(size.title.lowercased()) widget. Choose a smaller size or add another page."
             return
         }
@@ -950,4 +946,3 @@ private struct WidgetSizePreview: View {
         .shadow(color: .black.opacity(selected ? 0.15 : 0.06), radius: 4, x: 0, y: 2)
     }
 }
-

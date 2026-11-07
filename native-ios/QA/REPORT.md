@@ -1,14 +1,13 @@
-# Logbook Default theme QA report
+# Logbook QA report
 
-- Workflow: [Daily Home QA run 42274999088](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42274999088)
-- Branch: `codex/default-theme-gate1`
-- Tested source commit: `9d6a724655218de42f0f4b70f66f9be37c7db12e`
-- Simulator: iPhone 16, iOS 18.5 (GitHub macOS 15 runner)
-- Build / Xcode test result: **PASSED**
-- Tests: **7 passed, 0 failed, 0 skipped** (6 store/unit + 1 UI)
-- Screenshots: 4 real PNG captures (Daily, Training, Food, Progress & History), artifact `daily-home-qa-results`
-- Missing asset runtime warnings: none
-- Baselines: unchanged; no candidate has been approved
-- Current decision: **Ready for user review**, not design-approved
+This report is updated by `Scripts/run-daily-home-qa.sh` after a simulator test. The last known completed run is #27. The next run is required to validate the current Training Phase 2 source.
 
-See the downloaded visual review gallery for the captures, measured frames, and open discrepancies. iPhone 18 Pro and smaller-device runs remain outstanding. The other three Home captures show the current implementation for audit only; their functional content remains incomplete.
+- Workflow: [Daily Home QA run #27](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42382271551)
+- Tested source commit: `45f42d4a505f58b4d900431e1ae5fc85f43edb6b`
+- iPhone 16: build succeeded; 14 tests passed, 2 failed, 0 skipped. Daily grid/layout assertions passed. Failures were a strict persisted-Date equality in rest-timer recovery and the Home Start Workout action not presenting the active workout.
+- iPhone SE (3rd generation): build succeeded; 14 tests passed, 2 failed, 0 skipped. Daily grid/layout assertions passed, so run #27 did not show an SE geometry failure. Same two failures as iPhone 16.
+- iPhone 18 Pro: simulator unavailable on its runner; QA tests were skipped. **Untested**, not passed.
+- Artifacts: iPhone 16 ID `13578721172`; iPhone SE ID `13577954498`; unavailable-device report ID `13577769726`. Run #27 artifacts contain real simulator screenshots and Xcode results.
+- Baselines: unchanged; no candidate has been approved.
+
+The current source includes fixes for the two run #27 failures and Training Phase 2 changes. Those changes are not verified until a new Actions run finishes. The active-workout screenshot capture was added to that test, but there is no result artifact for it yet. See `TRAINING_PHASE2.md` for the detailed status.

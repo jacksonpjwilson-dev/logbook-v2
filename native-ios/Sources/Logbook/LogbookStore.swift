@@ -8,6 +8,7 @@ final class LogbookStore: ObservableObject {
     @Published private(set) var persistenceError: String?
     @Published private(set) var lastSavedAt: Date?
     @Published private(set) var focusedCheckInSection: CheckInSection?
+    @Published private(set) var activeWorkoutPresentationRequest: UUID?
 
     private let repository: LogbookRepository
     private(set) var canEdit = true
@@ -25,9 +26,11 @@ final class LogbookStore: ObservableObject {
                 loaded.nutrition.foods = foods
             }
             let migratedDailyLayout = loaded.home.migrateUntouchedDailyLayout()
+            let migratedTrainingPrograms = Self.migrateLegacyPrograms(&loaded.training)
+            let purgedWorkoutRecords = Self.purgeExpiredWorkoutRecords(&loaded.training, asOf: .now)
             state = loaded
             lastSavedAt = FileManager.default.fileExists(atPath: repository.url.path) ? Date() : nil
-            if migratedDailyLayout {
+            if migratedDailyLayout || migratedTrainingPrograms || purgedWorkoutRecords {
                 do {
                     try repository.save(loaded)
                     lastSavedAt = .now
@@ -52,6 +55,14 @@ final class LogbookStore: ObservableObject {
 
     func focusCheckIn(_ section: CheckInSection) {
         focusedCheckInSection = section
+    }
+
+    func requestActiveWorkoutPresentation() {
+        activeWorkoutPresentationRequest = UUID()
+    }
+
+    func consumeActiveWorkoutPresentationRequest() {
+        activeWorkoutPresentationRequest = nil
     }
 
     func clearCheckInFocus() {
@@ -138,8 +149,90 @@ final class LogbookStore: ObservableObject {
         let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !clean.isEmpty else { return nil }
         let template = WorkoutTemplate(name: clean)
-        transact { $0.training.templates.append(template) }
+        transact { state in
+            Self.migrateLegacyPrograms(&state.training)
+            state.training.templates.append(template)
+            guard let programIndex = state.training.programs?.firstIndex(where: { $0.id == state.training.activeProgramID }) else { return }
+            state.training.programs?[programIndex].templateIDs.append(template.id)
+        }
         return template.id
+    }
+
+    @discardableResult
+    func addProgram(name: String, activate: Bool = true) -> UUID? {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return nil }
+        let program = WorkoutProgram(name: clean)
+        transact { state in
+            Self.migrateLegacyPrograms(&state.training)
+            state.training.programs?.append(program)
+            if activate {
+                state.training.activeProgramID = program.id
+                state.training.rotationIndex = 0
+            }
+        }
+        return state.training.programs?.contains(where: { $0.id == program.id }) == true ? program.id : nil
+    }
+
+    func setActiveProgram(_ id: UUID) {
+        transact { state in
+            Self.migrateLegacyPrograms(&state.training)
+            guard state.training.programs?.contains(where: { $0.id == id }) == true else { return }
+            state.training.activeProgramID = id
+            state.training.rotationIndex = state.training.programs?.first(where: { $0.id == id })?.rotationIndex ?? 0
+        }
+    }
+
+    func renameProgram(_ id: UUID, name: String) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        transact { state in
+            Self.migrateLegacyPrograms(&state.training)
+            guard let index = state.training.programs?.firstIndex(where: { $0.id == id }) else { return }
+            state.training.programs?[index].name = clean
+        }
+    }
+
+    func moveTemplate(_ templateID: UUID, toProgram programID: UUID, at requestedIndex: Int) {
+        transact { state in
+            Self.migrateLegacyPrograms(&state.training)
+            guard var programs = state.training.programs,
+                  let targetIndex = programs.firstIndex(where: { $0.id == programID }),
+                  let sourceIndex = programs.firstIndex(where: { $0.templateIDs.contains(templateID) }) else { return }
+            let oldScheduled = programs.map { ($0.id, $0.scheduledTemplate(in: state.training.templates)?.id) }
+            programs[sourceIndex].templateIDs.removeAll { $0 == templateID }
+            if programs[sourceIndex].rotationIndex >= programs[sourceIndex].templateIDs.count {
+                programs[sourceIndex].rotationIndex = max(0, programs[sourceIndex].templateIDs.count - 1)
+            }
+            guard let refreshedTargetIndex = programs.firstIndex(where: { $0.id == programID }) else { return }
+            let insertionIndex = min(max(0, requestedIndex), programs[refreshedTargetIndex].templateIDs.count)
+            programs[refreshedTargetIndex].templateIDs.insert(templateID, at: insertionIndex)
+            if let old = oldScheduled.first(where: { $0.0 == programID })?.1,
+               let newIndex = programs[refreshedTargetIndex].templateIDs.firstIndex(of: old) {
+                programs[refreshedTargetIndex].rotationIndex = newIndex
+            } else if sourceIndex == refreshedTargetIndex {
+                programs[refreshedTargetIndex].rotationIndex = insertionIndex
+            }
+            state.training.programs = programs
+            state.training.rotationIndex = programs.first(where: { $0.id == state.training.activeProgramID })?.rotationIndex ?? 0
+        }
+    }
+
+    @discardableResult
+    func skipScheduledWorkout() -> Bool {
+        guard state.training.activeSession == nil,
+              let activeID = state.training.activeProgramID,
+              let program = state.training.programs?.first(where: { $0.id == activeID }),
+              program.scheduledTemplate(in: state.training.templates) != nil else { return false }
+        transact { state in
+            guard var programs = state.training.programs,
+                  let index = programs.firstIndex(where: { $0.id == activeID }),
+                  !programs[index].templateIDs.isEmpty else { return }
+            programs[index].rotationIndex = (programs[index].rotationIndex + 1) % programs[index].templateIDs.count
+            state.training.programs = programs
+            state.training.rotationIndex = programs[index].rotationIndex
+        }
+        return true
     }
 
     func renameTemplate(_ id: UUID, name: String) {
@@ -152,10 +245,38 @@ final class LogbookStore: ObservableObject {
         }
     }
 
+    func reorderProgramTemplates(programID: UUID, orderedIDs: [UUID]) {
+        transact { state in
+            Self.migrateLegacyPrograms(&state.training)
+            guard var programs = state.training.programs,
+                  let index = programs.firstIndex(where: { $0.id == programID }) else { return }
+            let original = programs[index].templateIDs
+            let valid = Set(original)
+            let scheduledID = programs[index].scheduledTemplate(in: state.training.templates)?.id
+            var reordered = orderedIDs.filter { valid.contains($0) }
+            for id in original where !reordered.contains(id) { reordered.append(id) }
+            programs[index].templateIDs = reordered
+            if let scheduledID, let position = reordered.firstIndex(of: scheduledID) { programs[index].rotationIndex = position }
+            else { programs[index].rotationIndex = min(programs[index].rotationIndex, max(0, reordered.count - 1)) }
+            state.training.programs = programs
+            if state.training.activeProgramID == programID { state.training.rotationIndex = programs[index].rotationIndex }
+        }
+    }
+
     func deleteTemplate(_ id: UUID) {
         transact { state in
+            Self.migrateLegacyPrograms(&state.training)
             state.training.templates.removeAll { $0.id == id }
             state.training.rotationIndex = min(state.training.rotationIndex, max(0, state.training.templates.count - 1))
+            guard var programs = state.training.programs else { return }
+            for index in programs.indices {
+                let removedIndex = programs[index].templateIDs.firstIndex(of: id)
+                programs[index].templateIDs.removeAll { $0 == id }
+                if let removedIndex, removedIndex < programs[index].rotationIndex { programs[index].rotationIndex -= 1 }
+                if !programs[index].templateIDs.isEmpty { programs[index].rotationIndex %= programs[index].templateIDs.count }
+                else { programs[index].rotationIndex = 0 }
+            }
+            state.training.programs = programs
         }
     }
 
@@ -167,6 +288,59 @@ final class LogbookStore: ObservableObject {
         }
     }
 
+    func reorderTemplateExercises(templateID: UUID, orderedIDs: [UUID]) {
+        transact { state in
+            guard let templateIndex = state.training.templates.firstIndex(where: { $0.id == templateID }) else { return }
+            let original = state.training.templates[templateIndex].exercises
+            let byID = Dictionary(uniqueKeysWithValues: original.map { ($0.id, $0) })
+            var reordered = orderedIDs.compactMap { byID[$0] }
+            for exercise in original where !reordered.contains(where: { $0.id == exercise.id }) { reordered.append(exercise) }
+            state.training.templates[templateIndex].exercises = reordered
+            state.training.templates[templateIndex].version += 1
+        }
+    }
+
+    func configurePlannedExercise(templateID: UUID, exerciseID: UUID, setCount: Int, reps: Int, restSeconds: Int?, trackingMode: ExerciseTrackingMode? = nil) {
+        transact { state in
+            guard let templateIndex = state.training.templates.firstIndex(where: { $0.id == templateID }),
+                  let exerciseIndex = state.training.templates[templateIndex].exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+            var exercise = state.training.templates[templateIndex].exercises[exerciseIndex]
+            let targetSetCount = min(30, max(1, setCount))
+            if exercise.sets.count > targetSetCount { exercise.sets = Array(exercise.sets.prefix(targetSetCount)) }
+            while exercise.sets.count < targetSetCount { exercise.sets.append(PlannedSet(reps: max(1, reps))) }
+            for index in exercise.sets.indices { exercise.sets[index].reps = max(1, reps) }
+            exercise.restSeconds = restSeconds.map { min(600, max(15, $0)) }
+            if let trackingMode { exercise.trackingMode = trackingMode }
+            state.training.templates[templateIndex].exercises[exerciseIndex] = exercise
+            state.training.templates[templateIndex].version += 1
+        }
+    }
+
+    func setSuperset(templateID: UUID, exerciseIDs: [UUID], groupID: UUID? = nil) {
+        let unique = Array(Set(exerciseIDs))
+        guard unique.count >= 2 else { return }
+        transact { state in
+            guard let templateIndex = state.training.templates.firstIndex(where: { $0.id == templateID }) else { return }
+            let existingGroup = unique.compactMap { id in
+                state.training.templates[templateIndex].exercises.first(where: { $0.id == id })?.supersetID
+            }.first
+            let resolvedGroup = groupID ?? existingGroup ?? UUID()
+            for index in state.training.templates[templateIndex].exercises.indices where unique.contains(state.training.templates[templateIndex].exercises[index].id) {
+                state.training.templates[templateIndex].exercises[index].supersetID = resolvedGroup
+            }
+            state.training.templates[templateIndex].version += 1
+        }
+    }
+
+    func ungroupExercise(templateID: UUID, exerciseID: UUID) {
+        transact { state in
+            guard let templateIndex = state.training.templates.firstIndex(where: { $0.id == templateID }),
+                  let exerciseIndex = state.training.templates[templateIndex].exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+            state.training.templates[templateIndex].exercises[exerciseIndex].supersetID = nil
+            state.training.templates[templateIndex].version += 1
+        }
+    }
+
     func appendExercise(_ exercise: ExerciseDefinition, toTemplate id: UUID) {
         transact { state in
             guard let index = state.training.templates.firstIndex(where: { $0.id == id }) else { return }
@@ -174,16 +348,17 @@ final class LogbookStore: ObservableObject {
                 exerciseID: exercise.id,
                 name: exercise.name,
                 muscle: exercise.group,
-                equipment: exercise.equipment
+                equipment: exercise.equipment,
+                trackingMode: exercise.trackingMode
             ))
             state.training.templates[index].version += 1
         }
     }
 
-    func addCustomExercise(name: String, muscle: String, equipment: String) -> ExerciseDefinition? {
+    func addCustomExercise(name: String, muscle: String, equipment: String, instructions: String = "", trackingMode: ExerciseTrackingMode = .weightAndReps) -> ExerciseDefinition? {
         let cleanName = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !cleanName.isEmpty else { return nil }
-        let item = ExerciseDefinition(id: "custom-\(UUID().uuidString)", name: cleanName, group: muscle, equipment: equipment, isCustom: true)
+        let item = ExerciseDefinition(id: "custom-\(UUID().uuidString)", name: cleanName, group: muscle, equipment: equipment, description: instructions.trimmingCharacters(in: .whitespacesAndNewlines), isCustom: true, trackingMode: trackingMode)
         transact { $0.training.exercises.append(item) }
         return item
     }
@@ -191,6 +366,9 @@ final class LogbookStore: ObservableObject {
     func startWorkout(_ template: WorkoutTemplate) {
         guard state.training.activeSession == nil else { return }
         let now = Date()
+        let originProgram = state.training.activeProgram
+        let scheduledTemplateID = originProgram?.scheduledTemplate(in: state.training.templates)?.id
+        let isScheduled = scheduledTemplateID == template.id
         let exerciseRows = template.exercises.map { planned in
             WorkoutExercise(
                 exerciseID: planned.exerciseID,
@@ -199,7 +377,8 @@ final class LogbookStore: ObservableObject {
                 equipment: planned.equipment,
                 sets: planned.sets.map { WorkoutSet(reps: $0.reps, kind: $0.kind) },
                 supersetID: planned.supersetID,
-                restSeconds: planned.restSeconds
+                restSeconds: planned.restSeconds,
+                trackingMode: planned.trackingMode ?? state.training.exercises.first(where: { $0.id == planned.exerciseID })?.trackingMode
             )
         }
         let session = WorkoutSession(
@@ -209,7 +388,10 @@ final class LogbookStore: ObservableObject {
             localDate: LocalDay.string(now),
             startedAt: now,
             exercises: exerciseRows,
-            restTimer: WorkoutRestTimer()
+            restTimer: WorkoutRestTimer(),
+            programID: originProgram?.id,
+            scheduledTemplateID: scheduledTemplateID,
+            wasScheduledWorkout: isScheduled
         )
         transact { $0.training.activeSession = session }
         guard state.training.activeSession?.id == session.id else { return }
@@ -234,16 +416,36 @@ final class LogbookStore: ObservableObject {
                 muscle: exercise.group,
                 equipment: exercise.equipment,
                 sets: (0..<3).map { _ in WorkoutSet() },
-                restSeconds: nil
+                restSeconds: nil,
+                trackingMode: exercise.trackingMode
             ))
         }
+    }
+
+    @discardableResult
+    func replaceUnstartedActiveExercise(_ exerciseID: UUID, with exercise: ExerciseDefinition) -> Bool {
+        guard let session = state.training.activeSession,
+              let row = session.exercises.first(where: { $0.id == exerciseID }),
+              row.hasStarted != true,
+              row.sets.allSatisfy({ !$0.completed && $0.weightKg == nil && $0.durationSeconds == nil && $0.distanceMeters == nil }) else { return false }
+        transact { state in
+            guard let sessionIndex = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+            state.training.activeSession?.exercises[sessionIndex].exerciseID = exercise.id
+            state.training.activeSession?.exercises[sessionIndex].name = exercise.name
+            state.training.activeSession?.exercises[sessionIndex].muscle = exercise.group
+            state.training.activeSession?.exercises[sessionIndex].equipment = exercise.equipment
+            state.training.activeSession?.exercises[sessionIndex].notes = ""
+            state.training.activeSession?.exercises[sessionIndex].trackingMode = exercise.trackingMode
+            state.training.activeSession?.exercises[sessionIndex].restSeconds = nil
+        }
+        return state.training.activeSession?.exercises.contains(where: { $0.id == exerciseID && $0.exerciseID == exercise.id }) == true
     }
 
     func addSet(toExercise exerciseID: UUID) {
         transact { state in
             guard let index = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
             let previous = state.training.activeSession?.exercises[index].sets.last
-            state.training.activeSession?.exercises[index].sets.append(WorkoutSet(weightKg: previous?.weightKg, reps: previous?.reps ?? 8))
+            state.training.activeSession?.exercises[index].sets.append(WorkoutSet(weightKg: previous?.weightKg, reps: previous?.reps ?? 8, durationSeconds: previous?.durationSeconds, distanceMeters: previous?.distanceMeters))
         }
     }
 
@@ -253,19 +455,62 @@ final class LogbookStore: ObservableObject {
                   let setIndex = state.training.activeSession?.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
             state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].weightKg = weightKg
             state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].reps = max(1, reps)
+            state.training.activeSession?.exercises[exerciseIndex].hasStarted = true
         }
+    }
+
+    func updateSetDuration(exerciseID: UUID, setID: UUID, seconds: Int?) {
+        transact { state in
+            guard let exerciseIndex = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }),
+                  let setIndex = state.training.activeSession?.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
+            state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].durationSeconds = seconds.map { max(1, $0) }
+            state.training.activeSession?.exercises[exerciseIndex].hasStarted = true
+        }
+    }
+
+    func updateSetDistance(exerciseID: UUID, setID: UUID, weightKg: Double?, distanceMeters: Double?) {
+        transact { state in
+            guard let exerciseIndex = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }),
+                  let setIndex = state.training.activeSession?.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
+            state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].weightKg = weightKg.flatMap { $0 > 0 ? $0 : nil }
+            state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].distanceMeters = distanceMeters.flatMap { $0 > 0 ? $0 : nil }
+            state.training.activeSession?.exercises[exerciseIndex].hasStarted = true
+        }
+    }
+
+    @discardableResult
+    func acceptProgressionSuggestion(exerciseID: UUID, weightKg: Double) -> Bool {
+        guard weightKg > 0,
+              let exercise = state.training.activeSession?.exercises.first(where: { $0.id == exerciseID }),
+              (exercise.trackingMode ?? .weightAndReps) == .weightAndReps,
+              exercise.sets.allSatisfy({ !$0.completed && $0.weightKg == nil }) else { return false }
+        transact { state in
+            guard let index = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }),
+                  var exercises = state.training.activeSession?.exercises else { return }
+            for setIndex in exercises[index].sets.indices { exercises[index].sets[setIndex].weightKg = weightKg }
+            state.training.activeSession?.exercises = exercises
+        }
+        return state.training.activeSession?.exercises.first(where: { $0.id == exerciseID })?.sets.allSatisfy { $0.weightKg == weightKg } == true
     }
 
     func toggleSet(exerciseID: UUID, setID: UUID) -> Bool {
         guard let exercise = state.training.activeSession?.exercises.first(where: { $0.id == exerciseID }),
               let set = exercise.sets.first(where: { $0.id == setID }) else { return false }
-        guard set.completed || (set.weightKg ?? 0) > 0 && set.reps > 0 else { return false }
+        let hasValidMeasurement: Bool
+        switch exercise.trackingMode ?? .weightAndReps {
+        case .weightAndReps: hasValidMeasurement = (set.weightKg ?? 0) > 0 && set.reps > 0
+        case .repsOnly: hasValidMeasurement = set.reps > 0
+        case .duration: hasValidMeasurement = (set.durationSeconds ?? 0) > 0
+        case .weightAndDistance: hasValidMeasurement = (set.weightKg ?? 0) > 0 && (set.distanceMeters ?? 0) > 0
+        }
+        guard set.completed || hasValidMeasurement else { return false }
         let isCompleting = !set.completed
         let setIndex = exercise.sets.firstIndex(where: { $0.id == setID })
         transact { state in
             guard let exerciseIndex = state.training.activeSession?.exercises.firstIndex(where: { $0.id == exerciseID }),
                   let setIndex = state.training.activeSession?.exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
             state.training.activeSession?.exercises[exerciseIndex].sets[setIndex].completed.toggle()
+            state.training.activeSession?.exercises[exerciseIndex].hasStarted = true
         }
         if isCompleting, let setIndex, shouldStartRestTimer(after: exerciseID, setIndex: setIndex),
            let changedExercise = state.training.activeSession?.exercises.first(where: { $0.id == exerciseID }) {
@@ -337,21 +582,94 @@ final class LogbookStore: ObservableObject {
         guard var session = state.training.activeSession else { return 0 }
         let incomplete = session.exercises.flatMap(\.sets).filter { !$0.completed }.count
         guard incomplete == 0 || confirmIncomplete else { return incomplete }
-        session.finishedAt = .now
+        let finishedAt = Date.now
+        if let pausedAt = session.pausedAt { session.pausedSeconds += finishedAt.timeIntervalSince(pausedAt) }
+        session.finishedAt = finishedAt
         session.pausedAt = nil
         transact { state in
             state.training.completedSessions.append(session)
             state.training.activeSession = nil
-            if let templateID = session.templateID,
-               let index = state.training.templates.firstIndex(where: { $0.id == templateID }),
-               !state.training.templates.isEmpty {
-                state.training.rotationIndex = (index + 1) % state.training.templates.count
+            if let programID = session.programID,
+               session.wasScheduledWorkout == true,
+               let programIndex = state.training.programs?.firstIndex(where: { $0.id == programID }),
+               let expectedID = session.scheduledTemplateID,
+               state.training.programs?[programIndex].scheduledTemplate(in: state.training.templates)?.id == expectedID,
+               let count = state.training.programs?[programIndex].templateIDs.count,
+               count > 0 {
+                let nextRotation = ((state.training.programs?[programIndex].rotationIndex ?? 0) + 1) % count
+                state.training.programs?[programIndex].rotationIndex = nextRotation
+                if state.training.activeProgramID == programID { state.training.rotationIndex = nextRotation }
+            } else if session.programID == nil,
+                      session.wasScheduledWorkout == nil,
+                      let templateID = session.templateID,
+                      let programIndex = state.training.programs?.firstIndex(where: { $0.templateIDs.contains(templateID) }),
+                      state.training.programs?[programIndex].scheduledTemplate(in: state.training.templates)?.id == templateID,
+                      let count = state.training.programs?[programIndex].templateIDs.count,
+                      count > 0 {
+                let nextRotation = ((state.training.programs?[programIndex].rotationIndex ?? 0) + 1) % count
+                state.training.programs?[programIndex].rotationIndex = nextRotation
+                if state.training.activeProgramID == state.training.programs?[programIndex].id { state.training.rotationIndex = nextRotation }
             }
         }
         guard state.training.activeSession == nil else { return -2 }
         WorkoutActivityController.shared.finish(session: session)
         WatchBridge.shared.send(state: state)
         return -1
+    }
+
+    func updateCompletedWorkoutSet(sessionID: UUID, exerciseID: UUID, setID: UUID, weightKg: Double?, reps: Int, completed: Bool, durationSeconds: Int? = nil, distanceMeters: Double? = nil) {
+        transact { state in
+            guard let sessionIndex = state.training.completedSessions.firstIndex(where: { $0.id == sessionID && $0.deletedAt == nil }),
+                  let exerciseIndex = state.training.completedSessions[sessionIndex].exercises.firstIndex(where: { $0.id == exerciseID }),
+                  let setIndex = state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets.firstIndex(where: { $0.id == setID }) else { return }
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].weightKg = weightKg.flatMap { $0 > 0 ? $0 : nil }
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].reps = max(1, reps)
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].completed = completed
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].durationSeconds = durationSeconds
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].sets[setIndex].distanceMeters = distanceMeters
+        }
+    }
+
+    func updateCompletedWorkoutNotes(sessionID: UUID, notes: String) {
+        transact { state in
+            guard let index = state.training.completedSessions.firstIndex(where: { $0.id == sessionID && $0.deletedAt == nil }) else { return }
+            state.training.completedSessions[index].notes = notes
+        }
+    }
+
+    func updateCompletedExerciseNotes(sessionID: UUID, exerciseID: UUID, notes: String) {
+        transact { state in
+            guard let sessionIndex = state.training.completedSessions.firstIndex(where: { $0.id == sessionID && $0.deletedAt == nil }),
+                  let exerciseIndex = state.training.completedSessions[sessionIndex].exercises.firstIndex(where: { $0.id == exerciseID }) else { return }
+            state.training.completedSessions[sessionIndex].exercises[exerciseIndex].notes = notes
+        }
+    }
+
+    func deleteCompletedWorkout(_ id: UUID, at date: Date = .now) {
+        transact { state in
+            guard let index = state.training.completedSessions.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.training.completedSessions[index].deletedAt = date
+        }
+    }
+
+    @discardableResult
+    func restoreDeletedWorkout(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let session = state.training.completedSessions.first(where: { $0.id == id }),
+              let deletedAt = session.deletedAt,
+              date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
+        transact { state in
+            guard let index = state.training.completedSessions.firstIndex(where: { $0.id == id }) else { return }
+            state.training.completedSessions[index].deletedAt = nil
+        }
+        return state.training.completedSessions.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func permanentlyDeleteWorkout(_ id: UUID) {
+        transact { $0.training.completedSessions.removeAll { $0.id == id && $0.deletedAt != nil } }
+    }
+
+    func purgeExpiredDeletedWorkouts(asOf date: Date = .now) {
+        transact { state in _ = Self.purgeExpiredWorkoutRecords(&state.training, asOf: date) }
     }
 
     func discardWorkout() {
@@ -625,6 +943,33 @@ final class LogbookStore: ObservableObject {
                 guard member.sets.indices.contains(setIndex) else { return true }
                 return member.sets[setIndex].completed
             }
+    }
+
+    @discardableResult
+    private static func migrateLegacyPrograms(_ training: inout TrainingState) -> Bool {
+        guard training.programs == nil || training.programs?.isEmpty == true else {
+            if training.activeProgramID == nil || training.programs?.contains(where: { $0.id == training.activeProgramID }) != true {
+                training.activeProgramID = training.programs?.first?.id
+                return true
+            }
+            return false
+        }
+        let id = UUID(uuidString: "A989A0DF-8E57-4DEB-BB52-66B9BD039999") ?? UUID()
+        let index = training.templates.isEmpty ? 0 : training.rotationIndex % training.templates.count
+        training.programs = [WorkoutProgram(id: id, name: "Program 1", templateIDs: training.templates.map(\.id), rotationIndex: index)]
+        training.activeProgramID = id
+        training.rotationIndex = index
+        return true
+    }
+
+    @discardableResult
+    private static func purgeExpiredWorkoutRecords(_ training: inout TrainingState, asOf date: Date) -> Bool {
+        let originalCount = training.completedSessions.count
+        training.completedSessions.removeAll { session in
+            guard let deletedAt = session.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
+        }
+        return training.completedSessions.count != originalCount
     }
 
     private static func isValid(_ state: LogbookState) -> Bool {

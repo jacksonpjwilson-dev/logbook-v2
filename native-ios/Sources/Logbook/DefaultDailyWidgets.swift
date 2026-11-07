@@ -108,8 +108,7 @@ struct DefaultDailyWidgetView: View {
             if let active, let templateID = active.templateID {
                 return state.training.templates.first { $0.id == templateID }
             }
-            guard state.training.templates.indices.contains(state.training.rotationIndex) else { return nil }
-            return state.training.templates[state.training.rotationIndex]
+            return state.training.scheduledTemplate
         }()
         let name = active?.templateName ?? template?.name ?? "No workout planned"
         let exerciseCount = active?.exercises.count ?? template?.exercises.count ?? 0
@@ -117,11 +116,12 @@ struct DefaultDailyWidgetView: View {
         let muscles = Array(Set(muscleNames.filter { !$0.isEmpty })).sorted().joined(separator: " · ")
         let setCount = active?.exercises.reduce(0) { $0 + $1.sets.count } ?? template?.exercises.reduce(0) { $0 + $1.sets.count } ?? 0
         let minutes = exerciseCount == 0 ? nil : max(1, setCount * 2 + exerciseCount * 2 + 5)
-        let last = state.training.completedSessions
+        let last = state.training.visibleCompletedSessions
             .compactMap(\.finishedAt)
             .max()
             .map { RelativeDateTimeFormatter().localizedString(for: $0, relativeTo: .now) } ?? "No previous completion"
-        let position = state.training.templates.firstIndex { $0.id == template?.id }.map { "\($0 + 1) of \(state.training.templates.count)" } ?? ""
+        let programTemplates = state.training.activeProgram?.templateIDs.compactMap { id in state.training.templates.first { $0.id == id } } ?? []
+        let position = programTemplates.firstIndex { $0.id == template?.id }.map { "\($0 + 1) of \(programTemplates.count)" } ?? ""
         return WorkoutSummary(
             template: template,
             name: name,

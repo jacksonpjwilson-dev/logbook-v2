@@ -3,9 +3,19 @@ import SwiftUI
 struct TrainingScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var showCreate = false
+    @State private var creatingProgram = false
     @State private var workoutName = ""
     @State private var showActiveWorkout = false
     @State private var showDeleteTemplate: UUID?
+    @State private var pendingProgramID: UUID?
+    @State private var editingProgramID: UUID?
+
+    private var activeProgram: WorkoutProgram? { store.state.training.activeProgram }
+    private var activeTemplates: [WorkoutTemplate] {
+        guard let activeProgram else { return store.state.training.templates }
+        let templates = Dictionary(uniqueKeysWithValues: store.state.training.templates.map { ($0.id, $0) })
+        return activeProgram.templateIDs.compactMap { templates[$0] }
+    }
 
     var body: some View {
         List {
@@ -28,12 +38,52 @@ struct TrainingScreen: View {
                 }
             }
 
+            Section("Programs") {
+                ForEach(store.state.training.availablePrograms) { program in
+                    Button { requestProgramSwitch(program.id) } label: {
+                        HStack(spacing: 12) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(program.name).font(.headline)
+                                let next = program.scheduledTemplate(in: store.state.training.templates)?.name ?? "No workouts in this program"
+                                Text("Next · \(next)").font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                            }
+                            Spacer(minLength: 8)
+                            if program.id == activeProgram?.id {
+                                Image(systemName: "checkmark.circle.fill").foregroundStyle(store.state.home.theme.palette.accentColor)
+                                    .accessibilityLabel("Active program")
+                            }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("training-program-\(program.id.uuidString)")
+                    .contextMenu {
+                        Button("Rename program", systemImage: "pencil") {
+                            editingProgramID = program.id
+                            workoutName = program.name
+                            showCreate = true
+                        }
+                    }
+                }
+                Button {
+                    creatingProgram = true
+                    editingProgramID = nil
+                    showCreate = true
+                } label: { Label("New program", systemImage: "plus.circle") }
+                if store.state.training.activeSession == nil, store.state.training.scheduledTemplate != nil {
+                    Button(role: .destructive) { _ = store.skipScheduledWorkout() } label: {
+                        Label("Skip scheduled workout", systemImage: "forward.fill")
+                    }
+                    .accessibilityIdentifier("skip-scheduled-workout")
+                }
+            }
+
             Section {
-                if store.state.training.templates.isEmpty {
+                if activeTemplates.isEmpty {
                     ContentUnavailableView("Create your first workout", systemImage: "dumbbell", description: Text("Choose a name, add exercises from the built-in library, then start a session. Your history begins when you save a workout."))
                         .listRowBackground(Color.clear)
                 }
-                ForEach(store.state.training.templates) { template in
+                ForEach(activeTemplates) { template in
                     NavigationLink(destination: WorkoutTemplateScreen(templateID: template.id)) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(template.name).font(.headline)
@@ -41,25 +91,41 @@ struct TrainingScreen: View {
                                 .font(.caption).foregroundStyle(.secondary)
                         }
                     }
+                    .contextMenu {
+                        ForEach(store.state.training.availablePrograms.filter { $0.id != activeProgram?.id }) { destination in
+                            Button("Move to \(destination.name)", systemImage: "folder") {
+                                store.moveTemplate(template.id, toProgram: destination.id, at: destination.templateIDs.count)
+                            }
+                        }
+                    }
                     .swipeActions {
                         Button("Delete", role: .destructive) { showDeleteTemplate = template.id }
                     }
+                }
+                .onMove { sources, destination in
+                    guard let programID = activeProgram?.id else { return }
+                    var orderedIDs = activeTemplates.map(\.id)
+                    let moving = sources.map { orderedIDs[$0] }
+                    orderedIDs.remove(atOffsets: sources)
+                    let adjustedDestination = destination - sources.filter { $0 < destination }.count
+                    orderedIDs.insert(contentsOf: moving, at: adjustedDestination)
+                    store.reorderProgramTemplates(programID: programID, orderedIDs: orderedIDs)
                 }
             } header: {
                 HStack {
                     Text("Your workouts")
                         .accessibilityIdentifier("training-workouts-heading")
                     Spacer()
-                    Button { showCreate = true } label: { Label("New", systemImage: "plus") }
+                    Button { creatingProgram = false; editingProgramID = nil; showCreate = true } label: { Label("New", systemImage: "plus") }
                         .labelStyle(.titleAndIcon)
                 }
             }
 
             Section("Recent sessions") {
-                if store.state.training.completedSessions.isEmpty {
+                if store.state.training.visibleCompletedSessions.isEmpty {
                     Text("Completed workouts will appear here.").foregroundStyle(.secondary)
                 } else {
-                    ForEach(store.state.training.completedSessions.sorted { $0.startedAt > $1.startedAt }.prefix(8)) { session in
+                    ForEach(store.state.training.visibleCompletedSessions.sorted { $0.startedAt > $1.startedAt }.prefix(8)) { session in
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(session.templateName).font(.headline)
@@ -80,14 +146,41 @@ struct TrainingScreen: View {
             }
         }
         .navigationTitle("Training")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showCreate = true } label: { Image(systemName: "plus") }.accessibilityLabel("New workout") } }
-        .alert("New workout", isPresented: $showCreate) {
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) { EditButton() }
+            ToolbarItem(placement: .topBarTrailing) { Button { creatingProgram = false; editingProgramID = nil; showCreate = true } label: { Image(systemName: "plus") }.accessibilityLabel("New workout") }
+        }
+        .alert(creatingProgram ? "New program" : (editingProgramID == nil ? "New workout" : "Rename program"), isPresented: $showCreate) {
             TextField("Workout name", text: $workoutName)
-            Button("Create") {
-                if store.addTemplate(name: workoutName) != nil { workoutName = "" }
+            Button(editingProgramID == nil ? "Create" : "Save") {
+                if creatingProgram {
+                    if let id = store.addProgram(name: workoutName, activate: false) {
+                        if store.state.training.activeSession == nil { store.setActiveProgram(id) }
+                        else { pendingProgramID = id }
+                    }
+                } else if let editingProgramID {
+                    store.renameProgram(editingProgramID, name: workoutName)
+                } else {
+                    _ = store.addTemplate(name: workoutName)
+                }
+                workoutName = ""
+                creatingProgram = false
+                editingProgramID = nil
             }
-            Button("Cancel", role: .cancel) { workoutName = "" }
-        } message: { Text("You can add exercises after creating it.") }
+            Button("Cancel", role: .cancel) { workoutName = ""; creatingProgram = false; editingProgramID = nil }
+        } message: { Text(creatingProgram ? "Each program keeps its own workout order and next scheduled workout." : (editingProgramID == nil ? "You can add exercises after creating it." : "Workout history is unchanged when a program is renamed.")) }
+        .confirmationDialog("Switch workout program?", isPresented: Binding(
+            get: { pendingProgramID != nil },
+            set: { if !$0 { pendingProgramID = nil } }
+        ), titleVisibility: .visible) {
+            Button("Switch program") {
+                if let pendingProgramID { store.setActiveProgram(pendingProgramID) }
+                pendingProgramID = nil
+            }
+            Button("Keep current program", role: .cancel) { pendingProgramID = nil }
+        } message: {
+            Text("Your unfinished workout stays attached to its original program and will not be moved.")
+        }
         .confirmationDialog("Delete this workout plan?", isPresented: Binding(
             get: { showDeleteTemplate != nil },
             set: { if !$0 { showDeleteTemplate = nil } }
@@ -100,6 +193,21 @@ struct TrainingScreen: View {
         .sheet(isPresented: $showActiveWorkout) {
             ActiveWorkoutScreen().presentationDetents([.large]).presentationDragIndicator(.visible)
         }
+        .onAppear { presentRequestedWorkoutIfNeeded() }
+        .onChange(of: store.activeWorkoutPresentationRequest) { _, _ in presentRequestedWorkoutIfNeeded() }
+    }
+
+    private func requestProgramSwitch(_ id: UUID) {
+        guard id != activeProgram?.id else { return }
+        if store.state.training.activeSession != nil { pendingProgramID = id }
+        else { store.setActiveProgram(id) }
+    }
+
+    private func presentRequestedWorkoutIfNeeded() {
+        guard store.activeWorkoutPresentationRequest != nil,
+              store.state.training.activeSession != nil else { return }
+        showActiveWorkout = true
+        store.consumeActiveWorkoutPresentationRequest()
     }
 
     private func volume(_ session: WorkoutSession) -> String {
@@ -134,13 +242,60 @@ struct WorkoutTemplateScreen: View {
                             Text("Add exercises to make this plan ready to start.").foregroundStyle(.secondary)
                         }
                         ForEach(template.exercises) { exercise in
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(exercise.name).font(.headline)
-                                Text("\(exercise.muscle) · \(exercise.sets.count) sets · \(exercise.equipment)").font(.caption).foregroundStyle(.secondary)
+                            DisclosureGroup {
+                                Picker("Tracking mode", selection: Binding(
+                                    get: { exercise.trackingMode ?? .weightAndReps },
+                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds, trackingMode: $0) }
+                                )) {
+                                    ForEach(ExerciseTrackingMode.allCases) { mode in Text(mode.title).tag(mode) }
+                                }
+                                Stepper("Sets · \(exercise.sets.count)", value: Binding(
+                                    get: { exercise.sets.count },
+                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: $0, reps: exercise.sets.first?.reps ?? 8, restSeconds: exercise.restSeconds) }
+                                ), in: 1...30)
+                                Stepper("Reps · \(exercise.sets.first?.reps ?? 8)", value: Binding(
+                                    get: { exercise.sets.first?.reps ?? 8 },
+                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: $0, restSeconds: exercise.restSeconds) }
+                                ), in: 1...100)
+                                Stepper("Rest · \(exercise.restSeconds.map { "\($0)s" } ?? "90s default")", value: Binding(
+                                    get: { exercise.restSeconds ?? 90 },
+                                    set: { store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: $0) }
+                                ), in: 15...600, step: 15)
+                                if exercise.restSeconds != nil {
+                                    Button("Use workout default rest") {
+                                        store.configurePlannedExercise(templateID: templateID, exerciseID: exercise.id, setCount: exercise.sets.count, reps: exercise.sets.first?.reps ?? 8, restSeconds: nil)
+                                    }
+                                }
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(exercise.name).font(.headline)
+                                Text("\(exercise.muscle) · \(exercise.sets.count) sets · \(exercise.trackingMode?.title ?? "Weight + reps") · \(exercise.equipment)").font(.caption).foregroundStyle(.secondary)
+                                }
                             }
                             .swipeActions {
                                 Button("Remove", role: .destructive) { store.removeExercise(exercise.id, fromTemplate: templateID) }
                             }
+                            .contextMenu {
+                                if let index = template.exercises.firstIndex(where: { $0.id == exercise.id }), index > 0 {
+                                    let previous = template.exercises[index - 1]
+                                    Button("Superset with \(previous.name)", systemImage: "link") {
+                                        store.setSuperset(templateID: templateID, exerciseIDs: [previous.id, exercise.id])
+                                    }
+                                }
+                                if exercise.supersetID != nil {
+                                    Button("Remove from superset", systemImage: "link.slash") {
+                                        store.ungroupExercise(templateID: templateID, exerciseID: exercise.id)
+                                    }
+                                }
+                            }
+                        }
+                        .onMove { sources, destination in
+                            var orderedIDs = template.exercises.map(\.id)
+                            let moving = sources.map { orderedIDs[$0] }
+                            orderedIDs.remove(atOffsets: sources)
+                            let adjustedDestination = destination - sources.filter { $0 < destination }.count
+                            orderedIDs.insert(contentsOf: moving, at: adjustedDestination)
+                            store.reorderTemplateExercises(templateID: templateID, orderedIDs: orderedIDs)
                         }
                         Button { showExercisePicker = true } label: { Label("Add exercise", systemImage: "plus.circle.fill") }
                     } header: { Text("Exercise plan") }
@@ -151,6 +306,7 @@ struct WorkoutTemplateScreen: View {
                     }
                 }
                 .navigationTitle(template.name)
+                .toolbar { ToolbarItem(placement: .topBarTrailing) { EditButton() } }
             } else {
                 ContentUnavailableView("Workout plan unavailable", systemImage: "dumbbell")
             }
@@ -183,7 +339,10 @@ struct ExercisePickerScreen: View {
 
     private var filtered: [ExerciseDefinition] {
         guard !search.isEmpty else { return store.state.training.exercises }
-        return store.state.training.exercises.filter { $0.name.localizedCaseInsensitiveContains(search) || $0.group.localizedCaseInsensitiveContains(search) || $0.equipment.localizedCaseInsensitiveContains(search) }
+        return store.state.training.exercises.filter {
+            $0.name.localizedCaseInsensitiveContains(search) || $0.group.localizedCaseInsensitiveContains(search) ||
+                $0.equipment.localizedCaseInsensitiveContains(search) || $0.description.localizedCaseInsensitiveContains(search)
+        }
     }
 
     var body: some View {
@@ -226,6 +385,8 @@ struct CustomExerciseScreen: View {
     @State private var name = ""
     @State private var muscle = "Other"
     @State private var equipment = ""
+    @State private var instructions = ""
+    @State private var trackingMode: ExerciseTrackingMode = .weightAndReps
 
     var body: some View {
         NavigationStack {
@@ -233,6 +394,10 @@ struct CustomExerciseScreen: View {
                 TextField("Exercise name", text: $name)
                 TextField("Primary muscle", text: $muscle)
                 TextField("Equipment", text: $equipment)
+                Picker("Tracking mode", selection: $trackingMode) {
+                    ForEach(ExerciseTrackingMode.allCases) { mode in Text(mode.title).tag(mode) }
+                }
+                TextField("Optional instructions", text: $instructions, axis: .vertical).lineLimit(2...5)
             }
             .navigationTitle("Custom exercise")
             .navigationBarTitleDisplayMode(.inline)
@@ -240,7 +405,7 @@ struct CustomExerciseScreen: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Save") {
-                        guard let item = store.addCustomExercise(name: name, muscle: muscle, equipment: equipment.isEmpty ? "Other" : equipment) else { return }
+                        guard let item = store.addCustomExercise(name: name, muscle: muscle, equipment: equipment.isEmpty ? "Other" : equipment, instructions: instructions, trackingMode: trackingMode) else { return }
                         onCreate(item); dismiss()
                     }
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
@@ -254,12 +419,35 @@ struct ActiveWorkoutScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
     @State private var showExercisePicker = false
+    @State private var replacingExerciseID: UUID?
     @State private var showFinishConfirmation = false
     @State private var showDiscardConfirmation = false
     @State private var incompleteCount = 0
+    @State private var expandedExerciseID: UUID?
+    @State private var showCompletionSummary = false
+    @State private var completedSessionForSummary: WorkoutSession?
     var onStart: (() -> Void)?
 
     private var session: WorkoutSession? { store.state.training.activeSession }
+    private var focusedExerciseID: UUID? {
+        guard let session else { return nil }
+        var visitedSupersets = Set<UUID>()
+        for exercise in session.exercises {
+            if let groupID = exercise.supersetID {
+                guard visitedSupersets.insert(groupID).inserted else { continue }
+                let members = session.exercises.filter { $0.supersetID == groupID }
+                let rounds = members.map { $0.sets.count }.max() ?? 0
+                for round in 0..<rounds {
+                    if let next = members.first(where: { $0.sets.indices.contains(round) && !$0.sets[round].completed }) {
+                        return next.id
+                    }
+                }
+            } else if exercise.sets.contains(where: { !$0.completed }) {
+                return exercise.id
+            }
+        }
+        return session.exercises.last?.id
+    }
 
     var body: some View {
         NavigationStack {
@@ -340,31 +528,67 @@ struct ActiveWorkoutScreen: View {
                             }
                         }
                         ForEach(session.exercises) { exercise in
+                            let isExpanded = (expandedExerciseID ?? focusedExerciseID) == exercise.id
                             Section {
-                                HStack(spacing: 4) {
-                                    Text("Set").frame(width: 20, alignment: .center)
-                                    Text("Previous").frame(width: 55, alignment: .leading)
-                                    Text("Weight").frame(maxWidth: .infinity, alignment: .leading)
-                                    Text("Reps").frame(width: 52, alignment: .center)
-                                    Text("Done").frame(width: 28, alignment: .center)
+                                if isExpanded {
+                                    setTableHeader(for: exercise)
+                                    ForEach(exercise.sets) { set in
+                                        WorkoutSetEditor(exercise: exercise, set: set)
+                                    }
+                                    if let suggestion = suggestedProgression(for: exercise) {
+                                        Button {
+                                            _ = store.acceptProgressionSuggestion(exerciseID: exercise.id, weightKg: suggestion)
+                                        } label: {
+                                            Label("Accept progression · \(suggestion.formatted(.number.precision(.fractionLength(0...1)))) kg", systemImage: "arrow.up.right")
+                                                .font(.caption.weight(.semibold))
+                                        }
+                                        .accessibilityIdentifier("accept-progression-suggestion")
+                                    }
+                                    TextField("Exercise notes", text: Binding(
+                                        get: { exercise.notes },
+                                        set: { store.updateExerciseNotes($0, exerciseID: exercise.id) }
+                                    ), axis: .vertical)
+                                        .lineLimit(1...3)
+                                        .accessibilityIdentifier("exercise-notes-\(exercise.id.uuidString)")
+                                    Button { store.addSet(toExercise: exercise.id) } label: { Label("Add set", systemImage: "plus") }
+                                } else {
+                                    Button { expandedExerciseID = exercise.id } label: {
+                                        HStack {
+                                            VStack(alignment: .leading, spacing: 3) {
+                                                Text(exercise.name).font(.subheadline.weight(.semibold))
+                                                Text("\(exercise.sets.filter(\.completed).count) of \(exercise.sets.count) sets complete")
+                                                    .font(.caption).foregroundStyle(.secondary)
+                                            }
+                                            Spacer()
+                                            Image(systemName: "chevron.down").font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                        }
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(.plain)
                                 }
-                                .font(.caption2.weight(.medium))
-                                .foregroundStyle(.secondary)
-                                ForEach(exercise.sets) { set in
-                                    WorkoutSetEditor(exercise: exercise, set: set)
-                                }
-                                TextField("Exercise notes", text: Binding(
-                                    get: { exercise.notes },
-                                    set: { store.updateExerciseNotes($0, exerciseID: exercise.id) }
-                                ), axis: .vertical)
-                                    .lineLimit(1...3)
-                                    .accessibilityIdentifier("exercise-notes-\(exercise.id.uuidString)")
-                                Button { store.addSet(toExercise: exercise.id) } label: { Label("Add set", systemImage: "plus") }
                             } header: {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(exercise.name)
-                                    Text("\(exercise.muscle) · Previous values never mark a set complete")
-                                        .font(.caption2).textCase(nil).foregroundStyle(.secondary)
+                                Button {
+                                    expandedExerciseID = isExpanded ? nil : exercise.id
+                                } label: {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(exercise.name)
+                                            Text("\(exercise.muscle) · \(exercise.equipment)")
+                                                .font(.caption2).textCase(nil).foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
+                                            .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                                    }
+                                }
+                                .buttonStyle(.plain)
+                                .contextMenu {
+                                    if exercise.hasStarted != true && exercise.sets.allSatisfy({ !$0.completed && $0.weightKg == nil }) {
+                                        Button("Replace exercise", systemImage: "arrow.2.squarepath") {
+                                            replacingExerciseID = exercise.id
+                                            showExercisePicker = true
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -378,7 +602,11 @@ struct ActiveWorkoutScreen: View {
                     .safeAreaInset(edge: .bottom, spacing: 0) {
                         ActiveWorkoutSummaryBar(session: session) {
                             let result = store.finishWorkout(confirmIncomplete: false)
-                            if result == -1 { dismiss() }
+                            if result == -1 {
+                                completedSessionForSummary = store.state.training.completedSessions.first { $0.id == session.id }
+                                showCompletionSummary = completedSessionForSummary != nil
+                                if completedSessionForSummary == nil { dismiss() }
+                            }
                             else if result > 0 { incompleteCount = result; showFinishConfirmation = true }
                         }
                     }
@@ -390,11 +618,29 @@ struct ActiveWorkoutScreen: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Close") { dismiss() } } }
             .sheet(isPresented: $showExercisePicker) {
-                ExercisePickerScreen { store.addExerciseToActive($0) }
+                ExercisePickerScreen { exercise in
+                    if let replacingExerciseID {
+                        _ = store.replaceUnstartedActiveExercise(replacingExerciseID, with: exercise)
+                        self.replacingExerciseID = nil
+                    } else {
+                        store.addExerciseToActive(exercise)
+                    }
+                }
                     .presentationDetents([.large]).presentationDragIndicator(.visible)
             }
+            .sheet(isPresented: $showCompletionSummary, onDismiss: { dismiss() }) {
+                if let completedSessionForSummary {
+                    WorkoutCompletionSummaryScreen(session: completedSessionForSummary)
+                        .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
+                }
+            }
             .confirmationDialog("Save this workout with unfinished sets?", isPresented: $showFinishConfirmation, titleVisibility: .visible) {
-                Button("Finish & Save", role: .destructive) { _ = store.finishWorkout(confirmIncomplete: true); dismiss() }
+                Button("Finish & Save", role: .destructive) {
+                    _ = store.finishWorkout(confirmIncomplete: true)
+                    completedSessionForSummary = store.state.training.completedSessions.last
+                    showCompletionSummary = completedSessionForSummary != nil
+                    if completedSessionForSummary == nil { dismiss() }
+                }
                 Button("Return to workout", role: .cancel) { }
             } message: { Text("\(incompleteCount) planned sets will remain saved as unfinished. Only completed sets count in statistics.") }
             .confirmationDialog("Discard this workout?", isPresented: $showDiscardConfirmation, titleVisibility: .visible) {
@@ -402,7 +648,46 @@ struct ActiveWorkoutScreen: View {
                 Button("Keep working", role: .cancel) { }
             }
             .onAppear { if session == nil { onStart?() } }
+            .onChange(of: focusedExerciseID) { _, newID in
+                if newID != nil { expandedExerciseID = newID }
+            }
         }
+    }
+
+    @ViewBuilder
+    private func setTableHeader(for exercise: WorkoutExercise) -> some View {
+        HStack(spacing: 4) {
+            Text("Set").frame(width: 20, alignment: .center)
+            Text("Previous").frame(width: 55, alignment: .leading)
+            switch exercise.trackingMode ?? .weightAndReps {
+            case .weightAndReps:
+                Text("Weight").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Reps").frame(maxWidth: .infinity, alignment: .leading)
+            case .repsOnly:
+                Text("Reps").frame(maxWidth: .infinity, alignment: .leading)
+            case .duration:
+                Text("Seconds").frame(maxWidth: .infinity, alignment: .leading)
+            case .weightAndDistance:
+                Text("Weight").frame(maxWidth: .infinity, alignment: .leading)
+                Text("Distance").frame(maxWidth: .infinity, alignment: .leading)
+            }
+            Text("Done").frame(width: 28, alignment: .center)
+        }
+        .font(.caption2.weight(.medium))
+        .foregroundStyle(.secondary)
+        .accessibilityIdentifier("workout-set-table-header")
+    }
+
+    private func suggestedProgression(for exercise: WorkoutExercise) -> Double? {
+        guard (exercise.trackingMode ?? .weightAndReps) == .weightAndReps,
+              exercise.sets.allSatisfy({ !$0.completed && $0.weightKg == nil }),
+              let prior = store.state.training.visibleCompletedSessions
+                .filter({ $0.finishedAt != nil })
+                .sorted(by: { $0.startedAt > $1.startedAt })
+                .compactMap({ $0.exercises.first(where: { $0.exerciseID == exercise.exerciseID }) })
+                .first,
+              let priorBest = prior.sets.filter(\.completed).compactMap(\.weightKg).max(), priorBest > 0 else { return nil }
+        return priorBest + 2.5
     }
 
     private func elapsed(_ session: WorkoutSession, now: Date) -> String {
@@ -413,6 +698,47 @@ struct ActiveWorkoutScreen: View {
 
     private func restTime(_ seconds: Int) -> String {
         String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+}
+
+private struct WorkoutCompletionSummaryScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @Environment(\.dismiss) private var dismiss
+    let session: WorkoutSession
+
+    private var sets: [WorkoutSet] { session.exercises.flatMap(\.sets) }
+    private var completedSets: [WorkoutSet] { sets.filter(\.completed) }
+    private var volume: Double {
+        completedSets.reduce(0) { $0 + ($1.weightKg ?? 0) * Double($1.reps) }
+    }
+    private var durationMinutes: Int {
+        guard let finishedAt = session.finishedAt else { return 0 }
+        return max(0, Int(finishedAt.timeIntervalSince(session.startedAt) - session.pausedSeconds) / 60)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    LabeledContent("Duration", value: "\(durationMinutes) min")
+                    LabeledContent("Sets completed", value: "\(completedSets.count) of \(sets.count)")
+                    LabeledContent("Exercises", value: "\(session.exercises.count)")
+                    if volume > 0 { LabeledContent("Lifting volume", value: "\(Int(volume)) kg") }
+                } header: { Text(session.templateName) }
+                let records = store.state.training.personalRecordEvents.filter { $0.sessionID == session.id }
+                if !records.isEmpty {
+                    Section("Personal records") {
+                        ForEach(records) { record in
+                            LabeledContent(record.exerciseName, value: "e1RM \(record.estimatedOneRepMaxKg.formatted(.number.precision(.fractionLength(1)))) kg")
+                        }
+                    }
+                }
+                if !session.notes.isEmpty { Section("Workout notes") { Text(session.notes) } }
+            }
+            .navigationTitle("Workout saved")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
     }
 }
 
@@ -464,15 +790,25 @@ private struct WorkoutSetEditor: View {
     private var setIndex: Int { exercise.sets.firstIndex(of: set) ?? 0 }
 
     private var previous: String {
-        let session = store.state.training.completedSessions
+        let session = store.state.training.visibleCompletedSessions
             .sorted { $0.startedAt > $1.startedAt }
             .first { candidate in candidate.exercises.contains { $0.exerciseID == exercise.exerciseID } }
         guard let previousExercise = session?.exercises.first(where: { $0.exerciseID == exercise.exerciseID }),
               previousExercise.sets.indices.contains(setIndex) else { return "—" }
         let previousSet = previousExercise.sets[setIndex]
-        guard previousSet.weightKg != nil || previousSet.reps > 0 else { return "—" }
-        let weight = previousSet.weightKg.map { $0.formatted(.number.precision(.fractionLength(0...1))) } ?? "—"
-        return "\(weight) × \(previousSet.reps)"
+        switch exercise.trackingMode ?? .weightAndReps {
+        case .weightAndReps:
+            guard let weight = previousSet.weightKg else { return "—" }
+            return "\(weight.formatted(.number.precision(.fractionLength(0...1)))) × \(previousSet.reps)"
+        case .repsOnly:
+            return "\(previousSet.reps) reps"
+        case .duration:
+            guard let seconds = previousSet.durationSeconds else { return "—" }
+            return "\(seconds)s"
+        case .weightAndDistance:
+            guard let weight = previousSet.weightKg, let distance = previousSet.distanceMeters else { return "—" }
+            return "\(Int(weight)) kg · \(Int(distance)) m"
+        }
     }
 
     var body: some View {
@@ -487,16 +823,7 @@ private struct WorkoutSetEditor: View {
                 .minimumScaleFactor(0.7)
                 .frame(width: 55, alignment: .leading)
                 .accessibilityLabel("Previous: \(previous)")
-            TextField("—", value: weight, format: .number.precision(.fractionLength(0...2)))
-                .keyboardType(.decimalPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(minWidth: 42, maxWidth: .infinity)
-                .accessibilityLabel("Weight in kilograms")
-            TextField("—", value: reps, format: .number)
-                .keyboardType(.numberPad)
-                .textFieldStyle(.roundedBorder)
-                .frame(width: 52)
-                .accessibilityLabel("Repetitions")
+            trackingInputs
             Button { _ = store.toggleSet(exerciseID: exercise.id, setID: set.id) } label: {
                 Image(systemName: set.completed ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 24)).foregroundStyle(set.completed ? Color.green : Color.secondary)
@@ -507,12 +834,52 @@ private struct WorkoutSetEditor: View {
         }
     }
 
+    @ViewBuilder
+    private var trackingInputs: some View {
+        switch exercise.trackingMode ?? .weightAndReps {
+        case .weightAndReps:
+            weightField
+            repsField
+        case .repsOnly:
+            repsField
+        case .duration:
+            TextField("sec", value: duration, format: .number)
+                .keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity)
+                .accessibilityLabel("Duration in seconds")
+        case .weightAndDistance:
+            weightField
+            TextField("m", value: distance, format: .number.precision(.fractionLength(0...1)))
+                .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity)
+                .accessibilityLabel("Distance in meters")
+        }
+    }
+
+    private var weightField: some View {
+        TextField("kg", value: weight, format: .number.precision(.fractionLength(0...2)))
+            .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity)
+            .accessibilityLabel("Weight in kilograms")
+    }
+
+    private var repsField: some View {
+        TextField("Reps", value: reps, format: .number)
+            .keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(maxWidth: .infinity)
+            .accessibilityLabel("Repetitions")
+    }
+
     private var weight: Binding<Double> {
         Binding(get: { set.weightKg ?? 0 }, set: { store.updateSet(exerciseID: exercise.id, setID: set.id, weightKg: $0 > 0 ? $0 : nil, reps: set.reps) })
     }
 
     private var reps: Binding<Int> {
         Binding(get: { set.reps }, set: { store.updateSet(exerciseID: exercise.id, setID: set.id, weightKg: set.weightKg, reps: max(1, $0)) })
+    }
+
+    private var duration: Binding<Int> {
+        Binding(get: { set.durationSeconds ?? 0 }, set: { store.updateSetDuration(exerciseID: exercise.id, setID: set.id, seconds: $0 > 0 ? $0 : nil) })
+    }
+
+    private var distance: Binding<Double> {
+        Binding(get: { set.distanceMeters ?? 0 }, set: { store.updateSetDistance(exerciseID: exercise.id, setID: set.id, weightKg: set.weightKg, distanceMeters: $0 > 0 ? $0 : nil) })
     }
 }
 

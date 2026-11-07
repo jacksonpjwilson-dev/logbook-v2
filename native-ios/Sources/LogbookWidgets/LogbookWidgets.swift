@@ -104,7 +104,7 @@ private struct TrainingWidgetView: View {
     @Environment(\.widgetFamily) private var family
     let entry: LogbookEntry
     private var theme: ThemePalette { entry.state.home.theme.palette }
-    private var sessions: [WorkoutSession] { entry.state.training.completedSessions.filter { $0.localDate >= weekStart() } }
+    private var sessions: [WorkoutSession] { entry.state.training.visibleCompletedSessions.filter { $0.localDate >= weekStart() } }
     private var active: WorkoutSession? { entry.state.training.activeSession }
 
     @ViewBuilder var body: some View {
