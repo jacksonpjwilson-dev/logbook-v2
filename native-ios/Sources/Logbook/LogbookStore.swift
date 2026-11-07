@@ -204,8 +204,12 @@ final class LogbookStore: ObservableObject {
                   let sourceIndex = programs.firstIndex(where: { $0.templateIDs.contains(templateID) }) else { return }
             let oldScheduled = programs.map { ($0.id, $0.scheduledTemplate(in: state.training.templates)?.id) }
             programs[sourceIndex].templateIDs.removeAll { $0 == templateID }
-            if programs[sourceIndex].rotationIndex >= programs[sourceIndex].templateIDs.count {
-                programs[sourceIndex].rotationIndex = max(0, programs[sourceIndex].templateIDs.count - 1)
+            let sourceScheduledID = oldScheduled.first(where: { $0.0 == programs[sourceIndex].id })?.1
+            if let sourceScheduledID, let preservedIndex = programs[sourceIndex].templateIDs.firstIndex(of: sourceScheduledID) {
+                programs[sourceIndex].rotationIndex = preservedIndex
+            } else {
+                // When the scheduled item itself moves, its successor takes its old position.
+                programs[sourceIndex].rotationIndex = min(programs[sourceIndex].rotationIndex, max(0, programs[sourceIndex].templateIDs.count - 1))
             }
             guard let refreshedTargetIndex = programs.firstIndex(where: { $0.id == programID }) else { return }
             let insertionIndex = min(max(0, requestedIndex), programs[refreshedTargetIndex].templateIDs.count)
@@ -270,7 +274,6 @@ final class LogbookStore: ObservableObject {
         transact { state in
             Self.migrateLegacyPrograms(&state.training)
             state.training.templates.removeAll { $0.id == id }
-            state.training.rotationIndex = min(state.training.rotationIndex, max(0, state.training.templates.count - 1))
             guard var programs = state.training.programs else { return }
             for index in programs.indices {
                 let removedIndex = programs[index].templateIDs.firstIndex(of: id)
@@ -280,6 +283,7 @@ final class LogbookStore: ObservableObject {
                 else { programs[index].rotationIndex = 0 }
             }
             state.training.programs = programs
+            state.training.rotationIndex = programs.first(where: { $0.id == state.training.activeProgramID })?.rotationIndex ?? 0
         }
     }
 
@@ -324,12 +328,14 @@ final class LogbookStore: ObservableObject {
         guard unique.count >= 2 else { return }
         transact { state in
             guard let templateIndex = state.training.templates.firstIndex(where: { $0.id == templateID }) else { return }
-            let existingGroup = unique.compactMap { id in
-                state.training.templates[templateIndex].exercises.first(where: { $0.id == id })?.supersetID
-            }.first
-            let resolvedGroup = groupID ?? existingGroup ?? UUID()
-            for index in state.training.templates[templateIndex].exercises.indices where unique.contains(state.training.templates[templateIndex].exercises[index].id) {
-                state.training.templates[templateIndex].exercises[index].supersetID = resolvedGroup
+            let selected = state.training.templates[templateIndex].exercises.filter { unique.contains($0.id) }
+            let mergedGroups = Set(selected.compactMap(\.supersetID) + (groupID.map { [$0] } ?? []))
+            let resolvedGroup = groupID ?? mergedGroups.first ?? UUID()
+            for index in state.training.templates[templateIndex].exercises.indices {
+                let exercise = state.training.templates[templateIndex].exercises[index]
+                if unique.contains(exercise.id) || exercise.supersetID.map(mergedGroups.contains) == true {
+                    state.training.templates[templateIndex].exercises[index].supersetID = resolvedGroup
+                }
             }
             state.training.templates[templateIndex].version += 1
         }
