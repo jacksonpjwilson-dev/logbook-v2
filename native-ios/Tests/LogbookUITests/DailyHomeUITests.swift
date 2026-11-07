@@ -124,11 +124,20 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
 
-        app.buttons["Close"].tap()
+        app.buttons["rest-add-15"].tap()
+        app.buttons["rest-add-15"].tap()
+        XCTAssertNotEqual(restTimer.label, "Ready", "The timer can be running before closing the app")
+        app.terminate()
+        app.launch()
+        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 10), "The app should reopen to Home after termination")
+        app.buttons["Training tab"].tap()
+
         let resumeWorkout = app.buttons["training-active-session"]
-        XCTAssertTrue(resumeWorkout.waitForExistence(timeout: 5), "Closing the active sheet leaves a non-intrusive Resume Workout entry")
+        XCTAssertTrue(resumeWorkout.waitForExistence(timeout: 5), "A terminated app should retain a non-intrusive Resume Workout entry")
         resumeWorkout.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["rest-timer-value"].waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
+        let recoveredTimer = app.descendants(matching: .any)["rest-timer-value"]
+        XCTAssertTrue(recoveredTimer.waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
+        XCTAssertNotEqual(recoveredTimer.label, "Ready", "The running rest timer must recover after app termination")
     }
 
     func testDefaultTrainingHomeShowsSplitTilesAndNavigableWorkoutCalendar() throws {
@@ -161,6 +170,7 @@ final class DailyHomeUITests: XCTestCase {
     private func launchApp(themeID: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
+        app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
         app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 20))

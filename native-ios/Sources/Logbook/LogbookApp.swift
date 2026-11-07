@@ -13,10 +13,15 @@ struct LogbookApp: App {
     private static func makeStore() -> LogbookStore {
         guard isUITesting else { return LogbookStore() }
 
+        let storageID = ProcessInfo.processInfo.arguments
+            .first(where: { $0.hasPrefix("--qa-storage-id=") })
+            .map { String($0.dropFirst("--qa-storage-id=".count)) }
+            ?? UUID().uuidString
         let url = FileManager.default.temporaryDirectory
-            .appendingPathComponent("Logbook-QA-\(ProcessInfo.processInfo.processIdentifier).json")
-        try? FileManager.default.removeItem(at: url)
+            .appendingPathComponent("Logbook-QA-\(storageID).json")
+        let shouldSeedFixture = !FileManager.default.fileExists(atPath: url.path)
         let store = LogbookStore(repository: LogbookRepository(url: url))
+        guard shouldSeedFixture else { return store }
         if let themeArgument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--qa-theme=") }),
            let theme = LogbookTheme(rawValue: String(themeArgument.dropFirst("--qa-theme=".count))) {
             store.setTheme(theme)
