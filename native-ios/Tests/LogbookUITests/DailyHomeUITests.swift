@@ -521,7 +521,9 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     func testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery() throws {
-        let app = launchApp(progressionHistory: true)
+        // A one-exercise fixture keeps the complete history edit/recovery flow
+        // reachable on compact devices without changing the production layout.
+        let app = launchApp(progressionHistory: true, singleExercise: true)
         app.buttons["Training tab"].tap()
         let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
         XCTAssertTrue(template.waitForExistence(timeout: 5))
@@ -810,17 +812,27 @@ final class DailyHomeUITests: XCTestCase {
 
         let editedRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
         XCTAssertTrue(editedRow.label.contains("200 kcal"), "The historical nutrition correction should be reflected in the saved row")
+        let deletedFoodID = String(editedRow.identifier.dropFirst("food-history-".count))
+        XCTAssertFalse(deletedFoodID.isEmpty, "Capture the stable food-entry identity before deletion")
         editedRow.swipeLeft()
         app.buttons["Delete"].tap()
-        XCTAssertFalse(editedRow.exists, "Deleted food history should leave the active history list")
+        let foodRowRemoved = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "exists == false"),
+            object: editedRow
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [foodRowRemoved], timeout: 5),
+            .completed,
+            "Deleted food history should leave the active history list after the UI update"
+        )
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let recentlyDeleted = app.buttons["food-recently-deleted-link"]
         scrollToElement(recentlyDeleted, in: app)
         recentlyDeleted.tap()
         XCTAssertTrue(app.navigationBars["Recently Deleted"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Food-Recently-Deleted-Candidate")
-        let restore = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-food-")).firstMatch
-        XCTAssertTrue(restore.waitForExistence(timeout: 5))
+        let restore = app.buttons["restore-food-\(deletedFoodID)"]
+        XCTAssertTrue(restore.waitForExistence(timeout: 5), "Recently Deleted should retain the same food entry")
         restore.tap()
         XCTAssertFalse(restore.exists, "Restoring removes the food record from Recently Deleted")
         app.navigationBars.buttons.element(boundBy: 0).tap()
@@ -1154,12 +1166,13 @@ final class DailyHomeUITests: XCTestCase {
         field.typeText(value)
     }
 
-    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false) -> XCUIApplication {
+    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false, singleExercise: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         if progressionHistory { app.launchArguments.append("--qa-progression-history") }
         if trainingSplitCount == 8 { app.launchArguments.append("--qa-training-split-eight") }
         if trainingPrograms { app.launchArguments.append("--qa-training-programs") }
+        if singleExercise { app.launchArguments.append("--qa-single-exercise") }
         app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
         app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()
