@@ -44,9 +44,10 @@ final class LogbookStore: ObservableObject {
             let migratedDailyLayout = loaded.home.migrateUntouchedDailyLayout()
             let migratedTrainingPrograms = Self.migrateLegacyPrograms(&loaded.training)
             let purgedWorkoutRecords = Self.purgeExpiredWorkoutRecords(&loaded.training, asOf: .now)
+            let purgedFoodRecords = Self.purgeExpiredFoodRecords(&loaded.nutrition, asOf: .now)
             state = loaded
             lastSavedAt = FileManager.default.fileExists(atPath: repository.url.path) ? Date() : nil
-            if migratedDailyLayout || migratedTrainingPrograms || purgedWorkoutRecords {
+            if migratedDailyLayout || migratedTrainingPrograms || purgedWorkoutRecords || purgedFoodRecords {
                 do {
                     try repository.save(loaded)
                     lastSavedAt = .now
@@ -823,7 +824,7 @@ final class LogbookStore: ObservableObject {
             foodName: food.name,
             mealID: meal.id,
             mealName: meal.name,
-            date: LocalDay.string(),
+            date: date,
             quantity: quantity,
             unit: unit,
             calories: food.calories * factor,
@@ -908,8 +909,34 @@ final class LogbookStore: ObservableObject {
             source: "Saved Logbook recipe", isPersonal: true)
     }
 
-    func deleteRecipe(_ id: String) {
-        transact { $0.nutrition.recipes?.removeAll { $0.id == id } }
+    func deleteRecipe(_ id: String, at date: Date = .now) {
+        transact { state in
+            guard let index = state.nutrition.recipes?.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.nutrition.recipes?[index].deletedAt = date
+        }
+    }
+
+    func recentlyDeletedRecipes(asOf date: Date = .now) -> [FoodRecipe] {
+        (state.nutrition.recipes ?? []).filter { recipe in
+            guard let deletedAt = recipe.deletedAt else { return false }
+            let age = date.timeIntervalSince(deletedAt)
+            return age >= 0 && age < 30 * 24 * 60 * 60
+        }.sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
+    }
+
+    @discardableResult
+    func restoreDeletedRecipe(_ id: String, at date: Date = .now) -> Bool {
+        guard let recipe = state.nutrition.recipes?.first(where: { $0.id == id }), let deletedAt = recipe.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0, date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
+        transact { state in
+            guard let index = state.nutrition.recipes?.firstIndex(where: { $0.id == id }) else { return }
+            state.nutrition.recipes?[index].deletedAt = nil
+        }
+        return state.nutrition.recipes?.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func permanentlyDeleteRecipe(_ id: String) {
+        transact { $0.nutrition.recipes?.removeAll { $0.id == id && $0.deletedAt != nil } }
     }
 
     func copyMeals(from sourceDate: String, to destinationDate: String, mealName: String? = nil, replaceMatchingMeals: Bool) -> Int {
@@ -949,11 +976,11 @@ final class LogbookStore: ObservableObject {
     func updateWaterLog(_ id: UUID, milliliters: Int, date: String) -> Bool {
         guard (1...5000).contains(milliliters) else { return false }
         transact { state in
-            guard let index = state.nutrition.water.firstIndex(where: { $0.id == id }) else { return }
+            guard let index = state.nutrition.water.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
             state.nutrition.water[index].milliliters = milliliters
             state.nutrition.water[index].date = date
         }
-        return state.nutrition.water.first(where: { $0.id == id })?.milliliters == milliliters
+        return state.nutrition.water.first(where: { $0.id == id && $0.deletedAt == nil })?.milliliters == milliliters
     }
 
     func deleteFoodLog(_ id: UUID, at date: Date = .now) {
@@ -989,16 +1016,37 @@ final class LogbookStore: ObservableObject {
     }
 
     func purgeExpiredFoodLogs(asOf date: Date = .now) {
+        transact { state in _ = Self.purgeExpiredFoodRecords(&state.nutrition, asOf: date) }
+    }
+
+    func removeWater(_ id: UUID, at date: Date = .now) {
         transact { state in
-            state.nutrition.logs.removeAll { log in
-                guard let deletedAt = log.deletedAt else { return false }
-                return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
-            }
+            guard let index = state.nutrition.water.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.nutrition.water[index].deletedAt = date
         }
     }
 
-    func removeWater(_ id: UUID) {
-        transact { $0.nutrition.water.removeAll { $0.id == id } }
+    func recentlyDeletedWaterLogs(asOf date: Date = .now) -> [WaterLog] {
+        state.nutrition.water.filter { log in
+            guard let deletedAt = log.deletedAt else { return false }
+            let age = date.timeIntervalSince(deletedAt)
+            return age >= 0 && age < 30 * 24 * 60 * 60
+        }.sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
+    }
+
+    @discardableResult
+    func restoreDeletedWaterLog(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let log = state.nutrition.water.first(where: { $0.id == id }), let deletedAt = log.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0, date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
+        transact { state in
+            guard let index = state.nutrition.water.firstIndex(where: { $0.id == id }) else { return }
+            state.nutrition.water[index].deletedAt = nil
+        }
+        return state.nutrition.water.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func permanentlyDeleteWaterLog(_ id: UUID) {
+        transact { $0.nutrition.water.removeAll { $0.id == id && $0.deletedAt != nil } }
     }
 
     @discardableResult
@@ -1225,6 +1273,24 @@ final class LogbookStore: ObservableObject {
             return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
         }
         return training.completedSessions.count != originalCount
+    }
+
+    @discardableResult
+    private static func purgeExpiredFoodRecords(_ nutrition: inout NutritionState, asOf date: Date) -> Bool {
+        let originalCount = nutrition.logs.count + nutrition.water.count + (nutrition.recipes?.count ?? 0)
+        nutrition.logs.removeAll { log in
+            guard let deletedAt = log.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
+        }
+        nutrition.water.removeAll { log in
+            guard let deletedAt = log.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
+        }
+        nutrition.recipes?.removeAll { recipe in
+            guard let deletedAt = recipe.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
+        }
+        return nutrition.logs.count + nutrition.water.count + (nutrition.recipes?.count ?? 0) != originalCount
     }
 
     private static func isValid(_ state: LogbookState) -> Bool {

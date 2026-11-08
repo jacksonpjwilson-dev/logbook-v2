@@ -798,10 +798,12 @@ private struct WorkoutCompletionSummaryScreen: View {
                 } header: { Text(session.templateName) }
                 let records = store.state.training.personalRecordEvents.filter { $0.sessionID == session.id }
                 if !records.isEmpty {
-                    Section("Personal records") {
+                    Section {
                         ForEach(records) { record in
                             LabeledContent(record.exerciseName, value: "e1RM \(record.estimatedOneRepMaxKg.formatted(.number.precision(.fractionLength(1)))) kg")
                         }
+                    } header: {
+                        Text("Personal records").accessibilityIdentifier("workout-summary-pr-section")
                     }
                 }
                 if !session.notes.isEmpty { Section("Workout notes") { Text(session.notes) } }

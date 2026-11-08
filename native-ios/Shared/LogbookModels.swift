@@ -717,6 +717,7 @@ struct FoodRecipe: Codable, Identifiable, Hashable {
     var yieldAmount: Double
     var yieldUnit: String
     var updatedAt: Date = .now
+    var deletedAt: Date? = nil
 
     var total: NutritionTargets {
         NutritionTargets(
@@ -733,6 +734,7 @@ struct WaterLog: Codable, Identifiable, Hashable {
     var date: String
     var milliliters: Int
     var createdAt: Date = .now
+    var deletedAt: Date? = nil
 }
 
 struct NutritionState: Codable {

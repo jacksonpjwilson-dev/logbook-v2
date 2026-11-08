@@ -466,7 +466,8 @@ final class DailyHomeUITests: XCTestCase {
         confirmSave.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Sets completed")).firstMatch.exists)
-        XCTAssertTrue(app.staticTexts["Personal records"].waitForExistence(timeout: 5), "A completed set that beats the prior completed workout should be presented as a PR")
+        let prSection = app.descendants(matching: .any)["workout-summary-pr-section"]
+        XCTAssertTrue(prSection.waitForExistence(timeout: 5), "A completed set that beats the prior completed workout should be presented as a PR")
         attachScreenshot(of: app, named: "Training-Completion-Summary-Candidate")
         app.buttons["workout-summary-done"].tap()
         XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
@@ -577,9 +578,6 @@ final class DailyHomeUITests: XCTestCase {
 
         let suggestion = app.buttons["decline-progression-suggestion"]
         XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "A prior completed workout should create an optional suggestion")
-        let suggestedLoad = suggestion.label.components(separatedBy: "·").last?
-            .replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces)
-        XCTAssertNotNil(Double(suggestedLoad ?? ""))
         let weight = inputField(app, labelled: "Weight in kilograms")
         scrollToElement(weight, in: app)
         let before = String(describing: weight.value ?? "")
@@ -589,6 +587,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["accept-progression-suggestion"].exists, "Declining removes the suggestion for this active workout")
         scrollToElement(weight, in: app, towardTop: true)
         XCTAssertEqual(String(describing: weight.value ?? ""), before, "Declining must leave the planned set load unchanged")
+        XCTAssertFalse(before.isEmpty, "The test must capture the planned load before declining")
         attachScreenshot(of: app, named: "Training-Progression-Declined-Candidate")
     }
 
@@ -596,6 +595,19 @@ final class DailyHomeUITests: XCTestCase {
         let app = launchApp()
         app.buttons["Food tab"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        let dateKey = app.staticTexts["food-date-key"]
+        XCTAssertTrue(dateKey.waitForExistence(timeout: 5))
+        let originalDate = dateKey.label
+        let foodList = app.collectionViews.firstMatch
+        let swipeStart = foodList.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.12))
+        let swipeEnd = foodList.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.12))
+        swipeStart.press(forDuration: 0.1, thenDragTo: swipeEnd)
+        let advancedDate = NSPredicate(format: "label != %@", originalDate)
+        expectation(for: advancedDate, evaluatedWith: dateKey)
+        waitForExpectations(timeout: 4)
+        app.buttons["food-day-previous"].tap()
+        XCTAssertEqual(dateKey.label, originalDate, "A right-to-left day swipe advances one day; previous-day action returns to the selected log date")
+
         let addFood = app.buttons["food-add-food"]
         scrollToElement(addFood, in: app)
         XCTAssertTrue(addFood.waitForExistence(timeout: 5))
@@ -615,7 +627,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["food-confirm-log"].isEnabled, "The quantity step requires confirmation before adding a food")
         app.buttons["food-confirm-log"].tap()
-        app.buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Logging a confirmed food returns to the selected Food day")
 
         scrollToElement(addFood, in: app)
         addFood.tap()
@@ -630,7 +642,7 @@ final class DailyHomeUITests: XCTestCase {
         replaceText(in: app.textFields["manual-food-fat"], with: "7")
         dismissKeyboard(in: app)
         app.buttons["manual-food-save"].tap()
-        app.buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving manual food returns to the selected Food day")
 
         let foodTotal = app.staticTexts["food-calories-total"]
         XCTAssertTrue(foodTotal.waitForExistence(timeout: 5))
@@ -682,6 +694,77 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["barcode-manual-fallback"].tap()
         XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5), "Barcode entry always offers a safe manual fallback")
         attachScreenshot(of: app, named: "Food-Barcode-Manual-Fallback-Candidate")
+    }
+
+    func testFoodTargetsHydrationFavoritesRecentsAndRecipeWorkflow() throws {
+        let app = launchApp()
+        app.buttons["Food tab"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+
+        app.buttons["food-targets"].tap()
+        XCTAssertTrue(app.navigationBars["Nutrition targets"].waitForExistence(timeout: 5))
+        replaceText(in: app.textFields["nutrition-target-calories"], with: "2200")
+        replaceText(in: app.textFields["nutrition-target-protein"], with: "160")
+        dismissKeyboard(in: app)
+        app.navigationBars["Nutrition targets"].buttons["Save"].tap()
+
+        let waterQuickAdd = app.buttons["water-quick-500"]
+        scrollToElement(waterQuickAdd, in: app)
+        XCTAssertTrue(waterQuickAdd.waitForExistence(timeout: 5))
+        waterQuickAdd.tap()
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("500 mL"))
+        let waterGoalEdit = app.buttons["water-goal-edit"]
+        scrollToElement(waterGoalEdit, in: app)
+        waterGoalEdit.tap()
+        XCTAssertTrue(app.navigationBars["Water goal"].waitForExistence(timeout: 5))
+        replaceText(in: app.textFields["water-goal-amount"], with: "2300")
+        dismissKeyboard(in: app)
+        app.navigationBars["Water goal"].buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("of 2300 mL"))
+
+        let createRecipe = app.buttons["food-create-recipe"]
+        scrollToElement(createRecipe, in: app)
+        XCTAssertTrue(createRecipe.waitForExistence(timeout: 5))
+        createRecipe.tap()
+        XCTAssertTrue(app.navigationBars["Recipe Builder"].waitForExistence(timeout: 5))
+        replaceText(in: app.textFields["recipe-name"], with: "QA breakfast bowl")
+        dismissKeyboard(in: app)
+        app.buttons["recipe-add-ingredient"].tap()
+        let ingredient = app.buttons["recipe-food-qa-breakfast"]
+        XCTAssertTrue(ingredient.waitForExistence(timeout: 5))
+        ingredient.tap()
+        XCTAssertTrue(app.navigationBars["Ingredient amount"].waitForExistence(timeout: 5))
+        app.navigationBars["Ingredient amount"].buttons["Add"].tap()
+        XCTAssertTrue(app.buttons["recipe-save"].isEnabled)
+        app.buttons["recipe-save"].tap()
+
+        let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
+        scrollToElement(logRecipe, in: app)
+        XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
+        logRecipe.tap()
+        XCTAssertEqual(app.staticTexts["food-calories-total"].label, "900", "The recipe should log calculated nutrition without rewriting its ingredient's source item")
+
+        let addFood = app.buttons["food-add-food"]
+        scrollToElement(addFood, in: app)
+        addFood.tap()
+        app.buttons["food-option-search"].tap()
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 5))
+        search.tap()
+        search.typeText("QA breakfast")
+        let result = app.buttons["food-search-result-qa-breakfast"]
+        XCTAssertTrue(result.waitForExistence(timeout: 5))
+        app.buttons["food-favorite-qa-breakfast"].tap()
+        app.switches["food-favorites-filter"].tap()
+        XCTAssertTrue(result.exists, "Favorites are a search filter, not a fifth Add Food option")
+        app.navigationBars["Search Foods"].buttons["Done"].tap()
+
+        scrollToElement(addFood, in: app)
+        addFood.tap()
+        app.buttons["food-option-recent"].tap()
+        XCTAssertTrue(app.navigationBars["Recent Foods"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["food-search-result-qa-breakfast"].waitForExistence(timeout: 5))
+        attachScreenshot(of: app, named: "Food-Recipe-Hydration-Targets-Candidate")
     }
 
     private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {

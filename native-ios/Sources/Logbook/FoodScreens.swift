@@ -22,7 +22,7 @@ struct FoodScreen: View {
     private var logs: [FoodLog] { store.state.nutrition.logs.filter { $0.date == dateKey && $0.deletedAt == nil } }
     private var totals: NutritionTargets { store.state.nutritionTotals(on: dateKey) }
     private var targets: NutritionTargets { store.state.nutritionTargets(on: dateKey) }
-    private var waterLogs: [WaterLog] { store.state.nutrition.water.filter { $0.date == dateKey }.sorted { $0.createdAt > $1.createdAt } }
+    private var waterLogs: [WaterLog] { store.state.nutrition.water.filter { $0.date == dateKey && $0.deletedAt == nil }.sorted { $0.createdAt > $1.createdAt } }
     private var waterTotal: Int { waterLogs.reduce(0) { $0 + $1.milliliters } }
 
     var body: some View {
@@ -33,6 +33,12 @@ struct FoodScreen: View {
             nutritionTrendsSection
             foodToolsSection
         }
+        .simultaneousGesture(DragGesture(minimumDistance: 48).onEnded { value in
+            let horizontal = value.translation.width
+            let vertical = value.translation.height
+            guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+            shiftDay(horizontal < 0 ? 1 : -1)
+        })
         .navigationTitle("Food")
         .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
             Button("Search Foods") { entryMode = .search; showAddFlow = true }
@@ -86,7 +92,7 @@ struct FoodScreen: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(remaining(targets.calories, totals.calories)) kcal left").font(.headline)
-                    Text(dateKey).font(.caption).foregroundStyle(.secondary)
+                    Text(dateKey).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("food-date-key")
                 }
             }
             ProgressView(value: ratio(totals.calories, targets.calories)).tint(store.state.home.theme.palette.accentColor)
@@ -164,7 +170,7 @@ struct FoodScreen: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Water").font(.headline)
                     Text("\(waterTotal) mL" + (store.state.nutrition.waterGoalMilliliters.map { " of \($0) mL" } ?? " logged"))
-                        .font(.caption).foregroundStyle(.secondary)
+                        .font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("food-water-total")
                 }
                 Spacer()
                 ForEach([250, 500, 750], id: \.self) { amount in
@@ -218,7 +224,7 @@ struct FoodScreen: View {
                 .accessibilityIdentifier("food-copy-meals")
             Button { showRecipeBuilder = true } label: { Label("Create recipe", systemImage: "book.closed") }
                 .accessibilityIdentifier("food-create-recipe")
-            if let recipes = store.state.nutrition.recipes, !recipes.isEmpty {
+            if let recipes = store.state.nutrition.recipes?.filter({ $0.deletedAt == nil }), !recipes.isEmpty {
                 ForEach(recipes) { recipe in recipeRow(recipe) }
             }
         } header: { Text("Food tools") }
@@ -696,12 +702,48 @@ private struct RecentlyDeletedFoodScreen: View {
     var body: some View {
         List {
             let logs = store.recentlyDeletedFoodLogs()
-            if logs.isEmpty { ContentUnavailableView("Recently Deleted is empty", systemImage: "trash", description: Text("Deleted food entries can be restored for 30 days.")) }
-            ForEach(logs) { log in
-                HStack {
-                    VStack(alignment: .leading) { Text(log.foodName); Text("\(log.date) · \(Int(log.calories)) kcal").font(.caption).foregroundStyle(.secondary) }
-                    Spacer()
-                    Button("Restore") { _ = store.restoreDeletedFoodLog(log.id) }.accessibilityIdentifier("restore-food-\(log.id.uuidString)")
+            let water = store.recentlyDeletedWaterLogs()
+            let recipes = store.recentlyDeletedRecipes()
+            if logs.isEmpty && water.isEmpty && recipes.isEmpty {
+                ContentUnavailableView("Recently Deleted is empty", systemImage: "trash", description: Text("Deleted food entries, water logs and recipes can be restored for 30 days."))
+            }
+            if !logs.isEmpty {
+                Section("Food entries") {
+                    ForEach(logs) { log in
+                        HStack {
+                            VStack(alignment: .leading) { Text(log.foodName); Text("\(log.date) · \(Int(log.calories)) kcal").font(.caption).foregroundStyle(.secondary) }
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedFoodLog(log.id) }.accessibilityIdentifier("restore-food-\(log.id.uuidString)")
+                            Button("Delete Permanently", role: .destructive) { store.permanentlyDeleteFoodLog(log.id) }
+                                .accessibilityIdentifier("permanently-delete-food-\(log.id.uuidString)")
+                        }
+                    }
+                }
+            }
+            if !water.isEmpty {
+                Section("Water logs") {
+                    ForEach(water) { log in
+                        HStack {
+                            Text("\(log.date) · \(log.milliliters) mL")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedWaterLog(log.id) }.accessibilityIdentifier("restore-water-\(log.id.uuidString)")
+                            Button("Delete Permanently", role: .destructive) { store.permanentlyDeleteWaterLog(log.id) }
+                                .accessibilityIdentifier("permanently-delete-water-\(log.id.uuidString)")
+                        }
+                    }
+                }
+            }
+            if !recipes.isEmpty {
+                Section("Recipes") {
+                    ForEach(recipes) { recipe in
+                        HStack {
+                            Text(recipe.name)
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedRecipe(recipe.id) }.accessibilityIdentifier("restore-recipe-\(recipe.id)")
+                            Button("Delete Permanently", role: .destructive) { store.permanentlyDeleteRecipe(recipe.id) }
+                                .accessibilityIdentifier("permanently-delete-recipe-\(recipe.id)")
+                        }
+                    }
                 }
             }
         }
@@ -769,7 +811,7 @@ private struct WaterGoalScreen: View {
         NavigationStack {
             Form {
                 Section("Daily hydration goal") {
-                    TextField("Milliliters", text: $amount).keyboardType(.numberPad)
+                    TextField("Milliliters", text: $amount).keyboardType(.numberPad).accessibilityIdentifier("water-goal-amount")
                     Text("Enter a value from 1 to 10,000 mL, or leave blank to remove the goal.").font(.footnote).foregroundStyle(.secondary)
                 }
             }
@@ -871,7 +913,7 @@ private struct RecipeIngredientAmountScreen: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section(food.name) { TextField("Amount", text: $quantity).keyboardType(.decimalPad); TextField("Unit", text: $unit) }
+                Section(food.name) { TextField("Amount", text: $quantity).keyboardType(.decimalPad).accessibilityIdentifier("recipe-ingredient-quantity"); TextField("Unit", text: $unit) }
                 Section("Added nutrition") { Text("\(Int(food.calories * (food.multiplier(for: Double(quantity) ?? 0, unit: unit) ?? 0))) kcal") }
             }
             .navigationTitle("Ingredient amount")
@@ -939,6 +981,6 @@ struct NutritionTargetsScreen: View {
         }
     }
     private func targetField(_ label: String, text: Binding<String>, unit: String) -> some View {
-        HStack { TextField(label, text: text).keyboardType(.decimalPad); Text(unit).foregroundStyle(.secondary) }
+        HStack { TextField(label, text: text).keyboardType(.decimalPad).accessibilityIdentifier("nutrition-target-\(label.lowercased())"); Text(unit).foregroundStyle(.secondary) }
     }
 }
