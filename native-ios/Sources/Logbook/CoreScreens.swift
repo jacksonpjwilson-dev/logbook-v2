@@ -477,62 +477,10 @@ struct ActiveWorkoutScreen: View {
         NavigationStack {
             Group {
                 if let session {
-                    List {
-                        Section {
-                            TimelineView(.periodic(from: .now, by: 1)) { context in
-                                let timer = store.state.training.activeSession?.restTimer ?? session.restTimer ?? WorkoutRestTimer()
-                                let remaining = timer.remainingSeconds(at: context.date)
-                                VStack(alignment: .leading, spacing: 9) {
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Label("Rest timer", systemImage: "timer")
-                                            .font(.subheadline.weight(.semibold))
-                                        Spacer()
-                                        Text(remaining > 0 ? restTime(remaining) : "Ready")
-                                            .font(.system(.title3, design: .rounded, weight: .semibold).monospacedDigit())
-                                            .accessibilityIdentifier("rest-timer-value")
-                                    }
-                                    ProgressView(value: timer.baseDurationSeconds > 0
-                                        ? Double(min(timer.currentDurationSeconds, remaining)) / Double(max(1, timer.currentDurationSeconds))
-                                        : 0)
-                                        .tint(Color.blue)
-                                    HStack(spacing: 8) {
-                                        Button {
-                                            if timer.isPaused { store.resumeRestTimer() }
-                                            else { store.pauseRestTimer() }
-                                        } label: {
-                                            Label(timer.isPaused ? "Resume" : "Pause",
-                                                  systemImage: timer.isPaused ? "play.fill" : "pause.fill")
-                                        }
-                                        .disabled(!timer.isPaused && remaining == 0)
-                                        .accessibilityIdentifier("rest-toggle")
-                                        .accessibilityLabel(timer.isPaused ? "Resume rest timer" : "Pause rest timer")
-                                        .accessibilityValue(timer.isPaused ? "Paused" : "Running")
-                                        Button("+15 sec") { store.addFifteenSecondsToRestTimer() }
-                                            .accessibilityIdentifier("rest-add-15")
-                                        Button("Skip") { store.skipRestTimer() }
-                                            .disabled(remaining == 0)
-                                            .accessibilityIdentifier("rest-skip")
-                                        Spacer(minLength: 0)
-                                        Menu("\(timer.baseDurationSeconds)s") {
-                                            ForEach([60, 90, 120, 150, 180], id: \.self) { seconds in
-                                                Button("\(seconds) seconds") { store.setWorkoutRestDuration(seconds) }
-                                            }
-                                        }
-                                        .accessibilityLabel("Default rest duration, \(timer.baseDurationSeconds) seconds")
-                                        .accessibilityIdentifier("rest-duration-menu")
-                                    }
-                                    .font(.caption.weight(.medium))
-                                }
-                                .padding(12)
-                                .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                            }
-                            .listRowInsets(EdgeInsets(top: 6, leading: 12, bottom: 6, trailing: 12))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                        } header: {
-                            Text("Rest")
-                        }
-                        ForEach(session.exercises) { exercise in
+                    VStack(spacing: 0) {
+                        restTimerCard(for: session)
+                        List {
+                            ForEach(session.exercises) { exercise in
                             let isExpanded = (expandedExerciseID ?? focusedExerciseID) == exercise.id
                             Section {
                                 if isExpanded {
@@ -627,16 +575,17 @@ struct ActiveWorkoutScreen: View {
                         } footer: {
                             Text("The full plan is saved, including unfinished sets. Only completed sets count toward workout statistics.")
                         }
-                    }
-                    .safeAreaInset(edge: .bottom, spacing: 0) {
-                        ActiveWorkoutSummaryBar(session: session) {
-                            let result = store.finishWorkout(confirmIncomplete: false)
-                            if result == -1 {
-                                completedSessionForSummary = store.state.training.completedSessions.first { $0.id == session.id }
-                                showCompletionSummary = completedSessionForSummary != nil
-                                if completedSessionForSummary == nil { dismiss() }
+                        }
+                        .safeAreaInset(edge: .bottom, spacing: 0) {
+                            ActiveWorkoutSummaryBar(session: session) {
+                                let result = store.finishWorkout(confirmIncomplete: false)
+                                if result == -1 {
+                                    completedSessionForSummary = store.state.training.completedSessions.first { $0.id == session.id }
+                                    showCompletionSummary = completedSessionForSummary != nil
+                                    if completedSessionForSummary == nil { dismiss() }
+                                }
+                                else if result > 0 { incompleteCount = result; showFinishConfirmation = true }
                             }
-                            else if result > 0 { incompleteCount = result; showFinishConfirmation = true }
                         }
                     }
                     .navigationTitle(session.templateName)
@@ -702,6 +651,71 @@ struct ActiveWorkoutScreen: View {
     private func expandCurrentExerciseIfNeeded() {
         guard expandedExerciseID == nil, let session else { return }
         expandedExerciseID = focusedExerciseID ?? session.exercises.first?.id
+    }
+
+    private func restTimerCard(for session: WorkoutSession) -> some View {
+        VStack(alignment: .leading, spacing: 5) {
+            Text("Rest")
+                .font(.caption.weight(.medium))
+                .textCase(.uppercase)
+                .foregroundStyle(.secondary)
+                .padding(.leading, 12)
+
+            TimelineView(.periodic(from: .now, by: 1)) { context in
+                let timer = store.state.training.activeSession?.restTimer ?? session.restTimer ?? WorkoutRestTimer()
+                let remaining = timer.remainingSeconds(at: context.date)
+                VStack(alignment: .leading, spacing: 9) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Label("Rest timer", systemImage: "timer")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Text(remaining > 0 ? restTime(remaining) : "Ready")
+                            .font(.system(.title3, design: .rounded, weight: .semibold).monospacedDigit())
+                            .accessibilityIdentifier("rest-timer-value")
+                    }
+                    ProgressView(value: timer.baseDurationSeconds > 0
+                        ? Double(min(timer.currentDurationSeconds, remaining)) / Double(max(1, timer.currentDurationSeconds))
+                        : 0)
+                        .tint(Color.blue)
+                    HStack(spacing: 8) {
+                        Button {
+                            if timer.isPaused { store.resumeRestTimer() }
+                            else { store.pauseRestTimer() }
+                        } label: {
+                            Label(timer.isPaused ? "Resume" : "Pause",
+                                  systemImage: timer.isPaused ? "play.fill" : "pause.fill")
+                        }
+                        .disabled(!timer.isPaused && remaining == 0)
+                        .accessibilityIdentifier("rest-toggle")
+                        .accessibilityLabel(timer.isPaused ? "Resume rest timer" : "Pause rest timer")
+                        .accessibilityValue(timer.isPaused ? "Paused" : "Running")
+                        Button("+15 sec") { store.addFifteenSecondsToRestTimer() }
+                            .accessibilityIdentifier("rest-add-15")
+                        Button("Skip") { store.skipRestTimer() }
+                            .disabled(remaining == 0)
+                            .accessibilityIdentifier("rest-skip")
+                        Spacer(minLength: 0)
+                        Menu("\(timer.baseDurationSeconds)s") {
+                            ForEach([60, 90, 120, 150, 180], id: \.self) { seconds in
+                                Button("\(seconds) seconds") { store.setWorkoutRestDuration(seconds) }
+                            }
+                        }
+                        .accessibilityLabel("Default rest duration, \(timer.baseDurationSeconds) seconds")
+                        .accessibilityIdentifier("rest-duration-menu")
+                    }
+                    .font(.caption.weight(.medium))
+                }
+                .padding(12)
+                .background(Color.blue.opacity(0.12), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.top, 7)
+        .padding(.bottom, 5)
+        .frame(maxWidth: .infinity)
+        .background(.background)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("active-workout-rest-card")
     }
 
     @ViewBuilder

@@ -135,6 +135,8 @@ final class DailyHomeUITests: XCTestCase {
 
         let timerWeight = inputField(app, labelled: "Weight in kilograms")
         scrollToElement(timerWeight, in: app)
+        XCTAssertTrue(restTimer.isHittable, "The blue rest timer stays pinned below the workout header while set rows scroll")
+        XCTAssertLessThan(restTimer.frame.minY, timerWeight.frame.minY, "The timer remains above the active exercise list")
         replaceText(in: timerWeight, with: "40")
         dismissKeyboard(in: app)
         attachScreenshot(of: app, named: "Training-Active-Workout-Set-Entry-Candidate")
@@ -255,7 +257,8 @@ final class DailyHomeUITests: XCTestCase {
         // Drop into the lower portion of the destination row. Dragging handle to
         // handle can be treated as a no-op on compact iPhone SE table rows.
         let dropPoint = destinationRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
-        sourceHandle.press(forDuration: 1.2, thenDragTo: dropPoint)
+        sourceHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+            .press(forDuration: 1.2, thenDragTo: dropPoint)
         let reordered = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "identifier == %@", secondID),
             object: rows.element(boundBy: 0)
