@@ -851,7 +851,9 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars["Nutrition targets"].buttons["Save"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving targets returns to Food before hydration controls are used")
 
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let foodBack = app.navigationBars["Food"].buttons.firstMatch
+        XCTAssertTrue(foodBack.waitForExistence(timeout: 5))
+        foodBack.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         XCTAssertTrue(app.buttons["Food page"].waitForExistence(timeout: 5))
         app.buttons["Food page"].tap()
         app.buttons["food-home-water-250"].tap()
@@ -922,11 +924,16 @@ final class DailyHomeUITests: XCTestCase {
         let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
         scrollToElement(logRecipe, in: app)
         XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
+        let caloriesBeforeRecipe = Int(app.staticTexts["food-calories-total"].label) ?? 0
         logRecipe.tap()
         let caloriesTotal = app.staticTexts["food-calories-total"]
         scrollToElement(caloriesTotal, in: app, towardTop: true)
         XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
-        XCTAssertEqual(caloriesTotal.label, "900", "The recipe should log calculated nutrition without rewriting its ingredient's source item")
+        let expectedRecipeTotal = String(caloriesBeforeRecipe + 450)
+        let recipeAdded = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label == %@", "food-calories-total", expectedRecipeTotal
+        )).firstMatch
+        XCTAssertTrue(recipeAdded.waitForExistence(timeout: 5), "Logging one recipe serving adds its calculated 450 kcal without rewriting the source food")
 
         let addFood = app.buttons["food-add-food"]
         scrollToElement(addFood, in: app)
@@ -1008,8 +1015,13 @@ final class DailyHomeUITests: XCTestCase {
         logFixtureFoodIntoOpenMeal()
         XCTAssertNotEqual(foodDate.label, today, "Food added to the prior selected day must remain attached to that date")
 
-        app.buttons["food-day-next"].tap()
-        XCTAssertEqual(foodDate.label, today)
+        let nextFoodDay = app.buttons["food-day-next"]
+        scrollToElement(nextFoodDay, in: app, towardTop: true)
+        nextFoodDay.tap()
+        let returnedToToday = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label == %@", "food-date-key", today
+        )).firstMatch
+        XCTAssertTrue(returnedToToday.waitForExistence(timeout: 5), "The date controls remain usable after returning from the food-entry sheet")
         XCTAssertEqual(app.staticTexts["food-calories-total"].label, "450", "The source day's entry is saved separately from today's food log")
         let addToDestinationMeal = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "add-to-meal-")).firstMatch
         if !addToDestinationMeal.exists { copyMeal.tap() }

@@ -192,6 +192,12 @@ struct FoodScreen: View {
             .accessibilityIdentifier("food-macro-swipe-area")
             .accessibilityElement(children: .combine)
             .contentShape(Rectangle())
+            .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded { value in
+                let horizontal = value.translation.width
+                let vertical = value.translation.height
+                guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+                shiftDay(horizontal < 0 ? 1 : -1)
+            })
         } header: {
             HStack {
                 Text(selectedDate.formatted(date: .complete, time: .omitted))
@@ -200,12 +206,6 @@ struct FoodScreen: View {
             }
         }
         .id("food-nutrition-summary-\(dateKey)")
-        .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded { value in
-            let horizontal = value.translation.width
-            let vertical = value.translation.height
-            guard abs(horizontal) > abs(vertical) * 1.5 else { return }
-            shiftDay(horizontal < 0 ? 1 : -1)
-        })
     }
 
     private var mealsSection: some View {
