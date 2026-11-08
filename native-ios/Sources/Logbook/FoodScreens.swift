@@ -1,7 +1,7 @@
 import Charts
 import SwiftUI
 
-private enum FoodEntryMode { case search, recent, scan }
+private enum FoodEntryMode { case search, recent, scan, manual }
 
 struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
@@ -315,11 +315,17 @@ private struct FoodAddFlowScreen: View {
     @State private var cameraCode: String?
 
     var body: some View {
-        NavigationStack {
+        Group {
+            if mode == .manual {
+                ManualFoodEntryScreen(meal: meal, date: date)
+            } else {
+                NavigationStack {
             Group {
                 switch mode {
                 case .search, .recent:
                     FoodSearchScreen(recentOnly: mode == .recent, onSelect: { selectedFood = $0 })
+                case .manual:
+                    EmptyView()
                 case .scan:
                     VStack(spacing: 16) {
                         if !ProcessInfo.processInfo.arguments.contains("--ui-testing") {
@@ -355,6 +361,8 @@ private struct FoodAddFlowScreen: View {
                 guard let value else { return }
                 barcode = value
                 Task { await lookupBarcode(value) }
+            }
+                }
             }
         }
     }

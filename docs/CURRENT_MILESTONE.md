@@ -1,47 +1,35 @@
-# Current Logbook milestone
+# Current Logbook milestone — Training verification and Food
 
-**Objective:** Finish the Training UI workflow verification, review the actual Default Home and active-workout captures, and reconcile the canonical tracker. This milestone does not complete the app or authorize theme approval.
+**Objective:** Close the remaining focused Training UI checks and deliver the persistent Food/Nutrition workflows in the approved specification. This is not visual approval, app completion, or authorization to change Home geometry, other themes, production data, HealthKit or `main`.
 
-**Development branch:** `codex/default-theme-gate1`
-**App source under test:** `f4b2cca17b3ba6bab2207783438f2296ffe93083` (pinned rest timer card)
-**UI-test-only follow-up:** `dfd8678efdc354d47aac0e549850a46bae533cdd` (centered, slower drag gesture)
-**Last fully green source/test run:** [#80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049), tested commit `dfd8678efdc354d47aac0e549850a46bae533cdd`. Run #42 remains the historical green app-source baseline before the current Training workflows. Run #79 was not fully green.
-**Docs update:** the tracker, audit and report now reflect #80. This documentation-only commit will trigger the QA matrix again; it does not change the tested app-source or test bytes.
+**Development branch:** `codex/default-theme-gate1` (isolated local worktree branch `work/logbook-next-milestone`)
+**Current source correction (local):** `c2e18bd` fixes the direct Manual Entry option exposed by run #83. It is awaiting publication to the development branch because the shell Git remote is temporarily unreachable; GitHub repository tools will be used for the already-authorized development-branch update.
+**Previous verified app/test baseline:** run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd`, 34 unit + 7 UI tests on each of iPhone SE (3rd generation) and iPhone 16; 41/41 on both. iPhone 18 Pro was skipped and untested.
+**Run #82:** commit `be9b3cec6b98f55b896a7383181c10ff9e204d99`; failed on both available simulator builds before test execution because Swift could not type-check the composed Food screen expression in a reasonable time. This source-level issue was corrected by splitting `FoodScreen` into smaller computed sections/helpers.
+**Run #83 result:** [GitHub Actions run #83](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42447491962), commit `1cd8109f3e203d1b6d9e3241e975a2edaaa081e7`, failed to compile on both iPhone SE and iPhone 16 before test execution. The compiler found that the required direct Manual Entry action selected a missing `FoodEntryMode.manual` case. This is fixed in local commit `c2e18bd`; it has not yet been published or tested. iPhone 18 Pro was skipped and remains **untested**.
 
-## Evidence status
+## Training implementation and pending verification
 
-Run #79 ran 34 unit tests and 7 UI tests per available device (iOS 18.5): SE passed 41/41; iPhone 16 passed 40 and failed 1 (the workout split drag assertion); iPhone 18 Pro test was skipped/untested.
+The current source now includes simulator UI paths for program switching/independent rotation and scheduled skip, declined progression, multiple sessions on one date, PR presentation, workout history edit/delete/restore, exercise tracking-mode selection, superset grouping and round-based rest timing. Existing store tests cover flexible program rotations, scheduled/out-of-order/discard rules, preserving the original program on a draft, timer pause/extension/reopen, tracking-mode PR eligibility, first-workout PR baseline, maximum one PR per exercise/workout, and PR recalculation after historical edits/deletion.
 
-Run #80 ran the same 34 unit + 7 UI tests per available device: iPhone SE **41 passed, 0 failed, 0 skipped**; iPhone 16 **41 passed, 0 failed, 0 skipped**. The iPhone 18 Pro step was skipped and remains **untested**. Commit `dfd8678` adjusts the test gesture to drop at the destination-row center and briefly hold; the actual reorder UI test passed on both devices in #80. #42 remains the older green baseline before the expanded Training workflows; #80 is now the newer fully green source/test evidence.
+These added UI checks were not executed in run #83 because compilation failed before tests. They remain **unverified** until a later run completes. Rest-day UI, draft program-switch UI, all tracking-mode input validation, full calendar drill-in for multiple same-day sessions and complete PR recalculation presentation remain narrower gaps. Preserve the exact Home geometry; unoccupied split cells remain empty when the user has fewer than eight workouts.
 
-## Current implementation boundary
+## Food/Nutrition implementation and verification boundary
 
-The app has real persistent Training UI flows for workout creation/reorder, exercise search and selection, custom exercises, prescription changes, active workout set entry, timer controls/recovery, explicit progression acceptance, completion summary, history editing, deletion and restoration. Run #80 passed the associated end-to-end UI flows on both available simulators. Superset editor interactions, program switching/skip in the UI, all tracking modes, declined progression, multi-session calendar drill-in, and PR presentation/recalculation UI still need dedicated acceptance tests.
+Implemented persistent Food flows include meal creation/rename/expand/edit; the exact four Add Food choices (Search Foods, Scan Barcode, Manual Entry, Recent Foods); local and remote search; favorites as an independent filter; quantity confirmation and serving conversion with only verified food-specific portions; manual personal foods; barcode lookup and unknown-barcode manual fallback; recipes with ingredient/yield nutrition; Add/Replace meal/day copying with recoverable replacement; date-specific calorie/macro targets; remaining values and adherence; seven-day trends; hydration quick-add/custom amounts, goals and history; Food History correction and Recently Deleted recovery; offline persistence; and food navigation from Home.
 
-The rest timer is now pinned in a blue card below the workout header and outside the scrollable exercise list. Run #80 screenshots and UI assertions confirm this on both devices, including after scrolling the set table. The approved 2×4 Home grid and dock have not changed.
+Canadian Nutrient File and Open Food Facts use public HTTP endpoints with attribution/source metadata and no app credential. The unit suite tests the provider response parser and data rules, but does not establish live endpoint uptime, licensing review, provider completeness, camera scanning on hardware, or offline behavior under every failure mode. Barcode camera access uses AVFoundation; CI only exercises its manual fallback because simulator camera scanning is not a meaningful physical barcode test. Food unit/UI execution in run #83 did not occur because the build failed before tests. UI coverage still needs to be expanded for recipe editing/logging, meal copy Add/Replace, goal/history controls, hydration, favorites/recent flows, day swiping/calendar selection and live/offline provider failure.
 
-The Training Split screenshot with one real workout has seven unused positions. Master spec §2.3 explicitly says to leave room instead of fabricating tiles; no alternate content is approved. An eight-workout QA fixture fills all positions. This discrepancy is documented rather than “fixed” by inventing workouts or changing the approved geometry.
+## Preserved constraints
 
-## Screenshots and visual status
+- Four Home pages, fixed 2-column × 4-row square-cell grid, small 1×1, medium 2×1, large 2×2, no Home vertical scroll, fixed five-icon dock.
+- Current visual style is provisional working direction only. No screenshot or visual baseline has been approved or overwritten; other themes have not been propagated.
+- HealthKit remains disabled. No `main` merge, production configuration change, or use of personal data.
+- This Linux worktree has no Xcode/iOS Simulator. GitHub macOS Actions is the only simulator verification path available here.
 
-A downloadable gallery of 24 real PNG candidates from run #80 is available at `/workspace/logbook-training-review-run80/index.html` and `/workspace/logbook-training-review-run80.zip`. Every capture is labeled by device and workflow and is **not an approved baseline**. See `native-ios/QA/VISUAL_DIFFS/README.md`.
+## Next actions
 
-Daily grid measurements from run #80 (points):
-
-| Device | Large | Medium measured | Small left / right | Dock frame |
-|---|---:|---:|---:|---:|
-| iPhone SE (3rd generation) | 212.35 × 212.35 | 211.5 × 101.25 | 101.85 × 101.85 / 102.35 × 101.85 | (19, 606.5, 67.5, 47) |
-| iPhone 16 | 268.52 × 268.52 | 267.5 × 129.25 | 130.18 × 130.18 / 130.18 × 130.18 | (19, 757.67, 71, 47) |
-
-No widget baseline was approved. The Home candidates show no clipping and the dock remains visible. The Active Workout and completion-summary sheets use standard grouped/light surfaces rather than the Home’s translucent Default surface; no original screen-specific visual reference is available to make a pixel comparison. Review remains pending.
-
-The 26 original theme binary references are accessible in the supplied local handoff but are not in the repository. Their exact filenames and destination subfolders are recorded in `docs/handoff-v2/themes/REFERENCE_INDEX.md`. Four Glass assets are thumbnail-only. No theme or baseline was modified.
-
-## Next work
-
-1. Check the Actions run triggered by this documentation update; keep #80 as the app-source test evidence.
-2. Resolve remaining Training UI coverage gaps without changing Home geometry.
-3. Review Default appearance and resolve the Training Split empty-space request against the explicit master-spec rule before changing its internal layout.
-4. Keep HealthKit disabled, and keep all changes on this development branch; no production configuration or `main` changes.
-
-This workspace has no local Xcode or iOS Simulator. Simulator builds and screenshots are produced by GitHub Actions.
+1. Publish the local `c2e18bd` manual-entry correction to the development branch; run #83 found it by failing before tests. Rerun without indefinite retries.
+2. Add meaningful Food UI coverage for currently untested workflows, commit the increments to the development branch, and wait for their actual CI results.
+3. Refresh tracker, issue register, audit and test report from the completed evidence; download actual simulator screenshots as review candidates.
+4. Keep remaining visual acceptance separate and identify the next milestone after Food/Training evidence is reconciled.

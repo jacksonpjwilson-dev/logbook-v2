@@ -1,33 +1,31 @@
 # Logbook QA report
 
-## Current app-source and test evidence
+## Current test evidence
 
-**Branch:** `codex/default-theme-gate1`
-**App source:** `f4b2cca17b3ba6bab2207783438f2296ffe93083`
-**Latest green run #80:** [GitHub Actions](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049), tested commit `dfd8678efdc354d47aac0e549850a46bae533cdd`.
-**Prior run #79:** [GitHub Actions](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42429166112), failed only one iPhone 16 UI assertion.
+**Development branch:** `codex/default-theme-gate1`
+**Current source correction (local):** `c2e18bd` — not yet published to GitHub at the time of this report
+**Run #83:** [GitHub Actions](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42447491962) — **failed before tests on iPhone SE and iPhone 16** because `FoodEntryMode.manual` was missing. The iPhone 18 Pro test action was skipped; that simulator remains **untested**.
+**Previous fully green evidence:** [Run #80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049), commit `dfd8678efdc354d47aac0e549850a46bae533cdd`: 34 unit + 7 UI = **41 passed, 0 failed, 0 skipped** on both iPhone SE and iPhone 16 (iOS 18.5); iPhone 18 Pro skipped/untested.
 
-Run #80 built and tested the app on iOS 18.5 simulators. Each available device ran 34 unit + 7 UI tests:
+Run #82 tested `be9b3ce` and failed both available device builds before tests due to Swift type-check complexity in the Food screen. The screen was refactored into smaller view sections/helpers in `1cd8109`; run #83 is checking that fix and the expanded Training/Food suite. No test result for #83 is claimed yet.
 
-- iPhone SE (3rd generation): **41 passed, 0 failed, 0 skipped**.
-- iPhone 16: **41 passed, 0 failed, 0 skipped**.
-- iPhone 18 Pro: QA test step skipped; **untested**.
+## Scope on the current commit
 
-The centered/slow-drop UI-test adjustment passed the drag-and-drop workflow on both available devices. Run #79 remains a recorded failure (40/41 on iPhone 16); #80 establishes the newer fully green app/test baseline. `f4b2cca` is the app-source commit; `dfd8678` changes only the UI test gesture.
+Training unit/UI coverage now includes independent program rotations and scheduled skip, progression acceptance/decline, superset grouping and round rest behavior, exercise tracking-mode selection, multiple completed sessions on one date, PR display, historical editing and Recently Deleted recovery. Store tests additionally cover rotation edge cases, timer lifecycle, tracking-mode PR eligibility, first-workout baseline, and recalculation after historical edits/deletions. All new run #83 simulator coverage is pending. See `TRAINING_PHASE2.md` and the canonical tracker for precise UI-versus-store boundaries.
 
-## Screenshot gallery
+Food/Nutrition source now includes persistent food and meal logging/editing, search, the exact four approved Add Food paths, manual entry, barcode provider/parser and unknown-code fallback, favorites/recents, verified portions, reusable recipes, meal/day copy Add/Replace, historical nutrition targets, calorie/macro remaining and adherence, 7-day trends, hydration goals/log/history, Food History editing/recovery, and offline state persistence. Unit tests cover business rules and persistence. Current UI automation source covers the four Add Food choices, local search and selection, manual entry, history correction, deletion/restoration and barcode manual fallback. Run #83 did not execute the suite because compilation failed.
 
-Run #80 produced 24 real iPhone 16 and iPhone SE PNG candidates for Daily, Training, Food, Progress & History, Workout Split Editor, Active Workout, progression, completion and history.
+Food UI acceptance still needs tests for recipe builder/edit/log, copy Add/Replace, goals/history controls, hydration entry/history, favorite/recents, horizontal date navigation/calendar, and provider online/offline error handling. The CI parser tests do not establish live Canadian Nutrient File/Open Food Facts availability or licensing/completeness. Camera barcode scan requires meaningful testing on physical hardware; the simulator verifies the manual fallback only.
 
-- Gallery HTML: `/workspace/logbook-training-review-run80/index.html`
-- Downloadable gallery ZIP: `/workspace/logbook-training-review-run80.zip`
+## Screenshot and visual status
 
-The gallery marks each image **CANDIDATE — NOT APPROVED**. No visual baseline was added or overwritten.
+Run #83 should upload actual simulator screenshots and test reports after the two available jobs finish. Until then, the last downloadable candidate gallery is the 24-PNG run #80 gallery:
 
-## Visual and requirements status
+- `/workspace/logbook-training-review-run80/index.html`
+- `/workspace/logbook-training-review-run80.zip`
 
-The Home grid measurements, timer placement and Training drag/reorder assertions passed on both devices in #80. Training Home’s unused positions with a short split are retained per master spec §2.3; the eight-workout fixture fills the same approved geometry. Default appearance and active-workout sheet styling remain pending human visual review.
+No candidate has been accepted as a baseline. The visual direction is provisional. Approved widget geometry, dock and existing theme definitions remain unchanged. The Home screenshot evidence is not a substitute for feature UI coverage or visual approval.
 
-The supplied handoff contains 26 original theme reference binaries outside the repository. Exact names, categories and repository destination paths are in `docs/handoff-v2/themes/REFERENCE_INDEX.md`. Four Glass images are thumbnail-only. The 16 formerly approved themes were not modified, and no visual candidate is automatically approved.
+## Environment and constraints
 
-The Linux environment has no `xcodebuild` or iOS Simulator. CI provides simulator builds and test evidence. HealthKit is disabled; no production config or `main` branch was changed.
+This Linux workspace has no Xcode or iOS Simulator. All native build, test and capture evidence must come from the macOS GitHub Actions run for its exact commit and device. HealthKit stays disabled. No production configuration or `main` branch was changed. CI test data is isolated synthetic data.

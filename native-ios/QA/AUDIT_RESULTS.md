@@ -1,5 +1,20 @@
 # Logbook v2 handoff audit and Default gate
 
+## Training verification and Food milestone — current source audit (2026-11-08)
+
+Current source commit under review: `1cd8109f3e203d1b6d9e3241e975a2edaaa081e7` on development branch `codex/default-theme-gate1`. Run #83 is the first Actions verification for the Food implementation and expanded Training acceptance tests; iPhone SE and iPhone 16 were in progress at last status check. Its iPhone 18 Pro QA step was skipped, so that simulator remains untested. Run #82 failed both available builds before tests because the large Food view expression exceeded Swift's type-check limit; the view was split into smaller computed sections/helpers before #83. See `REPORT.md` for actual results once completed.
+
+### Current implementation findings
+
+- **Training:** UI test source now drives program switching and scheduled skip, supersets and round-based rest, tracking-mode selection, progression decline, multiple sessions on a date, PR presentation, and historical edit/delete/restore. Store test source covers independent flexible rotations, out-of-order/discard/rest rules, draft program ownership, timer lifecycle, compatible tracking modes, first-session PR baseline and post-edit/deletion PR recalculation. The expanded UI paths were not executed in #83 because compilation failed; store-level proof does not establish every corresponding UI path.
+- **Food:** persistent offline-first models and screens implement meal logging/editing, local/remote search, the exact four Add Food choices, manual and barcode paths, portion confirmation/conversion, favorites/recents, recipe persistence, Add/Replace copy with recoverable replacement, effective-dated nutrition goals, adherence and remaining calculations, 7-day trends, hydration history, Food History and Recently Deleted. Store tests cover persistence and calculations; the current UI test navigates search/manual entry/history correction/recovery and barcode manual fallback. The Food simulator tests in run #83 did not execute because compilation failed.
+- **External data:** the CNF and Open Food Facts adapters use public HTTPS APIs and require no credential. Parser tests do not verify live service uptime, field completeness, licensing/attribution obligations, quality of serving-size provenance or offline recovery across runtime network changes. Those remain open validation items.
+- **Scanner:** AVFoundation barcode capture exists; automated simulator UI covers safe manual fallback rather than real-world camera/barcode recognition. Physical scan verification remains open.
+- **Visual constraints:** the user accepted the latest Default screenshots as a provisional working direction, not final approval. No geometry, theme or screenshot baseline was changed in these commits. The four-page Home grid/dock contract and unused split cells are preserved. Other theme implementations remain gated.
+- **Environment/safety:** this Linux workspace cannot run Xcode. CI uses synthetic isolated stores. HealthKit remains disabled; neither production configuration nor `main` was touched.
+
+The canonical row-level tracker and `CURRENT_MILESTONE.md` are updated for this source audit. They deliberately mark newly added acceptance paths unverified until the exact current commit completes CI.
+
 ## Current Training UI verification — 2026-11-08
 
 **Branch:** `codex/default-theme-gate1`

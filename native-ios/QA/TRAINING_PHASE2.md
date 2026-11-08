@@ -1,13 +1,13 @@
 # Training system UI milestone status
 
 **Branch:** `codex/default-theme-gate1`
-**App source commit under test:** `f4b2cca17b3ba6bab2207783438f2296ffe93083`
+**Latest completed Training source/test evidence:** run #80 (`dfd8678efdc354d47aac0e549850a46bae533cdd`); subsequent Training/Food changes are not yet verified.
 **UI-test-only follow-up:** `dfd8678efdc354d47aac0e549850a46bae533cdd`
 **Latest fully green evidence:** [run #80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049), tested commit `dfd8678efdc354d47aac0e549850a46bae533cdd`.
 
 ## Implemented workflows and verified scope
 
-- **Workout editor:** The end-to-end UI test creates a workout, enters edit mode, drags a workout, searches the built-in exercise library, selects an exercise, creates a custom exercise, and changes sets, reps and exercise-specific rest. Run #80 passed the full workflow on both iPhone SE and iPhone 16.
+- **Workout editor:** The end-to-end UI test creates a workout, enters edit mode, drags a workout, searches the built-in exercise library, selects an exercise, creates a custom exercise, and changes sets, reps and exercise-specific rest. Run #80 passed the workflow on both iPhone SE and iPhone 16. Expanded program/superset/tracking/decline/multi-session/PR UI assertions added later were not executed in run #83 because the later source failed to compile.
 - **Active workout and rest timer:** UI test verifies current exercise expansion, the five-column set table, weight entry, completion of a set, +15-second extension, pause/resume, termination/relaunch recovery and Resume Workout navigation. The blue timer is tested and captured above the scrollable exercise list. Passed on both available devices in run #80.
 - **Progression:** A real saved prior workout produces a suggestion on the next session; the test proves it is not applied before explicit acceptance and is applied afterward. Passed on both devices in #80. Declining a suggestion is not yet UI-tested.
 - **Completion/history:** The UI test saves a partially completed session, captures the summary, edits historical weight/reps/completion/notes, deletes the workout and restores it from Recently Deleted. Passed on both devices in #80. PR-display/recalculation and multi-session calendar navigation are not covered end to end.
