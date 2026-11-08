@@ -61,6 +61,7 @@ private struct FoodDateSwipeInstaller: UIViewRepresentable {
 
     func updateUIView(_ view: UIView, context: Context) {
         context.coordinator.onSwipe = onSwipe
+        context.coordinator.swipeRegionView = view
         DispatchQueue.main.async {
             var ancestor = view.superview
             while let current = ancestor {
@@ -76,6 +77,7 @@ private struct FoodDateSwipeInstaller: UIViewRepresentable {
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onSwipe: (Int) -> Void
         weak var scrollView: UIScrollView?
+        weak var swipeRegionView: UIView?
         private var recognizers: [UISwipeGestureRecognizer] = []
 
         init(onSwipe: @escaping (Int) -> Void) { self.onSwipe = onSwipe }
@@ -108,6 +110,12 @@ private struct FoodDateSwipeInstaller: UIViewRepresentable {
 
         @objc private func swipedLeft() { onSwipe(1) }
         @objc private func swipedRight() { onSwipe(-1) }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            guard let scrollView, let swipeRegionView else { return false }
+            let touchPoint = touch.location(in: scrollView)
+            return swipeRegionView.convert(swipeRegionView.bounds, to: scrollView).contains(touchPoint)
+        }
 
         func gestureRecognizer(
             _ gestureRecognizer: UIGestureRecognizer,
