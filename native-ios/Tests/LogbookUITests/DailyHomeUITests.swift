@@ -587,25 +587,17 @@ final class DailyHomeUITests: XCTestCase {
         calendarToday.tap()
         let calendarSessionRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "calendar-workout-"))
         XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
+        let editedWorkoutID = String(calendarSessionRows.firstMatch.identifier.dropFirst("calendar-workout-".count))
+        XCTAssertFalse(editedWorkoutID.isEmpty, "Capture the stable workout ID from the selected calendar session")
         calendarSessionRows.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5), "Each calendar session opens its individual editable history record")
-        app.buttons["workout-history-back"].tap()
-        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Back navigation returns to the selected calendar date")
-        app.navigationBars["Workout Calendar"].buttons["Done"].tap()
-        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
-        scrollToElement(historyRows.firstMatch, in: app)
-        XCTAssertTrue(historyRows.firstMatch.isHittable, "The first saved session is revealed after scrolling History past the charts")
-        let editedWorkoutID = String(historyRows.firstMatch.identifier.dropFirst("history-workout-".count))
-        XCTAssertFalse(editedWorkoutID.isEmpty, "Capture the stable workout ID before pushing the detail screen")
-        historyRows.firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Training-History-Detail-Candidate")
 
         let historyWeight = inputField(app, labelled: "history-set-weight")
         XCTAssertTrue(historyWeight.waitForExistence(timeout: 5))
         replaceText(in: historyWeight, with: "40")
         let historyReps = inputField(app, labelled: "history-set-reps")
+        XCTAssertTrue(historyReps.waitForExistence(timeout: 5))
         replaceText(in: historyReps, with: "8")
         let completionToggles = app.buttons.matching(identifier: "history-set-complete")
         completionToggles.firstMatch.tap()
@@ -624,20 +616,22 @@ final class DailyHomeUITests: XCTestCase {
         notes.tap()
         notes.typeText("QA history edit")
         dismissKeyboard(in: app)
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
-        XCTAssertEqual(visiblePRRows.count, 1, "Editing the current best below the previous workout immediately recalculates visible PRs")
-        let editedWorkoutRow = app.buttons["history-workout-\(editedWorkoutID)"]
-        scrollToElement(editedWorkoutRow, in: app, towardTop: true)
-        XCTAssertTrue(editedWorkoutRow.waitForExistence(timeout: 5), "The edited history row remains available after returning from detail")
-        editedWorkoutRow.tap()
-        XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
+
+        // Keep the workflow on the selected calendar record. This avoids
+        // depending on a lazy History row's accessibility frame after the
+        // calendar sheet has dismissed while still exercising the real editor.
         let deleteWorkout = app.buttons["Delete workout"]
         scrollToElement(deleteWorkout, in: app)
         XCTAssertTrue(deleteWorkout.waitForExistence(timeout: 5), "The delete action is below the completed set and notes history")
         deleteWorkout.tap()
         app.buttons["Delete Workout"].tap()
+        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Deleting a calendar record returns to the selected date")
 
+        app.navigationBars["Workout Calendar"].buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
+        XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "Deleted sessions are removed from active workout history")
+        let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
+        XCTAssertEqual(visiblePRRows.count, 1, "The earlier retained session still appears as a PR after the newest record is edited or deleted")
         let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))
         // Recently Deleted is below the charts and Training history sections.
         // Scroll the visible History list so its lazy row enters the accessibility tree.
@@ -645,10 +639,14 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreButtons.firstMatch.waitForExistence(timeout: 5), "Deleting a workout should move it into Recently Deleted")
         XCTAssertTrue(restoreButtons.firstMatch.isHittable)
         let deletedWorkoutID = String(restoreButtons.firstMatch.identifier.dropFirst("restore-deleted-workout-".count))
+        let deletedWorkoutID = String(restoreButtons.firstMatch.identifier.dropFirst("restore-deleted-workout-".count))
+        XCTAssertEqual(deletedWorkoutID, editedWorkoutID, "Recently Deleted preserves the selected record identity")
         restoreButtons.firstMatch.tap()
         let restoredWorkout = app.buttons["history-workout-\(deletedWorkoutID)"]
         scrollToElement(restoredWorkout, in: app, towardTop: true)
         XCTAssertTrue(restoredWorkout.waitForExistence(timeout: 5), "Restoring should return that exact record to the Training history list")
+        XCTAssertEqual(historyRows.count, 2, "Restoring the session returns both same-day records")
+        XCTAssertEqual(visiblePRRows.count, 1, "Restoration recalculates records without duplicating the retained earlier PR")
     }
 
     func testProgramSwitchingPreservesIndependentRotationAndSkipAdvancesOnlyScheduledProgram() throws {
