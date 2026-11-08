@@ -53,47 +53,37 @@ private struct FoodDateSwipeInstaller: UIViewRepresentable {
 
     func makeUIView(context: Context) -> UIView {
         let view = UIView(frame: .zero)
-        view.isUserInteractionEnabled = false
+        view.isUserInteractionEnabled = true
         view.backgroundColor = .clear
+        view.isOpaque = false
         view.accessibilityElementsHidden = true
         return view
     }
 
     func updateUIView(_ view: UIView, context: Context) {
         context.coordinator.onSwipe = onSwipe
-        context.coordinator.swipeRegionView = view
-        DispatchQueue.main.async {
-            var ancestor = view.superview
-            while let current = ancestor {
-                if let scrollView = current as? UIScrollView {
-                    context.coordinator.install(on: scrollView)
-                    return
-                }
-                ancestor = current.superview
-            }
-        }
+        context.coordinator.install(on: view)
     }
 
     final class Coordinator: NSObject, UIGestureRecognizerDelegate {
         var onSwipe: (Int) -> Void
-        weak var scrollView: UIScrollView?
-        weak var swipeRegionView: UIView?
+        weak var swipeView: UIView?
         private var recognizers: [UISwipeGestureRecognizer] = []
 
         init(onSwipe: @escaping (Int) -> Void) { self.onSwipe = onSwipe }
 
         deinit {
-            if let scrollView {
-                recognizers.forEach { scrollView.removeGestureRecognizer($0) }
+            if let swipeView {
+                recognizers.forEach { swipeView.removeGestureRecognizer($0) }
             }
         }
 
-        func install(on scrollView: UIScrollView) {
-            guard self.scrollView !== scrollView else { return }
-            if let oldScrollView = self.scrollView {
-                recognizers.forEach { oldScrollView.removeGestureRecognizer($0) }
+        func install(on view: UIView) {
+            guard swipeView !== view else { return }
+            if let oldView = swipeView {
+                recognizers.forEach { oldView.removeGestureRecognizer($0) }
             }
-            self.scrollView = scrollView
+            swipeView = view
             let left = UISwipeGestureRecognizer(target: self, action: #selector(swipedLeft))
             left.direction = .left
             let right = UISwipeGestureRecognizer(target: self, action: #selector(swipedRight))
@@ -103,19 +93,13 @@ private struct FoodDateSwipeInstaller: UIViewRepresentable {
                 recognizer.cancelsTouchesInView = false
                 recognizer.delaysTouchesBegan = false
                 recognizer.delaysTouchesEnded = false
-                scrollView.addGestureRecognizer(recognizer)
+                view.addGestureRecognizer(recognizer)
             }
             recognizers = [left, right]
         }
 
         @objc private func swipedLeft() { onSwipe(1) }
         @objc private func swipedRight() { onSwipe(-1) }
-
-        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
-            guard let scrollView, let swipeRegionView else { return false }
-            let touchPoint = touch.location(in: scrollView)
-            return swipeRegionView.convert(swipeRegionView.bounds, to: scrollView).contains(touchPoint)
-        }
 
         func gestureRecognizer(
             _ gestureRecognizer: UIGestureRecognizer,
@@ -273,7 +257,7 @@ struct FoodScreen: View {
             .accessibilityIdentifier("food-macro-swipe-area")
             .accessibilityElement(children: .combine)
             .contentShape(Rectangle())
-            .background(FoodDateSwipeInstaller { shiftDay($0) })
+            .overlay(FoodDateSwipeInstaller { shiftDay($0) })
 
         } header: {
             HStack {
