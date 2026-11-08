@@ -610,6 +610,7 @@ final class DailyHomeUITests: XCTestCase {
             .completed,
             "Historical set completion should update after the store publishes its edit"
         )
+        dismissKeyboard(in: app)
         let notes = app.descendants(matching: .any)["history-workout-notes"]
         scrollToElement(notes, in: app)
         XCTAssertTrue(notes.waitForExistence(timeout: 5), "Workout notes remain editable in the multiline history field")
@@ -788,7 +789,7 @@ final class DailyHomeUITests: XCTestCase {
 
         let foodTotal = app.staticTexts["food-calories-total"]
         XCTAssertTrue(foodTotal.waitForExistence(timeout: 5))
-        XCTAssertEqual(foodTotal.label, "1090", "A confirmed 450 kcal search result plus 190 kcal from a 50 g manual entry should add to the 450 kcal fixture")
+        XCTAssertEqual(foodTotal.label.replacingOccurrences(of: ",", with: ""), "1090", "A confirmed 450 kcal search result plus 190 kcal from a 50 g manual entry should add to the 450 kcal fixture")
         attachScreenshot(of: app, named: "Food-Nutrition-Home-Candidate")
         let foodHistory = app.buttons["food-history-link"]
         scrollToElement(foodHistory, in: app)
