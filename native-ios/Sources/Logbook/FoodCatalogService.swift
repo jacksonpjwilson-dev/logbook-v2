@@ -51,6 +51,11 @@ actor FoodCatalogService {
         return product.definition(code: requestedCode)
     }
 
+    static func parseSearchResponse(_ data: Data) throws -> [FoodDefinition] {
+        let response = try JSONDecoder().decode(OFFSearchResponse.self, from: data)
+        return (response.products ?? []).compactMap { $0.definition(code: $0.code) }
+    }
+
     private func searchCanadianNutrientFile(_ term: String) async throws -> [FoodDefinition] {
         let foods: [CNFFood]
         if let canadianFoodIndex {
@@ -100,8 +105,7 @@ actor FoodCatalogService {
             URLQueryItem(name: "page_size", value: "20")
         ]
         let data = try await get(components.url!)
-        let response = try JSONDecoder().decode(OFFSearchResponse.self, from: data)
-        return (response.products ?? []).compactMap { $0.definition(code: $0.code) }
+        return try Self.parseSearchResponse(data)
     }
 
     private func get(_ url: URL) async throws -> Data {
@@ -131,13 +135,46 @@ private struct CNFNutrient: Decodable {
 private struct OFFSearchResponse: Decodable { var products: [OFFProduct]? }
 private struct OFFProductResponse: Decodable { var status: Int?; var product: OFFProduct? }
 
+private struct DynamicCodingKey: CodingKey {
+    let stringValue: String
+    let intValue: Int?
+
+    init?(stringValue: String) {
+        self.stringValue = stringValue
+        self.intValue = nil
+    }
+
+    init?(intValue: Int) {
+        self.stringValue = String(intValue)
+        self.intValue = intValue
+    }
+}
+
+/// OFF nutrient maps include numeric measurements and text metadata such as
+/// units/modifiers. Decode only numbers so one metadata field cannot discard a
+/// valid food result.
+private struct OFFNutriments: Decodable {
+    let values: [String: Double]
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: DynamicCodingKey.self)
+        var values: [String: Double] = [:]
+        for key in container.allKeys {
+            if let number = try? container.decode(Double.self, forKey: key) {
+                values[key.stringValue] = number
+            }
+        }
+        self.values = values
+    }
+}
+
 private struct OFFProduct: Decodable {
     var code: String?
     var name: String?
     var brands: String?
     var servingSize: String?
     var servingQuantity: Double?
-    var nutriments: [String: Double]?
+    var nutriments: OFFNutriments?
 
     enum CodingKeys: String, CodingKey {
         case code
@@ -151,7 +188,7 @@ private struct OFFProduct: Decodable {
     func definition(code override: String?) -> FoodDefinition? {
         guard let resolvedCode = override ?? self.code,
               let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty,
-              let values = nutriments,
+              let values = nutriments?.values,
               let calories = values["energy-kcal_100g"], let protein = values["proteins_100g"],
               let carbs = values["carbohydrates_100g"], let fat = values["fat_100g"],
               [calories, protein, carbs, fat].allSatisfy({ $0.isFinite && $0 >= 0 }) else { return nil }

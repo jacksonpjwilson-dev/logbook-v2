@@ -224,6 +224,21 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertNil(unverified.multiplier(for: 1, unit: "serving"), "A serving quantity without a gram unit cannot authorize a gram conversion")
     }
 
+    func testOpenFoodFactsSearchIgnoresTextMetadataInsideNutrientMap() throws {
+        // Real OFF results mix numeric nutrient measures with textual units and
+        // modifiers in the same object. Nonnumeric metadata must not discard an
+        // otherwise valid food search result.
+        let payload = #"{"products":[{"code":"7622210449283","product_name":"Prince","brands":"Example","serving_size":"20g","serving_quantity":20,"nutriments":{"energy-kcal_100g":467,"proteins_100g":6.3,"carbohydrates_100g":69,"fat_100g":17,"energy-kcal_unit":"kcal","sodium_modifier":"~"}}]}"#
+        let foods = try FoodCatalogService.parseSearchResponse(Data(payload.utf8))
+        let food = try XCTUnwrap(foods.first)
+        XCTAssertEqual(food.id, "off-7622210449283")
+        XCTAssertEqual(food.calories, 467)
+        XCTAssertEqual(food.protein, 6.3, accuracy: 0.001)
+        XCTAssertEqual(food.carbohydrates, 69)
+        XCTAssertEqual(food.fat, 17)
+        XCTAssertEqual(food.verifiedServingGrams, 20)
+    }
+
     func testLegacyNutritionPayloadDecodesWithoutNewFoodFields() throws {
         let encoded = try JSONEncoder.logbook.encode(NutritionState())
         var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
