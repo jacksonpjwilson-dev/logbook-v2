@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 13609)
-Total output lines: 1032
-
 import Charts
 import SwiftUI
 
@@ -476,7 +473,130 @@ private struct FoodSearchScreen: View {
             }
             if isSearching { ProgressView("Searching Canadian Nutrient File and Open Food Facts…") }
             if let searchError { Text(searchError).font(.footnote).foregroundStyle(.secondary) }
-            Section(recentOnly ? "Recently logged" : (favoriteOnly ? "Favorites" : "Foods")) …1609 tokens truncated…oodEntryScreen: View {
+            Section(recentOnly ? "Recently logged" : (favoriteOnly ? "Favorites" : "Foods")) {
+                ForEach(visibleFoods) { food in
+                    HStack(spacing: 10) {
+                        Button { onSelect(food) } label: {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(food.name).font(.headline)
+                                Text("\(Int(food.calories)) kcal · \(Int(food.protein)) g protein per \(food.basisAmount.formatted()) \(food.basisUnit)")
+                                    .font(.caption).foregroundStyle(.secondary)
+                                Text(food.source).font(.caption2).foregroundStyle(.tertiary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("food-search-result-\(food.id)")
+                        Button {
+                            store.setFoodFavorite(food.id, isFavorite: !favorites.contains(food.id))
+                        } label: {
+                            Image(systemName: favorites.contains(food.id) ? "star.fill" : "star")
+                                .foregroundStyle(favorites.contains(food.id) ? .yellow : .secondary)
+                        }
+                        .buttonStyle(.plain).accessibilityLabel(favorites.contains(food.id) ? "Remove favorite" : "Add favorite")
+                        .accessibilityIdentifier("food-favorite-\(food.id)")
+                    }
+                }
+                if visibleFoods.isEmpty && !isSearching {
+                    ContentUnavailableView(recentOnly ? "No recent foods" : "No matching foods", systemImage: "fork.knife", description: Text(recentOnly ? "Logged foods are saved here for quick access." : "Search the local catalog and the Canadian Nutrient File / Open Food Facts, or use Manual Entry."))
+                }
+            }
+            if !recentOnly {
+                Section { Text("Canadian Nutrient File · Health Canada. Packaged-product data from Open Food Facts is community-contributed under its database license. Review provider values and verify the package label. Unverified portions are not offered as servings.").font(.caption2).foregroundStyle(.secondary) }
+            }
+        }
+        .searchable(text: $query, prompt: "Food or product name")
+        .task(id: query) { await runSearch(query) }
+    }
+
+    @MainActor private func runSearch(_ value: String) async {
+        remoteFoods = []
+        searchError = nil
+        guard !recentOnly, value.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else { return }
+        try? await Task.sleep(for: .milliseconds(350))
+        guard !Task.isCancelled else { return }
+        isSearching = true
+        defer { isSearching = false }
+        do {
+            let found = try await FoodCatalogService.shared.search(value)
+            guard !Task.isCancelled else { return }
+            remoteFoods = found
+            store.cacheFoodDefinitions(found)
+        } catch {
+            searchError = "Online providers are unavailable. Saved foods, recent foods and manual entry still work offline."
+        }
+    }
+}
+
+private struct FoodQuantityConfirmationScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @Environment(\.dismiss) private var dismiss
+    let food: FoodDefinition
+    let meal: MealSlot
+    let date: String
+    @State private var quantity: Double
+    @State private var unit: String
+
+    init(food: FoodDefinition, meal: MealSlot, date: String) {
+        self.food = food; self.meal = meal; self.date = date
+        let options = FoodQuantityConfirmationScreen.units(for: food)
+        let initialUnit = options.first ?? food.basisUnit
+        _unit = State(initialValue: initialUnit)
+        let initialQuantity: Double
+        switch initialUnit {
+        case "g": initialQuantity = food.basisAmount
+        case "oz": initialQuantity = food.basisAmount * 0.0352739619
+        default: initialQuantity = 1
+        }
+        _quantity = State(initialValue: initialQuantity)
+    }
+
+    private var multiplier: Double { food.multiplier(for: quantity, unit: unit) ?? 0 }
+    private static func units(for food: FoodDefinition) -> [String] {
+        guard food.basisUnit.caseInsensitiveCompare("g") == .orderedSame else { return [food.basisUnit] }
+        var result = ["g", "oz"]
+        if let serving = food.verifiedServingGrams, serving > 0 { result.append("serving") }
+        return result
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Confirm amount · \(meal.name)") {
+                    Text(food.name).font(.headline)
+                    HStack {
+                        TextField("Amount", value: $quantity, format: .number.precision(.fractionLength(0...2)))
+                            .keyboardType(.decimalPad).accessibilityIdentifier("food-quantity")
+                        Picker("Unit", selection: $unit) {
+                            ForEach(Self.units(for: food), id: \.self) { Text($0).tag($0) }
+                        }
+                        .pickerStyle(.menu).accessibilityIdentifier("food-quantity-unit")
+                    }
+                    Text("\(date) · \(food.source)").font(.caption).foregroundStyle(.secondary)
+                }
+                Section("Nutrition preview") {
+                    LabeledContent("Calories", value: "\(Int(food.calories * multiplier)) kcal")
+                    LabeledContent("Protein", value: "\(Int(food.protein * multiplier)) g")
+                    LabeledContent("Carbohydrates", value: "\(Int(food.carbohydrates * multiplier)) g")
+                    LabeledContent("Fat", value: "\(Int(food.fat * multiplier)) g")
+                }
+            }
+            .navigationTitle("Review food")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Log food") {
+                        if store.logFood(food, meal: meal, quantity: quantity, unit: unit, confirmed: true, date: date) { dismiss() }
+                    }
+                    .disabled(quantity <= 0 || multiplier <= 0).accessibilityIdentifier("food-confirm-log")
+                }
+            }
+        }
+    }
+}
+
+private struct ManualFoodEntryScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
     let meal: MealSlot

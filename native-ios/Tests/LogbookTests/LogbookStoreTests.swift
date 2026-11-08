@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 12949)
-Total output lines: 800
-
 import XCTest
 @testable import Logbook
 
@@ -343,7 +340,65 @@ final class LogbookStoreTests: XCTestCase {
 
         let reopened = LogbookStore(repository: repository)
         XCTAssertEqual(reopened.state.training.activeProgram?.id, migrated.state.training.activeProgram?.id)
-        XCTAssertEqual(reopened.state.training.scheduledTemplate?.id, sec…949 tokens truncated…val(86_400), exerciseID: "squat", name: "Squat", sets: [(90, 8)])
+        XCTAssertEqual(reopened.state.training.scheduledTemplate?.id, second.id)
+    }
+
+    func testEstimatedOneRepMaxUsesFirstWorkoutAsBaselineAndOnlyOneRecordPerExerciseWorkout() throws {
+        let repository = temporaryRepository()
+        let start = Date(timeIntervalSince1970: 1_800_000_000)
+        let baseline = completedSession(at: start, exerciseID: "bench", name: "Bench Press", sets: [(50, 10), (60, 5)])
+        let improvement = completedSession(at: start.addingTimeInterval(86_400), exerciseID: "bench", name: "Bench Press", sets: [(63, 5), (65, 5)])
+        let noImprovement = completedSession(at: start.addingTimeInterval(172_800), exerciseID: "bench", name: "Bench Press", sets: [(60, 5)])
+        var initial = LogbookState.empty
+        initial.training.completedSessions = [baseline, improvement, noImprovement]
+        try repository.save(initial)
+
+        let store = LogbookStore(repository: repository)
+        let records = store.state.training.personalRecordEvents
+        XCTAssertEqual(records.count, 1, "The first workout is baseline; multiple better sets in one later workout produce one event")
+        XCTAssertEqual(records.first?.sessionID, improvement.id)
+        XCTAssertEqual(records.first?.estimatedOneRepMaxKg ?? 0, 65 * (1 + 5.0 / 30), accuracy: 0.001)
+        XCTAssertEqual(records.first?.previousBestKg ?? 0, 60 * (1 + 5.0 / 30), accuracy: 0.001)
+    }
+
+    func testCompletingLiveWorkoutSurfacesImprovementOverHistoricalBaseline() throws {
+        let repository = temporaryRepository()
+        let baselineDate = Date.now.addingTimeInterval(-86_400)
+        let baseline = completedSession(at: baselineDate, exerciseID: "live-bench", name: "Bench Press", sets: [(60, 8)])
+        let exercise = ExerciseDefinition(id: "live-bench", name: "Bench Press", group: "Chest", equipment: "Barbell")
+        let template = WorkoutTemplate(name: "Upper Body", exercises: [
+            PlannedExercise(exerciseID: exercise.id, name: exercise.name, muscle: exercise.group, equipment: exercise.equipment, sets: [PlannedSet()])
+        ])
+        var initial = LogbookState.empty
+        initial.training.exercises = [exercise]
+        initial.training.templates = [template]
+        let program = WorkoutProgram(name: "Strength", templateIDs: [template.id])
+        initial.training.programs = [program]
+        initial.training.activeProgramID = program.id
+        initial.training.completedSessions = [baseline]
+        try repository.save(initial)
+
+        let store = LogbookStore(repository: repository)
+        store.startWorkout(template)
+        let active = try XCTUnwrap(store.state.training.activeSession)
+        let activeExercise = try XCTUnwrap(active.exercises.first)
+        let workingSet = try XCTUnwrap(activeExercise.sets.first)
+        store.updateSet(exerciseID: activeExercise.id, setID: workingSet.id, weightKg: 80, reps: 8)
+        XCTAssertTrue(store.toggleSet(exerciseID: activeExercise.id, setID: workingSet.id))
+        XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
+
+        let saved = try XCTUnwrap(store.state.training.completedSessions.first { $0.id == active.id })
+        let record = try XCTUnwrap(store.state.training.personalRecordEvents.first { $0.sessionID == saved.id })
+        XCTAssertEqual(record.exerciseID, "live-bench")
+        XCTAssertEqual(record.estimatedOneRepMaxKg, 80 * (1 + 8.0 / 30), accuracy: 0.001)
+        XCTAssertEqual(record.previousBestKg, 60 * (1 + 8.0 / 30), accuracy: 0.001)
+    }
+
+    func testHistoricalEditsDeletionAndRestoreRecalculatePersonalRecords() throws {
+        let repository = temporaryRepository()
+        let start = Date(timeIntervalSince1970: 1_800_100_000)
+        let baseline = completedSession(at: start, exerciseID: "squat", name: "Squat", sets: [(80, 8)])
+        let next = completedSession(at: start.addingTimeInterval(86_400), exerciseID: "squat", name: "Squat", sets: [(90, 8)])
         var initial = LogbookState.empty
         initial.training.completedSessions = [baseline, next]
         try repository.save(initial)
