@@ -10,11 +10,8 @@ final class FoodCatalogServiceTests: XCTestCase {
 
     func testSearchMergesCanadianNutrientFileAndOpenFoodFactsResults() async throws {
         FoodURLProtocolStub.handler = { request in
-            let path = request.url?.pathComponents.map { $0.lowercased() } ?? []
-            if path.contains("food") && !path.contains("nutrientamount") {
-                return Self.response(request, status: 200, body: #"[{"food_code":1,"food_description":"Banana, raw"}]"#)
-            }
-            if path.contains("nutrientamount") {
+            let path = request.url?.path.lowercased() ?? ""
+            if path.contains("/nutrientamount") {
                 return Self.response(request, status: 200, body: #"""
                 [
                     {"nutrient_name_id":208,"nutrient_value":89},
@@ -24,7 +21,10 @@ final class FoodCatalogServiceTests: XCTestCase {
                 ]
                 """#)
             }
-            if path == "/api/v2/search" {
+            if path.contains("/food") {
+                return Self.response(request, status: 200, body: #"[{"food_code":1,"food_description":"Banana, raw"}]"#)
+            }
+            if path.contains("/api/v2/search") {
                 return Self.response(request, status: 200, body: #"""
                 {"products":[
                     {"code":"0123456789012","product_name":"Banana chips","brands":"QA Foods",
