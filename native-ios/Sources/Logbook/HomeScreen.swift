@@ -339,6 +339,9 @@ private struct HomePageGrid: View {
                 openFood: openFoodFocus
             )
             .frame(width: width, height: height)
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("home-widget-food-\(widget.kind.rawValue)")
+            .accessibilityValue("\(width)|\(height)")
             .disabled(editing)
         } else {
             Button {
@@ -663,8 +666,6 @@ private struct DefaultFoodHomeWidgetView: View {
         .background(state.home.theme.tokens.surfaceTint.opacity(state.home.theme.tokens.cardOpacity), in: RoundedRectangle(cornerRadius: state.home.theme.tokens.cornerRadius, style: .continuous))
         .overlay(RoundedRectangle(cornerRadius: state.home.theme.tokens.cornerRadius, style: .continuous).stroke(palette.accentColor.opacity(state.home.theme.tokens.borderOpacity), lineWidth: 0.9))
         .shadow(color: .black.opacity(state.home.theme.tokens.shadowOpacity), radius: state.home.theme.tokens.cardShadowRadius, x: 0, y: 7)
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("home-widget-food-\(widget.kind.rawValue)")
     }
 
     private var trendsCard: some View {

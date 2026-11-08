@@ -83,18 +83,28 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodMealsWidget.exists)
         XCTAssertTrue(foodStreakWidget.exists)
         XCTAssertTrue(easyNextWidget.exists)
-        // Measure the actual accessible widget roots. Transparent frame probes
-        // can report zero-size AX frames on some iOS simulator versions.
+        // The grid container publishes the exact frame values it gave each
+        // widget; child-content accessibility bounds can be smaller than the
+        // rounded exterior surface.
         let trendFrame = foodTrendWidget
         let mealsFrame = foodMealsWidget
         let streakFrame = foodStreakWidget
         let easyNextFrame = easyNextWidget
-        XCTAssertEqual(trendFrame.frame.width, trendFrame.frame.height, accuracy: 2)
-        XCTAssertEqual(mealsFrame.frame.width, trendFrame.frame.width, accuracy: 2)
-        XCTAssertGreaterThan(trendFrame.frame.height, mealsFrame.frame.height)
-        XCTAssertEqual(streakFrame.frame.width, easyNextFrame.frame.width, accuracy: 2)
-        XCTAssertEqual(streakFrame.frame.width, streakFrame.frame.height, accuracy: 2)
-        XCTAssertEqual(mealsFrame.frame.height, streakFrame.frame.height, accuracy: 2)
+        func measuredSize(_ element: XCUIElement) -> (width: Double, height: Double) {
+            let values = (element.value as? String ?? "").split(separator: "|").compactMap { Double($0) }
+            return (values.count == 2 ? values[0] : element.frame.width,
+                    values.count == 2 ? values[1] : element.frame.height)
+        }
+        let trendSize = measuredSize(trendFrame)
+        let mealsSize = measuredSize(mealsFrame)
+        let streakSize = measuredSize(streakFrame)
+        let easyNextSize = measuredSize(easyNextFrame)
+        XCTAssertEqual(trendSize.width, trendSize.height, accuracy: 2)
+        XCTAssertEqual(mealsSize.width, trendSize.width, accuracy: 2)
+        XCTAssertGreaterThan(trendSize.height, mealsSize.height)
+        XCTAssertEqual(streakSize.width, easyNextSize.width, accuracy: 2)
+        XCTAssertEqual(streakSize.width, streakSize.height, accuracy: 2)
+        XCTAssertEqual(mealsSize.height, streakSize.height, accuracy: 2)
         XCTAssertLessThan(streakFrame.frame.maxY, app.buttons["Training tab"].frame.minY, "Food widgets stay above the fixed dock on supported simulators")
         XCTAssertTrue(app.segmentedControls["food-home-trend-picker"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["food-home-seven-day-chart"].exists)
@@ -584,6 +594,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
         for _ in 0..<5 where !historyRows.firstMatch.isHittable { historyList.swipeUp() }
         XCTAssertTrue(historyRows.firstMatch.isHittable)
+        let editedWorkoutID = String(historyRows.firstMatch.identifier.dropFirst("history-workout-".count))
+        XCTAssertFalse(editedWorkoutID.isEmpty, "Capture the stable workout ID before pushing the detail screen")
         historyRows.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Training-History-Detail-Candidate")
@@ -610,11 +622,13 @@ final class DailyHomeUITests: XCTestCase {
         notes.tap()
         notes.typeText("QA history edit")
         dismissKeyboard(in: app)
-        let editedWorkoutID = String(historyRows.firstMatch.identifier.dropFirst("history-workout-".count))
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
         XCTAssertEqual(visiblePRRows.count, 1, "Editing the current best below the previous workout immediately recalculates visible PRs")
-        app.buttons["history-workout-\(editedWorkoutID)"].tap()
+        let editedWorkoutRow = app.buttons["history-workout-\(editedWorkoutID)"]
+        scrollToElement(editedWorkoutRow, in: app, towardTop: true)
+        XCTAssertTrue(editedWorkoutRow.waitForExistence(timeout: 5), "The edited history row remains available after returning from detail")
+        editedWorkoutRow.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
         app.buttons["Delete workout"].tap()
         app.buttons["Delete Workout"].tap()
@@ -712,12 +726,15 @@ final class DailyHomeUITests: XCTestCase {
         let swipeStart = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.5))
         let swipeEnd = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.5))
         swipeStart.press(forDuration: 0.1, thenDragTo: swipeEnd)
-        let advancedDate = NSPredicate(format: "label != %@", originalDate)
-        expectation(for: advancedDate, evaluatedWith: dateKey)
-        waitForExpectations(timeout: 4)
+        let advancedDate = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label != %@", "food-date-key", originalDate
+        )).firstMatch
+        XCTAssertTrue(advancedDate.waitForExistence(timeout: 5), "A right-to-left swipe should select the next food date")
         app.buttons["food-day-previous"].tap()
-        let previousDateRestored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", originalDate), object: dateKey)
-        XCTAssertEqual(XCTWaiter.wait(for: [previousDateRestored], timeout: 5), .completed, "A right-to-left day swipe advances one day; previous-day action returns to the selected log date")
+        let previousDateRestored = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label == %@", "food-date-key", originalDate
+        )).firstMatch
+        XCTAssertTrue(previousDateRestored.waitForExistence(timeout: 5), "Previous-day action returns to the selected log date")
 
         let addFood = app.buttons["food-add-food"]
         scrollToElement(addFood, in: app)
@@ -903,7 +920,10 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(logRecipe, in: app)
         XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
         logRecipe.tap()
-        XCTAssertEqual(app.staticTexts["food-calories-total"].label, "900", "The recipe should log calculated nutrition without rewriting its ingredient's source item")
+        let caloriesTotal = app.staticTexts["food-calories-total"]
+        scrollToElement(caloriesTotal, in: app, towardTop: true)
+        XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
+        XCTAssertEqual(caloriesTotal.label, "900", "The recipe should log calculated nutrition without rewriting its ingredient's source item")
 
         let addFood = app.buttons["food-add-food"]
         scrollToElement(addFood, in: app)
@@ -954,9 +974,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodDate.waitForExistence(timeout: 5))
         let today = foodDate.label
         app.buttons["food-day-previous"].tap()
-        let updatedFoodDate = app.staticTexts.matching(identifier: "food-date-key").firstMatch
-        let priorDate = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", today), object: updatedFoodDate)
-        XCTAssertEqual(XCTWaiter.wait(for: [priorDate], timeout: 5), .completed, "Previous-day control selects the prior date before logging")
+        let updatedFoodDate = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label != %@", "food-date-key", today
+        )).firstMatch
+        XCTAssertTrue(updatedFoodDate.waitForExistence(timeout: 5), "Previous-day control selects the prior date before logging")
 
         let addMeal = app.buttons["Add meal"]
         scrollToElement(addMeal, in: app)

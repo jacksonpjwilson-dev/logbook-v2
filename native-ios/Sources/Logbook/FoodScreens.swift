@@ -165,7 +165,9 @@ struct FoodScreen: View {
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text("\(remaining(targets.calories, totals.calories)) kcal left").font(.headline)
-                    Text(dateKey).font(.caption).foregroundStyle(.secondary).accessibilityIdentifier("food-date-key")
+                    Text(dateKey).font(.caption).foregroundStyle(.secondary)
+                        .id("food-date-key-\(dateKey)")
+                        .accessibilityIdentifier("food-date-key")
                 }
             }
             ProgressView(value: ratio(totals.calories, targets.calories)).tint(store.state.home.theme.palette.accentColor)
@@ -190,7 +192,7 @@ struct FoodScreen: View {
                 Button("Targets") { presentedSheet = .targets(date: dateKey) }.accessibilityIdentifier("food-targets")
             }
         }
-        .id("food-nutrition-summary")
+        .id("food-nutrition-summary-\(dateKey)")
     }
 
     private var mealsSection: some View {
