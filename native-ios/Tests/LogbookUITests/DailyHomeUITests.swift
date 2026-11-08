@@ -629,7 +629,9 @@ final class DailyHomeUITests: XCTestCase {
 
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "Deleted sessions are removed from active workout history")
+        scrollToElement(historyRows.firstMatch, in: app)
+        XCTAssertEqual(historyRows.count, 1, "Deleting a session removes it from the two-session active history list")
+        XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
         XCTAssertEqual(visiblePRRows.count, 1, "The earlier retained session still appears as a PR after the newest record is edited or deleted")
         let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))
