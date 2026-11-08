@@ -1,51 +1,39 @@
-# Logbook QA report
+# Logbook QA report — Training and Food/Nutrition
 
-## Latest completed CI
+**Run:** [Actions #126](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834)  
+**Branch / tested commit:** `codex/default-theme-gate1` / `074ab167f4ea6826f6d9a7c5536257ea2c1bd395`  
+**Result:** Successful on iPhone SE and iPhone 16; iPhone 18 Pro app tests were skipped and remain untested.
 
-**Branch:** `codex/default-theme-gate1`
-**Tested source:** `54c236485bcd16ffa685ce5cea02d9e27a0220f2`
-**Actions run:** [#90](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622)
-
-| Simulator | Build | Unit tests | UI tests | Result |
+| Simulator | Build | Unit | UI | Result |
 |---|---|---:|---:|---|
-| iPhone SE (3rd generation) | Passed | 44/45 passed | 8/13 passed | Failed |
-| iPhone 16 | Passed | 44/45 passed | 8/13 passed | Failed |
-| iPhone 18 Pro | Availability check only | Not run | Not run | Untested; step skipped |
+| iPhone SE (3rd generation) | Passed | 50/50 | 13/13 | Passed |
+| iPhone 16 | Passed | 50/50 | 13/13 | Passed |
+| iPhone 18 Pro | Availability check passed | Not run | Not run | Untested |
 
-The single unit failure on both tested devices is `testLegacyNutritionPayloadDecodesWithoutNewFoodFields`: a legacy saved recipe lacks the newer `updatedAt` field. The local follow-up adds a backwards-compatible decoder default, but it is not in the tested commit yet.
+## Coverage and findings
 
-The five UI failures on both available simulators were:
+The Training UI and store tests passed for rotation/program switching/skip/out-of-order behavior, split editor and exercise search/customization, supersets and tracking modes, progression accept/decline, active workout/rest timer, termination recovery, completion summary/PRs, history editing, deletion and recovery.
 
-- `testDailyHomeLayoutAndCaptureAllHomePages`: Food-page frame probes had zero-sized accessibility frames.
-- `testFoodCopyAddAndReplaceUsesSelectedDateAndMatchingMeal`: tapping the previous-day control did not change the selected date as asserted.
-- `testFoodManualEntryOptionsHistoryCorrectionAndRecovery`: the Food date swipe did not change the selected date as asserted.
-- `testFoodTargetsHydrationFavoritesRecentsAndRecipeWorkflow`: active search presented Cancel/Clear instead of the Done toolbar action.
-- `testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery`: returning from an individual calendar workout did not restore the calendar date screen.
+Food/Nutrition tests passed for the exact four entry paths, search/manual entry, portion confirmation and correction, barcode unknown fallback, meal history/recovery, nutrition targets, trends/adherence, hydration, recipes/favorites/recents, and Add/Replace meal copy. Run #125 exposed an iPhone 16 navigation failure: the horizontal day-swipe gesture covered the whole Food list. The gesture was scoped to the macro summary and #126 passed Food History navigation on both devices.
 
-The local follow-up changes the frame test to inspect accessible widget roots, stores the selected Food date as a stable date key, exits search before pressing Done, and gives the calendar its own navigation path. These changes have not been built or run. The Linux development environment has no Xcode, Swift compiler or iOS Simulator.
+Automated provider tests use controlled responses and verify CNF/Open Food Facts parsing, provider fallback and cached-data persistence. Live provider availability/terms/data completeness and network-loss behavior were not tested. Physical camera scanning was not tested; manual barcode entry and unknown-code fallback were tested. No API credentials are required.
 
-## Screenshots and results
+## Screenshot artifacts
 
-Actual, unapproved run #90 artifacts:
+Actual Simulator screenshots are included in these per-device artifacts; they are candidates for review only and do not approve or overwrite visual baselines:
 
-- [iPhone SE result bundle, screenshots, and test logs](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13608512203)
-- [iPhone 16 result bundle, screenshots, and test logs](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13609390347)
-- [iPhone 18 Pro availability report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13607842943)
+- [iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834/artifacts/13624920583)
+- [iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834/artifacts/13624832311)
+- [iPhone 18 Pro availability artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834/artifacts/13624205975)
 
-These are simulator captures from the failed run and are candidates for review only. No image is automatically approved or used to overwrite a baseline.
+The UI test attaches screenshots for all four Home pages and key Training and Food flows. The approved grid geometry and all 16 themes were preserved; Default visuals remain provisional.
 
-## Training verification
+## Remaining checks
 
-Run #90 passed business/store tests for independent flexible workout-program rotations, scheduled skip and out-of-order behavior, discard, workout origin-program retention, rest timer and supersets, exercise tracking modes, progression accept/decline, multiple same-day sessions, completed-record edits and recovery, and PR calculation. On both simulators, UI tests passed for program switching/rotation, split reordering/search/custom exercise, progression decisions, starting the next workout, daily check-in regions and hydration history recovery. The calendar history UI test failed as listed above. Rest-day non-advance, app termination recovery, and PR recalculation after deleting/restoring a record still lack direct UI proof. Training is not fully verified.
+- Add a focused UI assertion for Food’s compact date picker.
+- Verify live CNF/Open Food Facts requests and provider terms on a connected device.
+- Verify physical camera scanning and camera permission fallback.
+- Run on iPhone 18 Pro when that simulator is available.
+- Continue with Sleep, Weight, Supplements, Habits and broader History.
 
-## Food and Nutrition verification
-
-The implementation includes persistent meal logging/editing, the exact four Add Food choices, CNF/Open Food Facts adapters, barcode scan and unknown-code manual fallback, serving conversions, manual food correction, recent/favorite foods, saved recipes, Add/Replace copying, dated goals/snapshots, remaining calorie/macro calculations, nutrition trends/adherence, hydration history, Food History and recoverable deletion. The #90 store suite ran 45 tests (44 passed, 1 failed) on each available simulator. Food-specific end-to-end UI scenarios were not green, so the Food milestone is not complete.
-
-The #90 UI suite did verify Home navigation to the Food page, hydration quick-add/history recovery, individual meal navigation, four Add Food options, and some Food navigation; it failed in the four Food cases listed above. The current local candidate must pass those scenarios before reporting the user-facing flows as verified.
-
-Canadian Nutrient File and Open Food Facts public APIs require no credentials. Live API availability/completeness, provider attribution and licensing review, offline transitions, and physical-camera barcode scanning remain unverified. The simulator scanner UI uses manual barcode entry and does not prove camera behavior.
-
-## Current untested follow-up
-
-Commit `22c6ef4d71af3c0b2d2e2045d7520fb083af7334` addresses the run #90 decoder, date, accessibility-frame, search-dismissal, and calendar-return defects. **Actions #91 is running**; these changes remain unverified until it finishes. The local `git diff --check` was clean before commit. Current Home geometry, five-icon dock, all existing themes and HealthKit-off configuration are preserved. Default visuals remain provisional and user approval is separate from technical tests. No production configuration or `main` branch has been modified.
+Tests use synthetic QA data. HealthKit remains disabled; production configuration and `main` were not changed.

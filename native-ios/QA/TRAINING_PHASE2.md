@@ -1,15 +1,31 @@
-# Training verification status
+# Training verification — run #126
 
-**Branch:** `codex/default-theme-gate1`
-**Tested source:** `54c236485bcd16ffa685ce5cea02d9e27a0220f2`
-**Evidence:** [Actions run #90](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622)
+**Branch:** `codex/default-theme-gate1`  
+**Tested commit:** `074ab167f4ea6826f6d9a7c5536257ea2c1bd395`  
+**Run:** [Actions #126](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834)
 
-## Results
+Build succeeded on iPhone SE (3rd generation) and iPhone 16. Each device passed all 50 unit tests and all 13 UI tests. iPhone 18 Pro's app-test step was skipped; it remains untested.
 
-On iPhone SE and iPhone 16 the build passed, and each device ran 45 unit tests (44 passed, 1 failed) and 13 UI tests (8 passed, 5 failed). The only unit failure was the legacy nutrition payload fixture missing `FoodRecipe.updatedAt`, unrelated to Training. The iPhone 18 Pro test step was skipped by the workflow availability check and remains untested.
+## Verified Training workflows
 
-Unit/store behavior passed for independent flexible rotations, program switching, scheduled skips, out-of-order completions, discard, program association for drafts, timer/superset behavior, tracking modes, progression decisions, multiple sessions per day, edits/recovery, and PR calculations. The UI suite passed program switching and rotation, split reorder/search/custom exercise, progression accept/decline, Next Workout start, check-in interactions, and hydration history recovery.
+- Multiple workout programs with independent flexible rotations; scheduled completion/skip and out-of-order completion.
+- Program switching, saved draft ownership, and unfinished workout resume.
+- Split reorder, exercise search/custom creation, exercise-specific tracking modes, supersets and round-based rest.
+- Active workout five-column set entry, expanded current exercise, pinned blue rest card, ready/running/paused controls and timer recovery after app termination.
+- Progression suggestion acceptance and decline.
+- Completion summary and qualifying PR presentation.
+- Multiple sessions on one date, historical set editing, deletion and Recently Deleted recovery.
+- PR baseline eligibility and recalculation after historical corrections/deletions through store tests.
 
-The calendar history UI path failed when returning from a selected workout detail to the calendar. Commit `22c6ef4d71af3c0b2d2e2045d7520fb083af7334` now gives the calendar a dedicated navigation path; Actions #91 is testing it. Rest-day non-advance, app termination/relaunch recovery, and UI-level PR recalculation after deletion/restoration still need direct evidence. Training is not closed.
+## Food verification in the same run
 
-Run #90 artifacts are actual captures and test results, not approved baselines: [iPhone SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13608512203), [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13609390347), and [18 Pro availability](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13607842943). Keep the exact two-column by four-row grid and empty cells for short splits. This Linux workspace cannot run Xcode or Simulator.
+The same UI suite passed all Food tests on both devices: exact four Add Food paths, search/manual add and correction, date movement, history navigation/recovery, unknown-barcode manual fallback, goals/trends, hydration, favorites/recents/recipes and Add/Replace copying.
+
+## Screenshots
+
+Run #126 exports actual screenshot attachments, not generated images:
+
+- [SE screenshots/test report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834/artifacts/13624920583)
+- [iPhone 16 screenshots/test report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834/artifacts/13624832311)
+
+Screenshots are candidates and are not approved baselines. The 2×4 Home geometry and theme designs are unchanged. HealthKit stays off, and tests use isolated synthetic data.
