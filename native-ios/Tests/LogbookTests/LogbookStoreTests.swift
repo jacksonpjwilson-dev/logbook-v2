@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 14087)
+Total output lines: 869
+
 import XCTest
 @testable import Logbook
 
@@ -28,6 +31,24 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(log.quantity, 50)
         XCTAssertEqual(log.calories, 190, accuracy: 0.001)
         XCTAssertEqual(log.mealName, meal.name)
+    }
+
+    func testCachedProviderFoodsRemainSearchableAfterRepositoryReopen() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let food = FoodDefinition(
+            id: "off-cached-oats", name: "Oats · QA Foods", basisAmount: 100, basisUnit: "g",
+            calories: 380, protein: 13, carbohydrates: 68, fat: 7,
+            source: "Open Food Facts · community-contributed",
+            verifiedServingGrams: 40,
+            barcode: "0123456789012",
+            sourceURL: "https://world.openfoodfacts.org/product/0123456789012"
+        )
+
+        store.cacheFoodDefinitions([food])
+        let reopened = LogbookStore(repository: repository)
+
+        XCTAssertEqual(reopened.state.nutrition.foods.first(where: { $0.id == food.id }), food)
     }
 
     func testVerifiedFoodPortionsHistoricalGoalsAndAdherenceAreConsistent() throws {
@@ -316,140 +337,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
         XCTAssertEqual(store.state.training.scheduledTemplate?.id, firstProgramTemplateIDs[2], "Finishing a non-next workout leaves the scheduled item unchanged")
 
-        let scheduled = try XCTUnwrap(store.state.training.templates.first { $0.id == firstProgramTemplateIDs[2] })
-        store.startWorkout(scheduled)
-        XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
-        XCTAssertEqual(store.state.training.scheduledTemplate?.id, firstProgramTemplateIDs[3])
-
-        store.setActiveProgram(secondProgram)
-        XCTAssertEqual(store.state.training.scheduledTemplate?.id, b1, "Switching programs restores its own saved rotation")
-        let reopened = LogbookStore(repository: repository)
-        XCTAssertEqual(reopened.state.training.activeProgram?.id, secondProgram)
-        XCTAssertEqual(reopened.state.training.scheduledTemplate?.id, b1)
-        XCTAssertEqual(reopened.state.training.programs?.first(where: { $0.id == firstProgram })?.rotationIndex, 3)
-    }
-
-    func testScheduledIncompleteWorkoutAdvancesButDiscardDoesNot() throws {
-        let store = LogbookStore(repository: temporaryRepository())
-        let firstID = try XCTUnwrap(store.addTemplate(name: "Scheduled A"))
-        let secondID = try XCTUnwrap(store.addTemplate(name: "Scheduled B"))
-        let exercise = ExerciseDefinition(id: "schedule-test", name: "Squat", group: "Legs", equipment: "Barbell")
-        store.appendExercise(exercise, toTemplate: firstID)
-        let first = try XCTUnwrap(store.state.training.templates.first { $0.id == firstID })
-
-        store.startWorkout(first)
-        let active = try XCTUnwrap(store.state.training.activeSession)
-        XCTAssertGreaterThan(store.finishWorkout(confirmIncomplete: false), 0)
-        XCTAssertEqual(store.finishWorkout(confirmIncomplete: true), -1)
-        XCTAssertEqual(store.state.training.scheduledTemplate?.id, secondID, "Confirmed partial save still completes the scheduled slot")
-
-        let programID = try XCTUnwrap(store.state.training.activeProgram?.id)
-        store.moveTemplate(secondID, toProgram: programID, at: 0)
-        XCTAssertEqual(store.state.training.scheduledTemplate?.id, secondID)
-        let second = try XCTUnwrap(store.state.training.templates.first { $0.id == secondID })
-        store.startWorkout(second)
-        store.discardWorkout()
-        XCTAssertEqual(store.state.training.scheduledTemplate?.id, secondID)
-        XCTAssertTrue(store.state.training.completedSessions.contains { $0.id == active.id })
-    }
-
-    func testSwitchingProgramDuringDraftFinishesAgainstOriginProgram() throws {
-        let store = LogbookStore(repository: temporaryRepository())
-        let originID = try XCTUnwrap(store.state.training.activeProgram?.id)
-        let a1 = try XCTUnwrap(store.addTemplate(name: "Origin A1"))
-        _ = try XCTUnwrap(store.addTemplate(name: "Origin A2"))
-        let a = try XCTUnwrap(store.state.training.templates.first { $0.id == a1 })
-        store.startWorkout(a)
-        XCTAssertEqual(store.state.training.activeSession?.programID, originID)
-
-        let otherID = try XCTUnwrap(store.addProgram(name: "Other"))
-        let otherTemplateID = try XCTUnwrap(store.addTemplate(name: "Other 1"))
-        store.setActiveProgram(originID)
-        store.setActiveProgram(otherID)
-        XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
-        XCTAssertEqual(store.state.training.activeProgram?.id, otherID)
-        XCTAssertEqual(store.state.training.scheduledTemplate?.id, otherTemplateID)
-        XCTAssertEqual(store.state.training.programs?.first(where: { $0.id == originID })?.rotationIndex, 1)
-    }
-
-    func testLegacySingleRotationMigratesWithoutResettingItsUpcomingWorkout() throws {
-        let repository = temporaryRepository()
-        var legacy = LogbookState.empty
-        let first = WorkoutTemplate(name: "Legacy A")
-        let second = WorkoutTemplate(name: "Legacy B")
-        legacy.training.templates = [first, second]
-        legacy.training.rotationIndex = 1
-        legacy.training.programs = nil
-        legacy.training.activeProgramID = nil
-        try repository.save(legacy)
-
-        let migrated = LogbookStore(repository: repository)
-        XCTAssertEqual(migrated.state.training.availablePrograms.count, 1)
-        XCTAssertEqual(migrated.state.training.activeProgram?.name, "Program 1")
-        XCTAssertEqual(migrated.state.training.activeProgram?.templateIDs, [first.id, second.id])
-        XCTAssertEqual(migrated.state.training.scheduledTemplate?.id, second.id)
-
-        let reopened = LogbookStore(repository: repository)
-        XCTAssertEqual(reopened.state.training.activeProgram?.id, migrated.state.training.activeProgram?.id)
-        XCTAssertEqual(reopened.state.training.scheduledTemplate?.id, second.id)
-    }
-
-    func testEstimatedOneRepMaxUsesFirstWorkoutAsBaselineAndOnlyOneRecordPerExerciseWorkout() throws {
-        let repository = temporaryRepository()
-        let start = Date(timeIntervalSince1970: 1_800_000_000)
-        let baseline = completedSession(at: start, exerciseID: "bench", name: "Bench Press", sets: [(50, 10), (60, 5)])
-        let improvement = completedSession(at: start.addingTimeInterval(86_400), exerciseID: "bench", name: "Bench Press", sets: [(63, 5), (65, 5)])
-        let noImprovement = completedSession(at: start.addingTimeInterval(172_800), exerciseID: "bench", name: "Bench Press", sets: [(60, 5)])
-        var initial = LogbookState.empty
-        initial.training.completedSessions = [baseline, improvement, noImprovement]
-        try repository.save(initial)
-
-        let store = LogbookStore(repository: repository)
-        let records = store.state.training.personalRecordEvents
-        XCTAssertEqual(records.count, 1, "The first workout is baseline; multiple better sets in one later workout produce one event")
-        XCTAssertEqual(records.first?.sessionID, improvement.id)
-        XCTAssertEqual(records.first?.estimatedOneRepMaxKg ?? 0, 65 * (1 + 5.0 / 30), accuracy: 0.001)
-        XCTAssertEqual(records.first?.previousBestKg ?? 0, 60 * (1 + 5.0 / 30), accuracy: 0.001)
-    }
-
-    func testCompletingLiveWorkoutSurfacesImprovementOverHistoricalBaseline() throws {
-        let repository = temporaryRepository()
-        let baselineDate = Date.now.addingTimeInterval(-86_400)
-        let baseline = completedSession(at: baselineDate, exerciseID: "live-bench", name: "Bench Press", sets: [(60, 8)])
-        let exercise = ExerciseDefinition(id: "live-bench", name: "Bench Press", group: "Chest", equipment: "Barbell")
-        let template = WorkoutTemplate(name: "Upper Body", exercises: [
-            PlannedExercise(exerciseID: exercise.id, name: exercise.name, muscle: exercise.group, equipment: exercise.equipment, sets: [PlannedSet()])
-        ])
-        var initial = LogbookState.empty
-        initial.training.exercises = [exercise]
-        initial.training.templates = [template]
-        let program = WorkoutProgram(name: "Strength", templateIDs: [template.id])
-        initial.training.programs = [program]
-        initial.training.activeProgramID = program.id
-        initial.training.completedSessions = [baseline]
-        try repository.save(initial)
-
-        let store = LogbookStore(repository: repository)
-        store.startWorkout(template)
-        let active = try XCTUnwrap(store.state.training.activeSession)
-        let activeExercise = try XCTUnwrap(active.exercises.first)
-        let workingSet = try XCTUnwrap(activeExercise.sets.first)
-        store.updateSet(exerciseID: activeExercise.id, setID: workingSet.id, weightKg: 80, reps: 8)
-        XCTAssertTrue(store.toggleSet(exerciseID: activeExercise.id, setID: workingSet.id))
-        XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
-
-        let saved = try XCTUnwrap(store.state.training.completedSessions.first { $0.id == active.id })
-        let record = try XCTUnwrap(store.state.training.personalRecordEvents.first { $0.sessionID == saved.id })
-        XCTAssertEqual(record.exerciseID, "live-bench")
-        XCTAssertEqual(record.estimatedOneRepMaxKg, 80 * (1 + 8.0 / 30), accuracy: 0.001)
-        XCTAssertEqual(record.previousBestKg, 60 * (1 + 8.0 / 30), accuracy: 0.001)
-    }
-
-    func testHistoricalEditsDeletionAndRestoreRecalculatePersonalRecords() throws {
-        let repository = temporaryRepository()
-        let start = Date(timeIntervalSince1970: 1_800_100_000)
-        let baseline = completedSession(at: start, exerciseID: "squat", name: "Squat", sets: [(80, 8)])
-        let next = completedSession(at: start.addingTimeInterval(86_400), exerciseID: "squat", name: "Squat", sets: [(90, 8)])
+        let scheduled = try XCTUnwrap(store.state.training.templates.…2087 tokens truncated…val(86_400), exerciseID: "squat", name: "Squat", sets: [(90, 8)])
         var initial = LogbookState.empty
         initial.training.completedSessions = [baseline, next]
         try repository.save(initial)
