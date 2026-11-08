@@ -231,48 +231,7 @@ private struct HomePageGrid: View {
                     let width = cellSide * CGFloat(columns) + gap * CGFloat(columns - 1)
                     let height = cellSide * CGFloat(rows) + gap * CGFloat(rows - 1)
                     ZStack(alignment: .topTrailing) {
-                        if usesApprovedDailyLayout {
-                            DefaultDailyWidgetView(
-                                widget: widget,
-                                palette: store.state.home.theme.palette,
-                                state: store.state,
-                                openFood: { open(.food) },
-                                openTraining: { open(.training) },
-                                openCheckIn: openCheckIn,
-                                startWorkout: startWorkout
-                            )
-                            .frame(width: width, height: height)
-                            .disabled(editing)
-                        } else if usesApprovedTrainingLayout {
-                            DefaultTrainingWidgetView(
-                                widget: widget,
-                                palette: store.state.home.theme.palette,
-                                state: store.state,
-                                openTraining: { open(.training) }
-                            )
-                            .frame(width: width, height: height)
-                            .disabled(editing)
-                        } else if usesApprovedFoodLayout {
-                            DefaultFoodHomeWidgetView(
-                                widget: widget,
-                                palette: store.state.home.theme.palette,
-                                state: store.state,
-                                openFood: openFoodFocus
-                            )
-                            .frame(width: width, height: height)
-                            .disabled(editing)
-                        } else {
-                            Button {
-                                guard !editing else { return }
-                                open(route(for: widget.kind))
-                            } label: {
-                                HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
-                                    .frame(width: width, height: height)
-                            }
-                            .accessibilityIdentifier("home-widget-\(widget.kind.rawValue)")
-                            .buttonStyle(WidgetPressStyle())
-                            .disabled(editing)
-                        }
+                        widgetContent(for: widget, width: width, height: height)
 
                         if editing {
                             Button { remove(widget.id) } label: {
@@ -345,6 +304,52 @@ private struct HomePageGrid: View {
         case "Food": .food
         case "Body": .checkins
         default: .history
+        }
+    }
+
+    @ViewBuilder
+    private func widgetContent(for widget: HomeWidget, width: CGFloat, height: CGFloat) -> some View {
+        if usesApprovedDailyLayout {
+            DefaultDailyWidgetView(
+                widget: widget,
+                palette: store.state.home.theme.palette,
+                state: store.state,
+                openFood: { open(.food) },
+                openTraining: { open(.training) },
+                openCheckIn: openCheckIn,
+                startWorkout: startWorkout
+            )
+            .frame(width: width, height: height)
+            .disabled(editing)
+        } else if usesApprovedTrainingLayout {
+            DefaultTrainingWidgetView(
+                widget: widget,
+                palette: store.state.home.theme.palette,
+                state: store.state,
+                openTraining: { open(.training) }
+            )
+            .frame(width: width, height: height)
+            .disabled(editing)
+        } else if usesApprovedFoodLayout {
+            DefaultFoodHomeWidgetView(
+                widget: widget,
+                palette: store.state.home.theme.palette,
+                state: store.state,
+                openFood: openFoodFocus
+            )
+            .frame(width: width, height: height)
+            .disabled(editing)
+        } else {
+            Button {
+                guard !editing else { return }
+                open(route(for: widget.kind))
+            } label: {
+                HomeWidgetCard(widget: widget, palette: store.state.home.theme.palette, state: store.state)
+                    .frame(width: width, height: height)
+            }
+            .accessibilityIdentifier("home-widget-\(widget.kind.rawValue)")
+            .buttonStyle(WidgetPressStyle())
+            .disabled(editing)
         }
     }
 }
