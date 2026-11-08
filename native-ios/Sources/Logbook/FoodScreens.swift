@@ -1,5 +1,6 @@
 import Charts
 import SwiftUI
+import UIKit
 
 private enum FoodEntryMode: String { case search, recent, scan, manual }
 private enum FoodPresentedSheet: Identifiable {
@@ -45,6 +46,69 @@ private enum FoodTrendMetric: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
+private struct FoodDateSwipeInstaller: UIViewRepresentable {
+    let onSwipe: (Int) -> Void
+
+    func makeCoordinator() -> Coordinator { Coordinator(onSwipe: onSwipe) }
+
+    func makeUIView(context: Context) -> UIView {
+        let view = UIView(frame: .zero)
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        view.accessibilityElementsHidden = true
+        return view
+    }
+
+    func updateUIView(_ view: UIView, context: Context) {
+        context.coordinator.onSwipe = onSwipe
+        DispatchQueue.main.async {
+            var ancestor = view.superview
+            while let current = ancestor {
+                if let scrollView = current as? UIScrollView {
+                    context.coordinator.install(on: scrollView)
+                    return
+                }
+                ancestor = current.superview
+            }
+        }
+    }
+
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        var onSwipe: (Int) -> Void
+        weak var scrollView: UIScrollView?
+        private var recognizers: [UISwipeGestureRecognizer] = []
+
+        init(onSwipe: @escaping (Int) -> Void) { self.onSwipe = onSwipe }
+
+        func install(on scrollView: UIScrollView) {
+            guard self.scrollView !== scrollView else { return }
+            if let oldScrollView = self.scrollView {
+                recognizers.forEach(oldScrollView.removeGestureRecognizer)
+            }
+            self.scrollView = scrollView
+            let left = UISwipeGestureRecognizer(target: self, action: #selector(swipedLeft))
+            left.direction = .left
+            let right = UISwipeGestureRecognizer(target: self, action: #selector(swipedRight))
+            right.direction = .right
+            for recognizer in [left, right] {
+                recognizer.delegate = self
+                recognizer.cancelsTouchesInView = false
+                recognizer.delaysTouchesBegan = false
+                recognizer.delaysTouchesEnded = false
+                scrollView.addGestureRecognizer(recognizer)
+            }
+            recognizers = [left, right]
+        }
+
+        @objc private func swipedLeft() { onSwipe(1) }
+        @objc private func swipedRight() { onSwipe(-1) }
+
+        func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+            true
+        }
+    }
+}
+
 struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var selectedDate = Calendar.current.startOfDay(for: .now)
@@ -78,16 +142,11 @@ struct FoodScreen: View {
                 nutritionTrendsSection
                 foodToolsSection
             }
+            .background(FoodDateSwipeInstaller { shiftDay($0) })
             .navigationTitle("Food")
             .onAppear { applyPendingFoodFocus(using: proxy) }
             .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
         }
-        .simultaneousGesture(DragGesture(minimumDistance: 0).onEnded { value in
-            let horizontal = value.translation.width
-            let vertical = value.translation.height
-            guard abs(horizontal) > max(32, abs(vertical) * 1.25) else { return }
-            shiftDay(horizontal < 0 ? 1 : -1)
-        })
         .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
                 Button("Search Foods") { presentFoodEntry(.search) }
                     .accessibilityIdentifier("food-option-search")
