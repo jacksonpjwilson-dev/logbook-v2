@@ -218,7 +218,7 @@ private struct HomePageGrid: View {
 
     var body: some View {
         GeometryReader { proxy in
-            gridBody(size: proxy.size, globalOrigin: proxy.frame(in: .global).origin)
+            gridBody(size: proxy.size)
         }
         .task(id: editing) {
             guard editing else {
@@ -236,7 +236,7 @@ private struct HomePageGrid: View {
         }
     }
 
-    private func gridBody(size: CGSize, globalOrigin: CGPoint) -> some View {
+    private func gridBody(size: CGSize) -> some View {
         // One scalar controls both axes: the eight cells are true squares.
         // Constrain the grid by the safe vertical space first when needed,
         // then center the two-column grid instead of stretching its rows.
@@ -245,7 +245,7 @@ private struct HomePageGrid: View {
         let gridLeading = max(0, (size.width - gridWidth) / 2)
         return ZStack(alignment: .topLeading) {
             ForEach(page.widgets) { widget in
-                widgetCell(widget, cellSide: cellSide, gridLeading: gridLeading, globalOrigin: globalOrigin)
+                widgetCell(widget, cellSide: cellSide, gridLeading: gridLeading)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -263,8 +263,7 @@ private struct HomePageGrid: View {
     private func widgetCell(
         _ widget: HomeWidget,
         cellSide: CGFloat,
-        gridLeading: CGFloat,
-        globalOrigin: CGPoint
+        gridLeading: CGFloat
     ) -> some View {
         let isSmall = widget.size == .small
         let isLarge = widget.size == .large
@@ -274,7 +273,6 @@ private struct HomePageGrid: View {
         let height = cellSide * rows + gap * (rows - 1)
         let originX = gridLeading + CGFloat(widget.column) * (cellSide + gap)
         let originY = CGFloat(widget.row) * (cellSide + gap)
-        let frame = CGRect(x: globalOrigin.x + originX, y: globalOrigin.y + originY, width: width, height: height)
         let angle = (widget.row + widget.column).isMultiple(of: 2) ? -1.0 : 1.0
         let rotation = editing ? angle * (wigglePhase ? 0.6 : -0.6) : 0
 
@@ -294,15 +292,6 @@ private struct HomePageGrid: View {
             }
         }
         .frame(width: width, height: height)
-        .overlay {
-            Rectangle().fill(Color.clear)
-                .frame(width: width, height: height)
-                .accessibilityElement(children: .ignore)
-                .accessibilityFrame(frame)
-                .accessibilityLabel("\(widget.kind.title) widget frame")
-                .accessibilityIdentifier("home-widget-frame-\(widget.kind.rawValue)")
-                .allowsHitTesting(false)
-        }
         .position(x: originX + width / 2, y: originY + height / 2)
         .rotationEffect(.degrees(rotation))
         .transaction { transaction in
