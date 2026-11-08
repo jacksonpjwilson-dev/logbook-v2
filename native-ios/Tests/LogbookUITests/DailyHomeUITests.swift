@@ -254,11 +254,12 @@ final class DailyHomeUITests: XCTestCase {
         let sourceHandle = reorderHandles.element(boundBy: 0)
         let destinationRow = app.buttons[secondID]
         XCTAssertTrue(destinationRow.exists, "Both workout rows should remain in the list while editing")
-        // Drop into the lower portion of the destination row. Dragging handle to
-        // handle can be treated as a no-op on compact iPhone SE table rows.
-        let dropPoint = destinationRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        // Drop at the destination row center and hold briefly so SwiftUI's List
+        // reorder interaction can settle consistently across compact and large
+        // simulator screens.
+        let dropPoint = destinationRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         sourceHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            .press(forDuration: 1.2, thenDragTo: dropPoint)
+            .press(forDuration: 1.2, thenDragTo: dropPoint, withVelocity: .slow, thenHoldForDuration: 0.8)
         let reordered = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "identifier == %@", secondID),
             object: rows.element(boundBy: 0)
