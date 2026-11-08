@@ -40,6 +40,7 @@ targets:
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
         NSSupportsLiveActivities: true
+        NSCameraUsageDescription: Logbook uses the camera only to scan a food barcode.
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.logbook

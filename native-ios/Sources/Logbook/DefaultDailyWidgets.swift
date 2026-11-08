@@ -155,7 +155,8 @@ private struct NutritionRemainingContent: View {
     let palette: ThemePalette
 
     private var totals: NutritionTargets { state.nutritionTotals(on: LocalDay.string()) }
-    private var calorieGoal: Double? { state.nutrition.targets.calories }
+    private var goals: NutritionTargets { state.nutritionTargets(on: LocalDay.string()) }
+    private var calorieGoal: Double? { goals.calories }
     private var caloriesConsumed: Double { totals.calories ?? 0 }
     private var caloriesRemaining: Int { Int(max(0, (calorieGoal ?? 0) - caloriesConsumed)) }
 
@@ -194,9 +195,9 @@ private struct NutritionRemainingContent: View {
                     HStack(alignment: .center, spacing: compact ? 6 : 9) {
                         calorieRing(diameter: compact ? 69 : 83)
                         VStack(spacing: compact ? 4 : 6) {
-                            macroRow("Protein", symbol: "dumbbell.fill", consumed: totals.protein ?? 0, goal: state.nutrition.targets.protein, color: palette.accentColor, iconColor: palette.accentColor, unit: "g", compact: compact)
-                            macroRow("Carbs", symbol: "leaf.fill", consumed: totals.carbohydrates ?? 0, goal: state.nutrition.targets.carbohydrates, color: Color(hex: "#426B8D"), iconColor: Color(hex: "#426B8D"), unit: "g", compact: compact)
-                            macroRow("Fat", symbol: "drop.fill", consumed: totals.fat ?? 0, goal: state.nutrition.targets.fat, color: Color(hex: "#A8C7E7"), iconColor: Color(hex: "#6D94BC"), unit: "g", compact: compact)
+                            macroRow("Protein", symbol: "dumbbell.fill", consumed: totals.protein ?? 0, goal: goals.protein, color: palette.accentColor, iconColor: palette.accentColor, unit: "g", compact: compact)
+                            macroRow("Carbs", symbol: "leaf.fill", consumed: totals.carbohydrates ?? 0, goal: goals.carbohydrates, color: Color(hex: "#426B8D"), iconColor: Color(hex: "#426B8D"), unit: "g", compact: compact)
+                            macroRow("Fat", symbol: "drop.fill", consumed: totals.fat ?? 0, goal: goals.fat, color: Color(hex: "#A8C7E7"), iconColor: Color(hex: "#6D94BC"), unit: "g", compact: compact)
                         }
                     }
                     .frame(maxWidth: .infinity)

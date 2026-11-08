@@ -317,12 +317,13 @@ private struct HomeWidgetCard: View {
     private var summary: (String, String) {
         let today = LocalDay.string()
         let totals = state.nutritionTotals(on: today)
+        let targets = state.nutritionTargets(on: today)
         switch widget.kind {
         case .calories:
-            if let target = state.nutrition.targets.calories {
+            if let target = targets.calories {
                 let remaining = Int(max(0, target - (totals.calories ?? 0)))
                 if widget.variant == "Calories & Protein Remaining" {
-                    let proteinLeft = state.nutrition.targets.protein.map { Int(max(0, $0 - (totals.protein ?? 0))) }
+                    let proteinLeft = targets.protein.map { Int(max(0, $0 - (totals.protein ?? 0))) }
                     return ("\(remaining) kcal left", proteinLeft.map { "\($0) g protein left" } ?? "Set a protein target")
                 }
                 return (String(remaining), "calories left · \(Int(totals.calories ?? 0)) eaten")
@@ -330,7 +331,7 @@ private struct HomeWidgetCard: View {
             if widget.variant == "Calories & Protein Remaining" { return ("Set calorie target", "Set a protein target") }
             return ("Set your target", "Calories update from your food log")
         case .protein:
-            if let target = state.nutrition.targets.protein { return (String(Int(max(0, target - (totals.protein ?? 0)))) + " g", "protein remaining") }
+            if let target = targets.protein { return (String(Int(max(0, target - (totals.protein ?? 0)))) + " g", "protein remaining") }
             return ("No target", "Set a protein goal in Food")
         case .macros:
             return ("\(Int(totals.protein ?? 0)) g protein", "\(Int(totals.carbohydrates ?? 0)) g carbs · \(Int(totals.fat ?? 0)) g fat")
@@ -338,7 +339,7 @@ private struct HomeWidgetCard: View {
             let amount = state.nutrition.water.filter { $0.date == today }.reduce(0) { $0 + $1.milliliters }
             return ("\(amount) mL", "water logged today")
         case .meals:
-            let count = state.nutrition.logs.filter { $0.date == today }.count
+            let count = state.nutrition.logs.filter { $0.date == today && $0.deletedAt == nil }.count
             return ("\(count) food entries", "across \(state.nutrition.meals.count) meals")
         case .nextWorkout:
             if let active = state.training.activeSession { return (active.templateName, "Workout in progress · Tap to open Training") }

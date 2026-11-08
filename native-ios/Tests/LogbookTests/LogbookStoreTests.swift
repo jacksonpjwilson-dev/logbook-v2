@@ -30,6 +30,123 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(log.mealName, meal.name)
     }
 
+    func testVerifiedFoodPortionsHistoricalGoalsAndAdherenceAreConsistent() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let meal = try XCTUnwrap(store.state.nutrition.meals.first)
+        let oats = FoodDefinition(id: "cnf-oats-test", name: "Oats", basisAmount: 100, basisUnit: "g",
+            calories: 380, protein: 13, carbohydrates: 68, fat: 7, source: "Canadian Nutrient File",
+            verifiedServingGrams: 40, sourceURL: "https://food-nutrition.canada.ca/cnf-fce/")
+
+        XCTAssertEqual(oats.multiplier(for: 1, unit: "serving") ?? -1, 0.4, accuracy: 0.0001)
+        XCTAssertEqual(oats.multiplier(for: 1, unit: "oz") ?? -1, 0.283495, accuracy: 0.0001)
+        XCTAssertNil(oats.multiplier(for: 1, unit: "cup"), "Unverified volume conversions are not offered")
+        store.setNutritionTargets(calories: 2_000, protein: 100, carbohydrates: 220, fat: 65, effectiveDate: "2026-11-07")
+        store.setNutritionTargets(calories: 2_200, protein: 120, carbohydrates: 240, fat: 70, effectiveDate: "2026-11-08")
+        XCTAssertEqual(store.state.nutritionTargets(on: "2026-11-07").calories ?? -1, 2_000)
+        XCTAssertEqual(store.state.nutritionTargets(on: "2026-11-08").calories ?? -1, 2_200)
+        XCTAssertTrue(store.logFood(oats, meal: meal, quantity: 1, unit: "serving", confirmed: true, date: "2026-11-07"))
+        XCTAssertEqual(store.state.nutritionTotals(on: "2026-11-07").calories ?? 0, 152, accuracy: 0.001)
+        XCTAssertEqual(store.state.nutritionTotals(on: "2026-11-07").protein ?? 0, 5.2, accuracy: 0.001)
+        XCTAssertEqual(store.state.nutritionAdherence(on: "2026-11-08"), .unlogged)
+        XCTAssertEqual(store.state.nutritionAdherence(on: "2026-11-07"), .belowGoal)
+
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertEqual(reopened.state.nutrition.targetHistory?.count, 3, "The legacy baseline remains alongside the two effective-dated goals")
+        XCTAssertEqual(reopened.state.nutrition.foods.first(where: { $0.id == oats.id })?.verifiedServingGrams, 40)
+        XCTAssertEqual(reopened.state.nutrition.logs.first?.date, "2026-11-07")
+    }
+
+    func testMealCopyReplaceOnlyTouchesMatchingMealsAndKeepsEntrySnapshots() throws {
+        let store = LogbookStore(repository: temporaryRepository())
+        let foods = [
+            FoodDefinition(id: "copy-a", name: "Egg", basisAmount: 1, basisUnit: "piece", calories: 70, protein: 6, carbohydrates: 0, fat: 5),
+            FoodDefinition(id: "copy-b", name: "Toast", basisAmount: 1, basisUnit: "slice", calories: 90, protein: 4, carbohydrates: 15, fat: 1)
+        ]
+        let breakfast = MealSlot(name: "Breakfast")
+        let snack = MealSlot(name: "Snack")
+        let dinner = MealSlot(name: "Dinner")
+        XCTAssertTrue(store.logFood(foods[0], meal: breakfast, quantity: 2, unit: "piece", confirmed: true, date: "2026-11-06"))
+        XCTAssertTrue(store.logFood(foods[1], meal: snack, quantity: 1, unit: "slice", confirmed: true, date: "2026-11-06"))
+        XCTAssertTrue(store.logFood(foods[1], meal: breakfast, quantity: 1, unit: "slice", confirmed: true, date: "2026-11-07"))
+        XCTAssertTrue(store.logFood(foods[0], meal: dinner, quantity: 1, unit: "piece", confirmed: true, date: "2026-11-07"))
+
+        XCTAssertEqual(store.copyMeals(from: "2026-11-06", to: "2026-11-07", replaceMatchingMeals: false), 2)
+        XCTAssertEqual(store.state.nutrition.logs.filter { $0.date == "2026-11-07" && $0.deletedAt == nil }.count, 4, "Add appends copied entries without removing existing destination foods")
+        XCTAssertEqual(store.copyMeals(from: "2026-11-06", to: "2026-11-07", replaceMatchingMeals: true), 2)
+        let copied = store.state.nutrition.logs.filter { $0.date == "2026-11-07" && $0.deletedAt == nil }
+        XCTAssertEqual(copied.count, 3, "The matching breakfast is replaced; unrelated dinner remains")
+        XCTAssertEqual(copied.filter { $0.mealName == "Breakfast" }.map(\.foodName), ["Egg"])
+        XCTAssertTrue(copied.contains { $0.mealName == "Dinner" && $0.foodName == "Egg" })
+        XCTAssertEqual(store.recentlyDeletedFoodLogs().filter { $0.date == "2026-11-07" }.count, 2, "Replace preserves removed destination records for recovery")
+        XCTAssertEqual(copied.first(where: { $0.foodName == "Egg" && $0.mealName == "Breakfast" })?.calories, 140)
+        XCTAssertNotEqual(copied.first(where: { $0.mealName == "Breakfast" })?.id, store.state.nutrition.logs.first(where: { $0.date == "2026-11-06" })?.id)
+    }
+
+    func testFoodDeleteRestoreFavoritesRecipeAndWaterPersist() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let meal = try XCTUnwrap(store.state.nutrition.meals.first)
+        let banana = FoodDefinition(id: "personal-banana", name: "Banana", basisAmount: 100, basisUnit: "g", calories: 89, protein: 1.1, carbohydrates: 22.8, fat: 0.3, source: "Personal manual entry", isPersonal: true)
+        XCTAssertTrue(store.logFood(banana, meal: meal, quantity: 100, unit: "g", confirmed: true, date: "2026-11-08"))
+        let log = try XCTUnwrap(store.state.nutrition.logs.first)
+        store.setFoodFavorite(banana.id, isFavorite: true)
+        let ingredient = try XCTUnwrap(store.makeRecipeIngredient(food: banana, quantity: 100, unit: "g"))
+        let recipeID = try XCTUnwrap(store.saveRecipe(name: "Banana bowl", ingredients: [ingredient], yieldAmount: 2, yieldUnit: "servings"))
+        let recipe = try XCTUnwrap(store.state.nutrition.recipes?.first(where: { $0.id == recipeID }))
+        let recipeFood = store.foodDefinition(for: recipe)
+        XCTAssertEqual(recipeFood.calories, 44.5, accuracy: 0.001)
+        XCTAssertTrue(store.logFood(recipeFood, meal: meal, quantity: 1, unit: "servings", confirmed: true, date: "2026-11-08"))
+        store.addWater(500, date: "2026-11-08")
+        store.setWaterGoal(2_000)
+        let water = try XCTUnwrap(store.state.nutrition.water.first)
+        XCTAssertTrue(store.updateWaterLog(water.id, milliliters: 750, date: "2026-11-07"))
+        store.deleteFoodLog(log.id)
+        XCTAssertTrue((store.state.nutritionTotals(on: "2026-11-08").calories ?? 0) < 100)
+        XCTAssertEqual(store.recentlyDeletedFoodLogs().map(\.id), [log.id])
+        XCTAssertTrue(store.restoreDeletedFoodLog(log.id))
+
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertTrue(reopened.state.nutrition.favoriteFoodIDs?.contains(banana.id) == true)
+        XCTAssertEqual(reopened.state.nutrition.waterGoalMilliliters, 2_000)
+        XCTAssertEqual(reopened.state.nutrition.water.first?.milliliters, 750)
+        XCTAssertEqual(reopened.state.nutrition.water.first?.date, "2026-11-07")
+        XCTAssertEqual(reopened.state.nutrition.recipes?.first?.name, "Banana bowl")
+        XCTAssertNil(reopened.state.nutrition.logs.first(where: { $0.id == log.id })?.deletedAt)
+    }
+
+    func testBarcodeUnknownResponseIsNotConvertedIntoAnAssociatedFood() throws {
+        let data = Data(#"{"code":"0000000000000","status":0,"status_verbose":"product not found"}"#.utf8)
+        XCTAssertNil(try FoodCatalogService.parseBarcodeResponse(data, requestedCode: "0000000000000"))
+    }
+
+    func testBarcodeProductRetainsProviderIdentityAndOnlyVerifiedGramServing() throws {
+        let payload = #"{"code":"3017620422003","status":1,"product":{"code":"3017620422003","product_name":"QA hazelnut spread","brands":"Example","serving_size":"30 g","serving_quantity":30,"nutriments":{"energy-kcal_100g":539,"proteins_100g":5.4,"carbohydrates_100g":57.5,"fat_100g":30.9}}}"#
+        let food = try XCTUnwrap(FoodCatalogService.parseBarcodeResponse(Data(payload.utf8), requestedCode: "3017620422003"))
+        XCTAssertEqual(food.barcode, "3017620422003")
+        XCTAssertEqual(food.source, "Open Food Facts · community-contributed")
+        XCTAssertEqual(food.multiplier(for: 1, unit: "serving") ?? -1, 0.3, accuracy: 0.0001)
+        XCTAssertEqual(food.multiplier(for: 30, unit: "g") ?? -1, 0.3, accuracy: 0.0001)
+
+        let unverifiedServing = #"{"code":"3017620422003","status":1,"product":{"code":"3017620422003","product_name":"QA food","serving_size":"1 cup","serving_quantity":30,"nutriments":{"energy-kcal_100g":100,"proteins_100g":1,"carbohydrates_100g":2,"fat_100g":3}}}"#
+        let unverified = try XCTUnwrap(FoodCatalogService.parseBarcodeResponse(Data(unverifiedServing.utf8), requestedCode: "3017620422003"))
+        XCTAssertNil(unverified.multiplier(for: 1, unit: "serving"), "A serving quantity without a gram unit cannot authorize a gram conversion")
+    }
+
+    func testLegacyNutritionPayloadDecodesWithoutNewFoodFields() throws {
+        let encoded = try JSONEncoder.logbook.encode(NutritionState())
+        var object = try XCTUnwrap(JSONSerialization.jsonObject(with: encoded) as? [String: Any])
+        object.removeValue(forKey: "targetHistory")
+        object.removeValue(forKey: "favoriteFoodIDs")
+        object.removeValue(forKey: "recipes")
+        object.removeValue(forKey: "waterGoalMilliliters")
+        object.removeValue(forKey: "calorieTolerance")
+        let legacyData = try JSONSerialization.data(withJSONObject: object)
+        let decoded = try JSONDecoder.logbook.decode(NutritionState.self, from: legacyData)
+        XCTAssertNil(decoded.targetHistory)
+        XCTAssertNil(decoded.recipes)
+    }
+
     func testWorkoutSetCanBeLoggedAndFinishedThenReopened() throws {
         let repository = temporaryRepository()
         let store = LogbookStore(repository: repository)

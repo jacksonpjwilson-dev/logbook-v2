@@ -398,7 +398,7 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     func testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery() throws {
-        let app = launchApp()
+        let app = launchApp(progressionHistory: true)
         app.buttons["Training tab"].tap()
         let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
         XCTAssertTrue(template.waitForExistence(timeout: 5))
@@ -410,7 +410,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
         let firstWeight = app.textFields["Weight in kilograms"].firstMatch
         scrollToElement(firstWeight, in: app)
-        replaceText(in: firstWeight, with: "40")
+        replaceText(in: firstWeight, with: "80")
         dismissKeyboard(in: app)
         app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
         XCTAssertTrue(finish.isHittable, "Finish & Save should remain reachable after set entry")
@@ -420,7 +420,21 @@ final class DailyHomeUITests: XCTestCase {
         confirmSave.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Sets completed")).firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["Personal records"].waitForExistence(timeout: 5), "A completed set that beats the prior completed workout should be presented as a PR")
         attachScreenshot(of: app, named: "Training-Completion-Summary-Candidate")
+        app.buttons["workout-summary-done"].tap()
+        XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
+        app.buttons["workout-template-start"].tap()
+        let secondWeight = inputField(app, labelled: "Weight in kilograms")
+        XCTAssertTrue(secondWeight.waitForExistence(timeout: 5))
+        scrollToElement(secondWeight, in: app)
+        replaceText(in: secondWeight, with: "85")
+        dismissKeyboard(in: app)
+        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
+        app.buttons["finish-workout"].tap()
+        XCTAssertTrue(app.buttons["confirm-finish-workout"].waitForExistence(timeout: 5))
+        app.buttons["confirm-finish-workout"].tap()
+        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         app.buttons["workout-summary-done"].tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
@@ -430,7 +444,16 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["History tab"].tap()
         let historyRows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-workout-"))
         let historyList = app.collectionViews.firstMatch
-        for _ in 0..<12 where !historyRows.firstMatch.exists { historyList.swipeUp() }
+        for _ in 0..<12 where historyRows.count < 2 { historyList.swipeUp() }
+        XCTAssertGreaterThanOrEqual(historyRows.count, 2, "Two workouts completed on one day must remain separate history sessions")
+        let dateFormatter = DateFormatter()
+        dateFormatter.calendar = Calendar.current
+        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+        dateFormatter.timeZone = .current
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let today = dateFormatter.string(from: .now)
+        let todaySessions = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today))
+        XCTAssertGreaterThanOrEqual(todaySessions.count, 2, "Both same-day sessions should display today's date in History")
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
         for _ in 0..<5 where !historyRows.firstMatch.isHittable { historyList.swipeUp() }
         XCTAssertTrue(historyRows.firstMatch.isHittable)
@@ -471,6 +494,115 @@ final class DailyHomeUITests: XCTestCase {
         restoreButtons.firstMatch.tap()
         scrollToElement(historyRows.firstMatch, in: app, towardTop: true)
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "Restoring should return the record to the Training history list")
+    }
+
+    func testProgramSwitchingPreservesIndependentRotationAndSkipAdvancesOnlyScheduledProgram() throws {
+        let app = launchApp(trainingPrograms: true)
+        app.buttons["Training tab"].tap()
+
+        let programA = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Program A")).firstMatch
+        let programB = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Program B")).firstMatch
+        XCTAssertTrue(programA.waitForExistence(timeout: 5))
+        XCTAssertTrue(programB.waitForExistence(timeout: 5))
+        XCTAssertTrue(programA.label.contains("Upper Body"), "Program A begins with its first workout")
+        XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Program B begins at its independently stored second workout")
+
+        app.buttons["skip-scheduled-workout"].tap()
+        XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Skipping advances the scheduled rotation")
+        XCTAssertTrue(app.staticTexts["Completed workouts will appear here."].exists, "Skipping must not create a completed workout")
+
+        programB.tap()
+        XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Switching programs preserves that program's rotation")
+        programA.tap()
+        XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Returning to Program A preserves its advanced position")
+        programB.tap()
+        XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Switching away and back does not reset Program B")
+    }
+
+    func testProgressionSuggestionCanBeDeclinedWithoutChangingPlannedLoad() throws {
+        let app = launchApp(progressionHistory: true)
+        app.buttons["Training tab"].tap()
+        let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
+        XCTAssertTrue(template.waitForExistence(timeout: 5))
+        template.tap()
+        app.buttons["workout-template-start"].tap()
+
+        let suggestion = app.buttons["decline-progression-suggestion"]
+        XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "A prior completed workout should create an optional suggestion")
+        let suggestedLoad = suggestion.label.components(separatedBy: "·").last?
+            .replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces)
+        XCTAssertNotNil(Double(suggestedLoad ?? ""))
+        let weight = inputField(app, labelled: "Weight in kilograms")
+        scrollToElement(weight, in: app)
+        let before = String(describing: weight.value ?? "")
+
+        scrollToElement(suggestion, in: app)
+        suggestion.tap()
+        XCTAssertFalse(app.buttons["accept-progression-suggestion"].exists, "Declining removes the suggestion for this active workout")
+        scrollToElement(weight, in: app, towardTop: true)
+        XCTAssertEqual(String(describing: weight.value ?? ""), before, "Declining must leave the planned set load unchanged")
+    }
+
+    func testFoodManualEntryOptionsHistoryCorrectionAndRecovery() throws {
+        let app = launchApp()
+        app.buttons["Food tab"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        let addFood = app.buttons["food-add-food"]
+        scrollToElement(addFood, in: app)
+        XCTAssertTrue(addFood.waitForExistence(timeout: 5))
+        addFood.tap()
+        for option in ["food-option-search", "food-option-scan", "food-option-manual", "food-option-recent"] {
+            XCTAssertTrue(app.buttons[option].waitForExistence(timeout: 3), "Add Food must retain the four approved entry options")
+        }
+        app.buttons["food-option-manual"].tap()
+        XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5))
+        replaceText(in: app.textFields["manual-food-name"], with: "QA Manual Oats")
+        replaceText(in: app.textFields["manual-food-quantity"], with: "50")
+        replaceText(in: app.textFields["manual-food-calories"], with: "380")
+        replaceText(in: app.textFields["manual-food-protein"], with: "13")
+        replaceText(in: app.textFields["manual-food-carbohydrates"], with: "68")
+        replaceText(in: app.textFields["manual-food-fat"], with: "7")
+        dismissKeyboard(in: app)
+        app.buttons["manual-food-save"].tap()
+        app.buttons["Done"].tap()
+
+        let foodTotal = app.staticTexts["food-calories-total"]
+        XCTAssertTrue(foodTotal.waitForExistence(timeout: 5))
+        XCTAssertEqual(foodTotal.label, "640", "A 50 g entry from a 380 kcal per 100 g food must add 190 kcal to the 450 kcal fixture")
+        let foodHistory = app.buttons["food-history-link"]
+        scrollToElement(foodHistory, in: app)
+        XCTAssertTrue(foodHistory.waitForExistence(timeout: 5))
+        foodHistory.tap()
+        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5))
+        let historyRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
+        XCTAssertTrue(historyRow.waitForExistence(timeout: 5))
+        historyRow.tap()
+        XCTAssertTrue(app.navigationBars["Edit food entry"].waitForExistence(timeout: 5))
+        let calories = app.textFields["food-log-calories"]
+        XCTAssertTrue(calories.waitForExistence(timeout: 5))
+        replaceText(in: calories, with: "200")
+        app.buttons["food-log-edit-save"].tap()
+        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5))
+
+        let editedRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
+        XCTAssertTrue(editedRow.label.contains("200 kcal"), "The historical nutrition correction should be reflected in the saved row")
+        editedRow.swipeLeft()
+        app.buttons["Delete"].tap()
+        XCTAssertFalse(editedRow.exists, "Deleted food history should leave the active history list")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let recentlyDeleted = app.buttons["food-recently-deleted-link"]
+        scrollToElement(recentlyDeleted, in: app)
+        recentlyDeleted.tap()
+        XCTAssertTrue(app.navigationBars["Recently Deleted"].waitForExistence(timeout: 5))
+        let restore = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-food-")).firstMatch
+        XCTAssertTrue(restore.waitForExistence(timeout: 5))
+        restore.tap()
+        XCTAssertFalse(restore.exists, "Restoring removes the food record from Recently Deleted")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let history = app.buttons["food-history-link"]
+        scrollToElement(history, in: app)
+        history.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "QA Manual Oats")).firstMatch.waitForExistence(timeout: 5), "Restored food entry returns to Food History")
     }
 
     private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
@@ -521,11 +653,12 @@ final class DailyHomeUITests: XCTestCase {
         field.typeText(value)
     }
 
-    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil) -> XCUIApplication {
+    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         if progressionHistory { app.launchArguments.append("--qa-progression-history") }
         if trainingSplitCount == 8 { app.launchArguments.append("--qa-training-split-eight") }
+        if trainingPrograms { app.launchArguments.append("--qa-training-programs") }
         app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
         app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()

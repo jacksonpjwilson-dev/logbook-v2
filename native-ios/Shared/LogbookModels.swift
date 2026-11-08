@@ -498,6 +498,9 @@ struct WorkoutSession: Codable, Identifiable, Hashable {
     var scheduledTemplateID: UUID? = nil
     var wasScheduledWorkout: Bool? = nil
     var deletedAt: Date? = nil
+    /// Optional, session-scoped dismissals. A dismissed suggestion never mutates
+    /// the plan or a set and remains dismissed after restoring the draft.
+    var declinedProgressionExerciseIDs: [UUID]? = nil
 
     /// The first exercise with planned work remaining. Supersets progress by
     /// round, so every member's set N is completed before set N+1 begins.
@@ -634,6 +637,12 @@ struct NutritionTargets: Codable, Hashable {
     var fat: Double?
 }
 
+struct NutritionTargetSnapshot: Codable, Identifiable, Hashable {
+    var id: String { effectiveDate }
+    var effectiveDate: String
+    var targets: NutritionTargets
+}
+
 struct FoodDefinition: Codable, Identifiable, Hashable {
     var id: String
     var name: String
@@ -644,6 +653,27 @@ struct FoodDefinition: Codable, Identifiable, Hashable {
     var carbohydrates: Double
     var fat: Double
     var source = "Manual"
+    /// Only populated when the provider supplies a verified gram amount.
+    var verifiedServingGrams: Double? = nil
+    var barcode: String? = nil
+    var sourceURL: String? = nil
+    var isPersonal: Bool? = nil
+
+    func multiplier(for quantity: Double, unit: String) -> Double? {
+        guard quantity.isFinite, quantity > 0, basisAmount.isFinite, basisAmount > 0 else { return nil }
+        if unit.caseInsensitiveCompare(basisUnit) == .orderedSame { return quantity / basisAmount }
+        guard basisUnit.caseInsensitiveCompare("g") == .orderedSame else { return nil }
+        let grams: Double
+        switch unit.lowercased() {
+        case "g", "gram", "grams": grams = quantity
+        case "oz", "ounce", "ounces": grams = quantity * 28.349523125
+        case "serving", "servings":
+            guard let verifiedServingGrams, verifiedServingGrams.isFinite, verifiedServingGrams > 0 else { return nil }
+            grams = quantity * verifiedServingGrams
+        default: return nil
+        }
+        return grams / basisAmount
+    }
 }
 
 struct MealSlot: Codable, Identifiable, Hashable {
@@ -665,6 +695,37 @@ struct FoodLog: Codable, Identifiable, Hashable {
     var carbohydrates: Double
     var fat: Double
     var confirmedAt: Date
+    var deletedAt: Date? = nil
+}
+
+struct FoodRecipeIngredient: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+    var foodID: String
+    var foodName: String
+    var amount: Double
+    var unit: String
+    var calories: Double
+    var protein: Double
+    var carbohydrates: Double
+    var fat: Double
+}
+
+struct FoodRecipe: Codable, Identifiable, Hashable {
+    var id: String
+    var name: String
+    var ingredients: [FoodRecipeIngredient]
+    var yieldAmount: Double
+    var yieldUnit: String
+    var updatedAt: Date = .now
+
+    var total: NutritionTargets {
+        NutritionTargets(
+            calories: ingredients.reduce(0) { $0 + $1.calories },
+            protein: ingredients.reduce(0) { $0 + $1.protein },
+            carbohydrates: ingredients.reduce(0) { $0 + $1.carbohydrates },
+            fat: ingredients.reduce(0) { $0 + $1.fat }
+        )
+    }
 }
 
 struct WaterLog: Codable, Identifiable, Hashable {
@@ -680,6 +741,12 @@ struct NutritionState: Codable {
     var meals: [MealSlot] = [MealSlot(name: "Meal 1"), MealSlot(name: "Meal 2"), MealSlot(name: "Meal 3")]
     var logs: [FoodLog] = []
     var water: [WaterLog] = []
+    /// Optional for backwards-compatible decoding of existing App Group files.
+    var targetHistory: [NutritionTargetSnapshot]? = nil
+    var favoriteFoodIDs: [String]? = nil
+    var recipes: [FoodRecipe]? = nil
+    var waterGoalMilliliters: Int? = nil
+    var calorieTolerance: Double? = nil
 }
 
 struct SleepLog: Codable, Identifiable, Hashable {
@@ -735,13 +802,41 @@ struct LogbookState: Codable {
     static var empty: LogbookState { LogbookState() }
 
     func nutritionTotals(on date: String) -> NutritionTargets {
-        let day = nutrition.logs.filter { $0.date == date }
+        let day = nutrition.logs.filter { $0.date == date && $0.deletedAt == nil }
         return NutritionTargets(
             calories: day.reduce(0) { $0 + $1.calories },
             protein: day.reduce(0) { $0 + $1.protein },
             carbohydrates: day.reduce(0) { $0 + $1.carbohydrates },
             fat: day.reduce(0) { $0 + $1.fat }
         )
+    }
+
+    func nutritionTargets(on date: String) -> NutritionTargets {
+        nutrition.targetHistory?
+            .filter { $0.effectiveDate <= date }
+            .max { $0.effectiveDate < $1.effectiveDate }?.targets ?? nutrition.targets
+    }
+
+    enum NutritionAdherence: Equatable {
+        case unlogged
+        case noTargets
+        case belowGoal
+        case aboveGoal
+        case onTarget
+    }
+
+    func nutritionAdherence(on date: String, tolerance: Double? = nil) -> NutritionAdherence {
+        let logs = nutrition.logs.filter { $0.date == date && $0.deletedAt == nil }
+        guard !logs.isEmpty else { return .unlogged }
+        let targets = nutritionTargets(on: date)
+        guard let calorieGoal = targets.calories, calorieGoal > 0 else { return .noTargets }
+        let totals = nutritionTotals(on: date)
+        let toleranceFraction = min(0.5, max(0, tolerance ?? nutrition.calorieTolerance ?? 0.05))
+        let calories = totals.calories ?? 0
+        guard calories >= calorieGoal * (1 - toleranceFraction) else { return .belowGoal }
+        guard calories <= calorieGoal * (1 + toleranceFraction) else { return .aboveGoal }
+        if let proteinGoal = targets.protein, (totals.protein ?? 0) < proteinGoal { return .belowGoal }
+        return .onTarget
     }
 }
 

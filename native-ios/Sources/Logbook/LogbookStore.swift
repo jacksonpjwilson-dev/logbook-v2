@@ -105,9 +105,18 @@ final class LogbookStore: ObservableObject {
         let template = WorkoutTemplate(id: templateID, name: "Upper Body", exercises: exercises)
         let fullSplitNames = ["Upper Body", "Lower Body", "Push", "Pull", "Legs", "Upper Accessory", "Lower Accessory", "Full Body"]
         let fullSplitFixture = ProcessInfo.processInfo.arguments.contains("--qa-training-split-eight")
+        let programRotationFixture = ProcessInfo.processInfo.arguments.contains("--qa-training-programs")
         let qaTemplates = fullSplitFixture
             ? [template] + fullSplitNames.dropFirst().map { WorkoutTemplate(name: $0, exercises: exercises) }
             : [template]
+        let rotationTemplates: [WorkoutTemplate] = programRotationFixture
+            ? [
+                template,
+                WorkoutTemplate(id: UUID(uuidString: "A2D8A513-9023-42AE-94A5-222E210F3C12")!, name: "Program A Workout 2", exercises: exercises),
+                WorkoutTemplate(id: UUID(uuidString: "B1D8A513-9023-42AE-94A5-222E210F3C12")!, name: "Program B Workout 1", exercises: exercises),
+                WorkoutTemplate(id: UUID(uuidString: "B2D8A513-9023-42AE-94A5-222E210F3C12")!, name: "Program B Workout 2", exercises: exercises)
+            ]
+            : qaTemplates
         let supplementID = UUID(uuidString: "D1B2B4F8-9B2A-493C-B60E-41E3587799A8")!
         let supplement = Supplement(id: supplementID, name: "Creatine", schedule: "daily")
         var sleepLogs: [SleepLog] = []
@@ -126,11 +135,18 @@ final class LogbookStore: ObservableObject {
         guard let yesterday = calendar.date(byAdding: .day, value: -1, to: today) else { return }
         let finished = calendar.date(bySettingHour: 16, minute: 20, second: 0, of: yesterday) ?? yesterday
         var fixture = state
-        fixture.training.templates = qaTemplates
+        fixture.training.templates = rotationTemplates
         fixture.training.rotationIndex = 0
-        let qaProgram = WorkoutProgram(name: "QA Program", templateIDs: qaTemplates.map(\.id), rotationIndex: 0)
-        fixture.training.programs = [qaProgram]
-        fixture.training.activeProgramID = qaProgram.id
+        if programRotationFixture {
+            let firstProgram = WorkoutProgram(name: "Program A", templateIDs: Array(rotationTemplates.prefix(2)).map(\.id), rotationIndex: 0)
+            let secondProgram = WorkoutProgram(name: "Program B", templateIDs: Array(rotationTemplates.suffix(2)).map(\.id), rotationIndex: 1)
+            fixture.training.programs = [firstProgram, secondProgram]
+            fixture.training.activeProgramID = firstProgram.id
+        } else {
+            let qaProgram = WorkoutProgram(name: "QA Program", templateIDs: qaTemplates.map(\.id), rotationIndex: 0)
+            fixture.training.programs = [qaProgram]
+            fixture.training.activeProgramID = qaProgram.id
+        }
         let progressionSets = [WorkoutSet(weightKg: 60, reps: 8, completed: true)]
         let progressionExercise = WorkoutExercise(
             exerciseID: "qa-bench",
@@ -164,11 +180,22 @@ final class LogbookStore: ObservableObject {
     }
     #endif
 
-    func setNutritionTargets(calories: Double?, protein: Double?, carbohydrates: Double?, fat: Double?) {
-        transact {
-            $0.nutrition.targets = NutritionTargets(calories: calories, protein: protein, carbohydrates: carbohydrates, fat: fat)
-            $0.home.dailyCalorieGoal = calories
-            $0.home.dailyProteinGoal = protein
+    func setNutritionTargets(calories: Double?, protein: Double?, carbohydrates: Double?, fat: Double?, effectiveDate: String = LocalDay.string()) {
+        let values = [calories, protein, carbohydrates, fat]
+        guard values.allSatisfy({ $0 == nil || ($0!.isFinite && $0! >= 0) }) else { return }
+        let next = NutritionTargets(calories: calories, protein: protein, carbohydrates: carbohydrates, fat: fat)
+        transact { state in
+            if state.nutrition.targetHistory == nil {
+                // Preserve the old global goal for earlier dates before recording
+                // the first dated override.
+                state.nutrition.targetHistory = [NutritionTargetSnapshot(effectiveDate: "0001-01-01", targets: state.nutrition.targets)]
+            }
+            state.nutrition.targetHistory?.removeAll { $0.effectiveDate == effectiveDate }
+            state.nutrition.targetHistory?.append(NutritionTargetSnapshot(effectiveDate: effectiveDate, targets: next))
+            state.nutrition.targetHistory?.sort { $0.effectiveDate < $1.effectiveDate }
+            state.nutrition.targets = next
+            state.home.dailyCalorieGoal = calories
+            state.home.dailyProteinGoal = protein
         }
     }
 
@@ -533,6 +560,17 @@ final class LogbookStore: ObservableObject {
         return state.training.activeSession?.exercises.first(where: { $0.id == exerciseID })?.sets.allSatisfy { $0.weightKg == weightKg } == true
     }
 
+    func declineProgressionSuggestion(exerciseID: UUID) {
+        transact { state in
+            guard var session = state.training.activeSession else { return }
+            var dismissed = session.declinedProgressionExerciseIDs ?? []
+            guard !dismissed.contains(exerciseID) else { return }
+            dismissed.append(exerciseID)
+            session.declinedProgressionExerciseIDs = dismissed
+            state.training.activeSession = session
+        }
+    }
+
     func toggleSet(exerciseID: UUID, setID: UUID) -> Bool {
         guard let exercise = state.training.activeSession?.exercises.first(where: { $0.id == exerciseID }),
               let set = exercise.sets.first(where: { $0.id == setID }) else { return false }
@@ -744,12 +782,42 @@ final class LogbookStore: ObservableObject {
     }
 
     func addFoodDefinition(_ food: FoodDefinition) {
-        transact { $0.nutrition.foods.append(food) }
+        guard !food.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              [food.calories, food.protein, food.carbohydrates, food.fat].allSatisfy({ $0.isFinite && $0 >= 0 }),
+              food.basisAmount.isFinite, food.basisAmount > 0 else { return }
+        transact { state in
+            if let index = state.nutrition.foods.firstIndex(where: { $0.id == food.id }) { state.nutrition.foods[index] = food }
+            else { state.nutrition.foods.append(food) }
+        }
     }
 
-    func logFood(_ food: FoodDefinition, meal: MealSlot, quantity: Double, unit: String, confirmed: Bool) -> Bool {
-        guard confirmed, quantity > 0, food.basisAmount > 0 else { return false }
-        let factor = quantity / food.basisAmount
+    func cacheFoodDefinitions(_ foods: [FoodDefinition]) {
+        let valid = foods.filter {
+            !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            $0.basisAmount.isFinite && $0.basisAmount > 0 &&
+            [$0.calories, $0.protein, $0.carbohydrates, $0.fat].allSatisfy { $0.isFinite && $0 >= 0 }
+        }
+        guard !valid.isEmpty else { return }
+        transact { state in
+            for food in valid {
+                if let index = state.nutrition.foods.firstIndex(where: { $0.id == food.id }) { state.nutrition.foods[index] = food }
+                else { state.nutrition.foods.append(food) }
+            }
+        }
+    }
+
+    func setFoodFavorite(_ foodID: String, isFavorite: Bool) {
+        transact { state in
+            var ids = state.nutrition.favoriteFoodIDs ?? []
+            ids.removeAll { $0 == foodID }
+            if isFavorite { ids.append(foodID) }
+            state.nutrition.favoriteFoodIDs = ids
+        }
+    }
+
+    func logFood(_ food: FoodDefinition, meal: MealSlot, quantity: Double, unit: String, confirmed: Bool, date: String = LocalDay.string()) -> Bool {
+        guard confirmed, let factor = food.multiplier(for: quantity, unit: unit),
+              [food.calories, food.protein, food.carbohydrates, food.fat].allSatisfy({ $0.isFinite && $0 >= 0 }) else { return false }
         let log = FoodLog(
             foodID: food.id,
             foodName: food.name,
@@ -764,8 +832,32 @@ final class LogbookStore: ObservableObject {
             fat: food.fat * factor,
             confirmedAt: .now
         )
-        transact { $0.nutrition.logs.append(log) }
+        transact { state in
+            state.nutrition.logs.append(log)
+            if !state.nutrition.foods.contains(where: { $0.id == food.id }) { state.nutrition.foods.append(food) }
+        }
         return true
+    }
+
+    func updateFoodLog(_ id: UUID, foodName: String, mealID: UUID, mealName: String, quantity: Double, unit: String, calories: Double, protein: Double, carbohydrates: Double, fat: Double, date: String) -> Bool {
+        let name = foodName.trimmingCharacters(in: .whitespacesAndNewlines)
+        let values = [quantity, calories, protein, carbohydrates, fat]
+        guard !name.isEmpty, quantity.isFinite, quantity > 0,
+              values.dropFirst().allSatisfy({ $0.isFinite && $0 >= 0 }) else { return false }
+        transact { state in
+            guard let index = state.nutrition.logs.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.nutrition.logs[index].foodName = name
+            state.nutrition.logs[index].mealID = mealID
+            state.nutrition.logs[index].mealName = mealName
+            state.nutrition.logs[index].quantity = quantity
+            state.nutrition.logs[index].unit = unit
+            state.nutrition.logs[index].calories = calories
+            state.nutrition.logs[index].protein = protein
+            state.nutrition.logs[index].carbohydrates = carbohydrates
+            state.nutrition.logs[index].fat = fat
+            state.nutrition.logs[index].date = date
+        }
+        return state.nutrition.logs.first(where: { $0.id == id })?.foodName == name
     }
 
     func addMeal(name: String) {
@@ -774,13 +866,135 @@ final class LogbookStore: ObservableObject {
         transact { $0.nutrition.meals.append(MealSlot(name: clean)) }
     }
 
-    func addWater(_ milliliters: Int) {
-        guard milliliters > 0 else { return }
-        transact { $0.nutrition.water.append(WaterLog(date: LocalDay.string(), milliliters: milliliters)) }
+    func renameMeal(_ id: UUID, name: String) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        transact { state in
+            guard let index = state.nutrition.meals.firstIndex(where: { $0.id == id }) else { return }
+            state.nutrition.meals[index].name = clean
+        }
     }
 
-    func deleteFoodLog(_ id: UUID) {
-        transact { $0.nutrition.logs.removeAll { $0.id == id } }
+    func makeRecipeIngredient(food: FoodDefinition, quantity: Double, unit: String) -> FoodRecipeIngredient? {
+        guard let factor = food.multiplier(for: quantity, unit: unit) else { return nil }
+        return FoodRecipeIngredient(foodID: food.id, foodName: food.name, amount: quantity, unit: unit,
+            calories: food.calories * factor, protein: food.protein * factor,
+            carbohydrates: food.carbohydrates * factor, fat: food.fat * factor)
+    }
+
+    @discardableResult
+    func saveRecipe(name: String, ingredients: [FoodRecipeIngredient], yieldAmount: Double, yieldUnit: String, id: String? = nil) -> String? {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty, !ingredients.isEmpty, yieldAmount.isFinite, yieldAmount > 0,
+              ["servings", "g"].contains(yieldUnit) else { return nil }
+        let recipeID = id ?? "recipe-\(UUID().uuidString)"
+        let recipe = FoodRecipe(id: recipeID, name: clean, ingredients: ingredients, yieldAmount: yieldAmount, yieldUnit: yieldUnit)
+        transact { state in
+            var recipes = state.nutrition.recipes ?? []
+            if let index = recipes.firstIndex(where: { $0.id == recipeID }) { recipes[index] = recipe }
+            else { recipes.append(recipe) }
+            state.nutrition.recipes = recipes
+        }
+        return state.nutrition.recipes?.first(where: { $0.id == recipeID })?.id
+    }
+
+    func foodDefinition(for recipe: FoodRecipe) -> FoodDefinition {
+        let total = recipe.total
+        return FoodDefinition(id: recipe.id, name: recipe.name, basisAmount: 1, basisUnit: recipe.yieldUnit,
+            calories: (total.calories ?? 0) / recipe.yieldAmount,
+            protein: (total.protein ?? 0) / recipe.yieldAmount,
+            carbohydrates: (total.carbohydrates ?? 0) / recipe.yieldAmount,
+            fat: (total.fat ?? 0) / recipe.yieldAmount,
+            source: "Saved Logbook recipe", isPersonal: true)
+    }
+
+    func deleteRecipe(_ id: String) {
+        transact { $0.nutrition.recipes?.removeAll { $0.id == id } }
+    }
+
+    func copyMeals(from sourceDate: String, to destinationDate: String, mealName: String? = nil, replaceMatchingMeals: Bool) -> Int {
+        guard sourceDate != destinationDate else { return 0 }
+        let sourceLogs = state.nutrition.logs.filter { $0.date == sourceDate && $0.deletedAt == nil && (mealName == nil || $0.mealName == mealName) }
+        guard !sourceLogs.isEmpty else { return 0 }
+        transact { state in
+            let matchingNames = Set(sourceLogs.map(\.mealName))
+            if replaceMatchingMeals {
+                for index in state.nutrition.logs.indices where state.nutrition.logs[index].date == destinationDate &&
+                    state.nutrition.logs[index].deletedAt == nil && matchingNames.contains(state.nutrition.logs[index].mealName) {
+                    state.nutrition.logs[index].deletedAt = .now
+                }
+            }
+            for source in sourceLogs {
+                var copy = source
+                copy.id = UUID()
+                copy.date = destinationDate
+                copy.confirmedAt = .now
+                copy.deletedAt = nil
+                state.nutrition.logs.append(copy)
+            }
+        }
+        return sourceLogs.count
+    }
+
+    func addWater(_ milliliters: Int, date: String = LocalDay.string()) {
+        guard (1...5000).contains(milliliters) else { return }
+        transact { $0.nutrition.water.append(WaterLog(date: date, milliliters: milliliters)) }
+    }
+
+    func setWaterGoal(_ milliliters: Int?) {
+        guard milliliters == nil || (1...10000).contains(milliliters!) else { return }
+        transact { $0.nutrition.waterGoalMilliliters = milliliters }
+    }
+
+    func updateWaterLog(_ id: UUID, milliliters: Int, date: String) -> Bool {
+        guard (1...5000).contains(milliliters) else { return false }
+        transact { state in
+            guard let index = state.nutrition.water.firstIndex(where: { $0.id == id }) else { return }
+            state.nutrition.water[index].milliliters = milliliters
+            state.nutrition.water[index].date = date
+        }
+        return state.nutrition.water.first(where: { $0.id == id })?.milliliters == milliliters
+    }
+
+    func deleteFoodLog(_ id: UUID, at date: Date = .now) {
+        transact { state in
+            guard let index = state.nutrition.logs.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.nutrition.logs[index].deletedAt = date
+        }
+    }
+
+    func recentlyDeletedFoodLogs(asOf date: Date = .now) -> [FoodLog] {
+        state.nutrition.logs.filter { log in
+            guard let deletedAt = log.deletedAt else { return false }
+            let age = date.timeIntervalSince(deletedAt)
+            return age >= 0 && age < 30 * 24 * 60 * 60
+        }.sorted { ($0.deletedAt ?? .distantPast) > ($1.deletedAt ?? .distantPast) }
+    }
+
+    @discardableResult
+    func restoreDeletedFoodLog(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let log = state.nutrition.logs.first(where: { $0.id == id }),
+              let deletedAt = log.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0,
+              date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
+        transact { state in
+            guard let index = state.nutrition.logs.firstIndex(where: { $0.id == id }) else { return }
+            state.nutrition.logs[index].deletedAt = nil
+        }
+        return state.nutrition.logs.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func permanentlyDeleteFoodLog(_ id: UUID) {
+        transact { $0.nutrition.logs.removeAll { $0.id == id && $0.deletedAt != nil } }
+    }
+
+    func purgeExpiredFoodLogs(asOf date: Date = .now) {
+        transact { state in
+            state.nutrition.logs.removeAll { log in
+                guard let deletedAt = log.deletedAt else { return false }
+                return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
+            }
+        }
     }
 
     func removeWater(_ id: UUID) {

@@ -489,13 +489,19 @@ struct ActiveWorkoutScreen: View {
                                         WorkoutSetEditor(exercise: exercise, set: set)
                                     }
                                     if let suggestion = suggestedProgression(for: exercise) {
-                                        Button {
-                                            _ = store.acceptProgressionSuggestion(exerciseID: exercise.id, weightKg: suggestion)
-                                        } label: {
-                                            Label("Accept progression · \(suggestion.formatted(.number.precision(.fractionLength(0...1)))) kg", systemImage: "arrow.up.right")
-                                                .font(.caption.weight(.semibold))
+                                        HStack {
+                                            Button {
+                                                _ = store.acceptProgressionSuggestion(exerciseID: exercise.id, weightKg: suggestion)
+                                            } label: {
+                                                Label("Accept · \(suggestion.formatted(.number.precision(.fractionLength(0...1)))) kg", systemImage: "arrow.up.right")
+                                                    .font(.caption.weight(.semibold))
+                                            }
+                                            .accessibilityIdentifier("accept-progression-suggestion")
+                                            Spacer()
+                                            Button("Not now") { store.declineProgressionSuggestion(exerciseID: exercise.id) }
+                                                .font(.caption)
+                                                .accessibilityIdentifier("decline-progression-suggestion")
                                         }
-                                        .accessibilityIdentifier("accept-progression-suggestion")
                                     }
                                     TextField("Exercise notes", text: Binding(
                                         get: { exercise.notes },
@@ -744,6 +750,7 @@ struct ActiveWorkoutScreen: View {
 
     private func suggestedProgression(for exercise: WorkoutExercise) -> Double? {
         guard (exercise.trackingMode ?? .weightAndReps) == .weightAndReps,
+              session?.declinedProgressionExerciseIDs?.contains(exercise.id) != true,
               exercise.sets.allSatisfy({ !$0.completed && $0.weightKg == nil }),
               let prior = store.state.training.visibleCompletedSessions
                 .filter({ $0.finishedAt != nil })
@@ -946,299 +953,5 @@ private struct WorkoutSetEditor: View {
 
     private var distance: Binding<Double> {
         Binding(get: { set.distanceMeters ?? 0 }, set: { store.updateSetDistance(exerciseID: exercise.id, setID: set.id, weightKg: set.weightKg, distanceMeters: $0 > 0 ? $0 : nil) })
-    }
-}
-
-struct FoodScreen: View {
-    @EnvironmentObject private var store: LogbookStore
-    @State private var showFoodPicker = false
-    @State private var showTargets = false
-    @State private var selectedMealID: UUID?
-
-    private var today: String { LocalDay.string() }
-    private var logs: [FoodLog] { store.state.nutrition.logs.filter { $0.date == today } }
-    private var totals: NutritionTargets { store.state.nutritionTotals(on: today) }
-    private var waterTotal: Int { store.state.nutrition.water.filter { $0.date == today }.reduce(0) { $0 + $1.milliliters } }
-
-    var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .firstTextBaseline) {
-                        VStack(alignment: .leading, spacing: 3) { Text("Calories").font(.caption).foregroundStyle(.secondary); Text("\(Int(totals.calories ?? 0))").font(.system(size: 31, weight: .bold, design: .rounded)) }
-                        Spacer()
-                        if let target = store.state.nutrition.targets.calories { Text("of \(Int(target)) kcal").font(.caption).foregroundStyle(.secondary) }
-                    }
-                    ProgressView(value: min(1, (totals.calories ?? 0) / max(1, store.state.nutrition.targets.calories ?? 1)))
-                    HStack(spacing: 7) {
-                        MacroTile(name: "Protein", value: totals.protein ?? 0, goal: store.state.nutrition.targets.protein, color: .teal)
-                        MacroTile(name: "Carbs", value: totals.carbohydrates ?? 0, goal: store.state.nutrition.targets.carbohydrates, color: .blue)
-                        MacroTile(name: "Fat", value: totals.fat ?? 0, goal: store.state.nutrition.targets.fat, color: .orange)
-                    }
-                }
-                .padding(.vertical, 5)
-            } header: {
-                HStack { Text("Nutrition today · \(today)"); Spacer(); Button("Targets") { showTargets = true } }
-            }
-
-            Section {
-                ForEach(store.state.nutrition.meals) { meal in
-                    let mealLogs = logs.filter { $0.mealID == meal.id }
-                    DisclosureGroup {
-                        if mealLogs.isEmpty { Text("Nothing logged yet.").font(.caption).foregroundStyle(.secondary) }
-                        ForEach(mealLogs) { log in
-                            HStack {
-                                VStack(alignment: .leading, spacing: 2) { Text(log.foodName); Text("\(format(log.quantity)) \(log.unit) · \(Int(log.calories)) kcal · \(Int(log.protein)) g protein").font(.caption).foregroundStyle(.secondary) }
-                                Spacer()
-                            }
-                            .swipeActions { Button("Delete", role: .destructive) { store.deleteFoodLog(log.id) } }
-                        }
-                        Button { selectedMealID = meal.id; showFoodPicker = true } label: { Label("Add food to \(meal.name)", systemImage: "plus") }
-                    } label: {
-                        HStack { Text(meal.name).font(.headline); Spacer(); Text("\(mealLogs.count) items").font(.caption).foregroundStyle(.secondary) }
-                    }
-                    .tint(store.state.home.theme.palette.accentColor)
-                }
-                Button { selectedMealID = store.state.nutrition.meals.first?.id; showFoodPicker = true } label: { Label("Add food", systemImage: "plus.circle.fill") }
-                Button { store.addMeal(name: "Meal \(store.state.nutrition.meals.count + 1)") } label: { Label("Add meal", systemImage: "rectangle.stack.badge.plus") }
-            } header: { Text("Meals") }
-
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) { Text("Water").font(.headline); Text("\(waterTotal) mL logged").font(.caption).foregroundStyle(.secondary) }
-                    Spacer()
-                    ForEach([250, 500, 750], id: \.self) { amount in
-                        Button("+\(amount)") { store.addWater(amount) }.buttonStyle(.bordered).controlSize(.small)
-                    }
-                }
-            } header: { Text("Hydration") }
-
-            if !logs.isEmpty {
-                Section("Today’s total") {
-                    LabeledContent("Calories", value: "\(Int(totals.calories ?? 0)) kcal")
-                    LabeledContent("Protein", value: "\(Int(totals.protein ?? 0)) g")
-                    LabeledContent("Carbohydrates", value: "\(Int(totals.carbohydrates ?? 0)) g")
-                    LabeledContent("Fat", value: "\(Int(totals.fat ?? 0)) g")
-                }
-            }
-        }
-        .navigationTitle("Food")
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button { showTargets = true } label: { Image(systemName: "slider.horizontal.3") }.accessibilityLabel("Nutrition targets") } }
-        .sheet(isPresented: $showFoodPicker) {
-            FoodPickerScreen(mealID: selectedMealID ?? store.state.nutrition.meals[0].id)
-                .presentationDetents([.large]).presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showTargets) { NutritionTargetsScreen().presentationDetents([.medium, .large]).presentationDragIndicator(.visible) }
-    }
-
-    private func format(_ value: Double) -> String { value.formatted(.number.precision(.fractionLength(0...2))) }
-}
-
-private struct MacroTile: View {
-    let name: String
-    let value: Double
-    let goal: Double?
-    let color: Color
-    var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(name).font(.caption2.weight(.semibold)).foregroundStyle(.secondary)
-            Text("\(Int(value)) g").font(.system(size: 15, weight: .bold, design: .rounded))
-            if let goal { ProgressView(value: min(1, value / max(1, goal))).tint(color) }
-            else { Text("No goal").font(.system(size: 9)).foregroundStyle(.tertiary) }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading).padding(9)
-        .background(color.opacity(0.1), in: RoundedRectangle(cornerRadius: 13))
-    }
-}
-
-struct FoodPickerScreen: View {
-    @EnvironmentObject private var store: LogbookStore
-    @Environment(\.dismiss) private var dismiss
-    let mealID: UUID
-    @State private var search = ""
-    @State private var selectedFood: FoodDefinition?
-    @State private var showNewFood = false
-
-    private var foods: [FoodDefinition] {
-        store.state.nutrition.foods.filter { search.isEmpty || $0.name.localizedCaseInsensitiveContains(search) }
-    }
-    private var meal: MealSlot { store.state.nutrition.meals.first(where: { $0.id == mealID }) ?? store.state.nutrition.meals[0] }
-
-    var body: some View {
-        NavigationStack {
-            List {
-                Section { Button { showNewFood = true } label: { Label("Create a food", systemImage: "plus.circle.fill") } }
-                Section("Foods · \(foods.count)") {
-                    ForEach(foods) { food in
-                        Button { selectedFood = food } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(food.name).font(.headline)
-                                Text("\(Int(food.calories)) kcal · \(Int(food.protein)) g protein per \(food.basisAmount.formatted()) \(food.basisUnit)")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        .foregroundStyle(.primary)
-                    }
-                }
-            }
-            .navigationTitle("Add to \(meal.name)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
-            .searchable(text: $search, prompt: "Food name")
-            .sheet(item: $selectedFood) { food in
-                FoodQuantityConfirmationScreen(food: food, meal: meal)
-                    .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
-            }
-            .sheet(isPresented: $showNewFood) {
-                NewFoodScreen().presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
-            }
-        }
-    }
-}
-
-struct FoodQuantityConfirmationScreen: View {
-    @EnvironmentObject private var store: LogbookStore
-    @Environment(\.dismiss) private var dismiss
-    let food: FoodDefinition
-    let meal: MealSlot
-    @State private var quantity: Double
-    @State private var confirmed = false
-
-    init(food: FoodDefinition, meal: MealSlot) {
-        self.food = food
-        self.meal = meal
-        _quantity = State(initialValue: food.basisAmount)
-    }
-
-    private var multiplier: Double { quantity / max(food.basisAmount, 0.0001) }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Confirm amount · \(meal.name)") {
-                    Text(food.name).font(.headline)
-                    HStack {
-                        TextField("Amount", value: $quantity, format: .number.precision(.fractionLength(0...2)))
-                            .keyboardType(.decimalPad)
-                        Text(food.basisUnit).foregroundStyle(.secondary)
-                    }
-                }
-                Section("Nutrition preview") {
-                    LabeledContent("Calories", value: "\(Int(food.calories * multiplier)) kcal")
-                    LabeledContent("Protein", value: "\(Int(food.protein * multiplier)) g")
-                    LabeledContent("Carbohydrates", value: "\(Int(food.carbohydrates * multiplier)) g")
-                    LabeledContent("Fat", value: "\(Int(food.fat * multiplier)) g")
-                }
-                Section {
-                    Text("Check the quantity and food label before logging. The values above are saved as an immutable snapshot for this entry.")
-                        .font(.footnote).foregroundStyle(.secondary)
-                }
-            }
-            .navigationTitle("Review food")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Log food") {
-                        confirmed = true
-                        if store.logFood(food, meal: meal, quantity: quantity, unit: food.basisUnit, confirmed: confirmed) { dismiss() }
-                    }
-                    .disabled(quantity <= 0)
-                }
-            }
-        }
-    }
-}
-
-struct NewFoodScreen: View {
-    @EnvironmentObject private var store: LogbookStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var name = ""
-    @State private var quantity = 100.0
-    @State private var unit = "g"
-    @State private var calories = 0.0
-    @State private var protein = 0.0
-    @State private var carbs = 0.0
-    @State private var fat = 0.0
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Food and serving") {
-                    TextField("Name", text: $name)
-                    HStack { TextField("Amount", value: $quantity, format: .number).keyboardType(.decimalPad); TextField("Unit", text: $unit).frame(width: 80) }
-                }
-                Section("Nutrition per serving above") {
-                    numeric("Calories", value: $calories, suffix: "kcal")
-                    numeric("Protein", value: $protein, suffix: "g")
-                    numeric("Carbohydrates", value: $carbs, suffix: "g")
-                    numeric("Fat", value: $fat, suffix: "g")
-                }
-                Text("For foods from a package, enter the label values for this exact serving. No unit conversion or nutrition estimate is assumed.")
-                    .font(.footnote).foregroundStyle(.secondary)
-            }
-            .navigationTitle("New food")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        let item = FoodDefinition(id: "custom-\(UUID().uuidString)", name: name.trimmingCharacters(in: .whitespacesAndNewlines), basisAmount: quantity, basisUnit: unit, calories: calories, protein: protein, carbohydrates: carbs, fat: fat)
-                        store.addFoodDefinition(item)
-                        dismiss()
-                    }
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || quantity <= 0)
-                }
-            }
-        }
-    }
-
-    private func numeric(_ title: String, value: Binding<Double>, suffix: String) -> some View {
-        HStack { TextField(title, value: value, format: .number).keyboardType(.decimalPad); Text(suffix).foregroundStyle(.secondary) }
-    }
-}
-
-struct NutritionTargetsScreen: View {
-    @EnvironmentObject private var store: LogbookStore
-    @Environment(\.dismiss) private var dismiss
-    @State private var calories = ""
-    @State private var protein = ""
-    @State private var carbohydrates = ""
-    @State private var fat = ""
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Daily targets") {
-                    targetField("Calories", text: $calories, unit: "kcal")
-                    targetField("Protein", text: $protein, unit: "g")
-                    targetField("Carbohydrates", text: $carbohydrates, unit: "g")
-                    targetField("Fat", text: $fat, unit: "g")
-                }
-                Section { Text("New target values apply from today onward. Past food logs remain unchanged.").font(.footnote).foregroundStyle(.secondary) }
-            }
-            .navigationTitle("Nutrition targets")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        store.setNutritionTargets(calories: Double(calories), protein: Double(protein), carbohydrates: Double(carbohydrates), fat: Double(fat))
-                        dismiss()
-                    }
-                }
-            }
-            .onAppear {
-                let targets = store.state.nutrition.targets
-                calories = targets.calories.map { String(Int($0)) } ?? ""
-                protein = targets.protein.map { String(Int($0)) } ?? ""
-                carbohydrates = targets.carbohydrates.map { String(Int($0)) } ?? ""
-                fat = targets.fat.map { String(Int($0)) } ?? ""
-            }
-        }
-    }
-
-    private func targetField(_ label: String, text: Binding<String>, unit: String) -> some View {
-        HStack { TextField(label, text: text).keyboardType(.decimalPad); Text(unit).foregroundStyle(.secondary) }
     }
 }
