@@ -318,9 +318,13 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["Create"].tap()
 
         let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-"))
-        XCTAssertEqual(rows.count, 2, "The UI should show both saved workouts in the active program")
-        let firstID = rows.element(boundBy: 0).identifier
-        let secondID = rows.element(boundBy: 1).identifier
+        let originalWorkout = rows.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Upper Body")).firstMatch
+        let createdWorkout = rows.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Lower Body")).firstMatch
+        scrollToElement(createdWorkout, in: app)
+        XCTAssertTrue(createdWorkout.waitForExistence(timeout: 5), "The newly created workout should be saved into the active program")
+        XCTAssertTrue(originalWorkout.exists, "Creating a workout must preserve the existing program workout")
+        let firstID = originalWorkout.identifier
+        let secondID = createdWorkout.identifier
         app.buttons["Edit"].tap()
         let reorderHandles = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS[cd] %@", "reorder"))
@@ -758,7 +762,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["food-confirm-log"].isEnabled, "The quantity step requires confirmation before adding a food")
         app.buttons["food-confirm-log"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Logging a confirmed food returns to the selected Food day")
+        XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5), "Search stays open so another item can be logged")
+        app.buttons["food-add-done"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Done returns to the selected Food day")
 
         scrollToElement(addFood, in: app)
         addFood.tap()
@@ -924,9 +930,11 @@ final class DailyHomeUITests: XCTestCase {
         let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
         scrollToElement(logRecipe, in: app)
         XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
-        let caloriesBeforeRecipe = Int(app.staticTexts["food-calories-total"].label) ?? 0
-        logRecipe.tap()
         let caloriesTotal = app.staticTexts["food-calories-total"]
+        scrollToElement(caloriesTotal, in: app, towardTop: true)
+        XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
+        let caloriesBeforeRecipe = Int(caloriesTotal.label) ?? 0
+        logRecipe.tap()
         scrollToElement(caloriesTotal, in: app, towardTop: true)
         XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
         let expectedRecipeTotal = String(caloriesBeforeRecipe + 450)
@@ -1010,7 +1018,9 @@ final class DailyHomeUITests: XCTestCase {
             result.tap()
             XCTAssertTrue(app.buttons["food-confirm-log"].waitForExistence(timeout: 5))
             app.buttons["food-confirm-log"].tap()
-            XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+            XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5), "Confirmed items leave the picker available for additional entries")
+            app.buttons["food-add-done"].tap()
+            XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Done closes Food search and returns to the selected log date")
         }
         logFixtureFoodIntoOpenMeal()
         XCTAssertNotEqual(foodDate.label, today, "Food added to the prior selected day must remain attached to that date")
