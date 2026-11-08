@@ -183,7 +183,7 @@ struct FoodScreen: View {
                 Button("Targets") { presentedSheet = .targets(date: dateKey) }.accessibilityIdentifier("food-targets")
             }
         }
-        .id("food-nutrition-summary-\(dateKey)")
+        .id("food-nutrition-summary")
     }
 
     private var mealsSection: some View {
@@ -367,7 +367,12 @@ struct FoodScreen: View {
         return store.state.nutrition.meals[min(index, store.state.nutrition.meals.count - 1)].id
     }
     private func shiftDay(_ amount: Int) {
-        if let date = Calendar.current.date(byAdding: .day, value: amount, to: selectedDate) { selectedDate = date }
+        var calendar = Calendar.autoupdatingCurrent
+        calendar.timeZone = .autoupdatingCurrent
+        let dayStart = calendar.startOfDay(for: selectedDate)
+        if let date = calendar.date(byAdding: .day, value: amount, to: dayStart) {
+            selectedDate = date
+        }
     }
     private func ratio(_ value: Double?, _ goal: Double?) -> Double { min(1, max(0, (value ?? 0) / max(1, goal ?? 1))) }
     private func remaining(_ goal: Double?, _ value: Double?) -> Int { max(0, Int((goal ?? 0) - (value ?? 0))) }

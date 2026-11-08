@@ -290,6 +290,7 @@ private struct HomePageGrid: View {
                     .frame(width: width, height: height)
                     .overlay {
                         Rectangle().fill(Color.clear)
+                            .frame(width: width, height: height)
                             .accessibilityElement(children: .ignore)
                             .accessibilityLabel("\(widget.kind.title) widget frame")
                             .accessibilityIdentifier("home-widget-frame-\(widget.kind.rawValue)")

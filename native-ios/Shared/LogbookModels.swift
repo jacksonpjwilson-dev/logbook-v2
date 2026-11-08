@@ -735,6 +735,25 @@ struct WaterLog: Codable, Identifiable, Hashable {
     var milliliters: Int
     var createdAt: Date = .now
     var deletedAt: Date? = nil
+
+    private enum CodingKeys: String, CodingKey { case id, date, milliliters, createdAt, deletedAt }
+
+    init(id: UUID = UUID(), date: String, milliliters: Int, createdAt: Date = .now, deletedAt: Date? = nil) {
+        self.id = id
+        self.date = date
+        self.milliliters = milliliters
+        self.createdAt = createdAt
+        self.deletedAt = deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        date = try values.decode(String.self, forKey: .date)
+        milliliters = try values.decode(Int.self, forKey: .milliliters)
+        createdAt = try values.decodeIfPresent(Date.self, forKey: .createdAt) ?? .now
+        deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
+    }
 }
 
 struct NutritionState: Codable {

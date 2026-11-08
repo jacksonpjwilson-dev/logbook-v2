@@ -564,7 +564,7 @@ final class DailyHomeUITests: XCTestCase {
         let today = dateFormatter.string(from: .now)
         let todaySessions = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today))
         XCTAssertGreaterThanOrEqual(todaySessions.count, 2, "Both same-day sessions should display today's date in History")
-        let calendarButton = app.buttons["Workout Calendar"]
+        let calendarButton = app.buttons["workout-calendar-open"]
         scrollToElement(calendarButton, in: app)
         calendarButton.tap()
         XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5))
@@ -575,7 +575,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
         calendarSessionRows.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5), "Each calendar session opens its individual editable history record")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.swipeRight()
+        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Back navigation returns to the selected calendar date")
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
@@ -704,7 +705,7 @@ final class DailyHomeUITests: XCTestCase {
         let dateKey = app.staticTexts["food-date-key"]
         XCTAssertTrue(dateKey.waitForExistence(timeout: 5))
         let originalDate = dateKey.label
-        let swipeArea = app.descendants(matching: .any)["food-macro-swipe-area"]
+        let swipeArea = app.descendants(matching: .any)["food-macro-swipe-area"].firstMatch
         XCTAssertTrue(swipeArea.waitForExistence(timeout: 5))
         let swipeStart = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.5))
         let swipeEnd = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.5))
@@ -828,20 +829,27 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars["Nutrition targets"].buttons["Save"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving targets returns to Food before hydration controls are used")
 
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["Food page"].waitForExistence(timeout: 5))
+        app.buttons["Food page"].tap()
+        app.buttons["food-home-water-250"].tap()
+        app.buttons["food-home-water-log"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("250 mL"), "Food Home quick logging routes into the persisted hydration history")
+
         let waterQuickAdd = app.buttons["water-quick-500"]
-        scrollToElement(waterQuickAdd, in: app)
         XCTAssertTrue(waterQuickAdd.waitForExistence(timeout: 5))
         waterQuickAdd.tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("500 mL"))
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("750 mL"))
         let customWater = app.buttons["water-custom-entry"]
-        scrollToElement(customWater, in: app)
+        XCTAssertTrue(customWater.waitForExistence(timeout: 5))
         customWater.tap()
         XCTAssertTrue(app.navigationBars["Add water"].waitForExistence(timeout: 5))
         let customAmount = app.textFields["water-entry-amount"]
         replaceText(in: customAmount, with: "375")
         dismissKeyboard(in: app)
         app.navigationBars["Add water"].buttons["Save"].tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("875 mL"), "Custom hydration is added to the persisted daily total")
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("1125 mL"), "Custom hydration is added to the persisted daily total")
         let waterGoalEdit = app.buttons["water-goal-edit"]
         scrollToElement(waterGoalEdit, in: app)
         waterGoalEdit.tap()
@@ -855,7 +863,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("of 2300 mL"))
 
         let createRecipe = app.buttons["food-create-recipe"]
-        scrollToElement(createRecipe, in: app)
+        for _ in 0..<5 where !createRecipe.exists { app.swipeUp() }
         XCTAssertTrue(createRecipe.waitForExistence(timeout: 5))
         createRecipe.tap()
         XCTAssertTrue(app.navigationBars["Recipe Builder"].waitForExistence(timeout: 5))
@@ -871,7 +879,8 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["recipe-save"].tap()
 
         let addFoodForRecipeSearch = app.buttons["food-add-food"]
-        scrollToElement(addFoodForRecipeSearch, in: app)
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving a recipe returns to the Food log")
+        scrollToElement(addFoodForRecipeSearch, in: app, towardTop: true)
         addFoodForRecipeSearch.tap()
         app.buttons["food-option-search"].tap()
         XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5))
@@ -941,7 +950,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodDate.waitForExistence(timeout: 5))
         let today = foodDate.label
         app.buttons["food-day-previous"].tap()
-        let priorDate = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", today), object: foodDate)
+        let updatedFoodDate = app.staticTexts.matching(identifier: "food-date-key").firstMatch
+        let priorDate = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", today), object: updatedFoodDate)
         XCTAssertEqual(XCTWaiter.wait(for: [priorDate], timeout: 5), .completed, "Previous-day control selects the prior date before logging")
 
         let addMeal = app.buttons["Add meal"]

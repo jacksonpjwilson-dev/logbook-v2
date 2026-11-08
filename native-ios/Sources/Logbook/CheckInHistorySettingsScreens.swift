@@ -192,6 +192,7 @@ struct HistoryScreen: View {
                     .accessibilityIdentifier("history-workout-\(session.id.uuidString)")
                 }
                 Button { showingWorkoutCalendar = true } label: { Label("Workout Calendar", systemImage: "calendar") }
+                    .accessibilityIdentifier("workout-calendar-open")
             }
 
             Section("Personal records") {
