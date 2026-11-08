@@ -48,4 +48,4 @@ Canadian Nutrient File and Open Food Facts public APIs require no credentials. L
 
 ## Current untested follow-up
 
-Local changes address the run #90 decoder, date, accessibility-frame, search-dismissal, and calendar-return defects. `git diff --check` must pass before commit. They will be reported only after a new Actions run completes. Current Home geometry, five-icon dock, all existing themes and HealthKit-off configuration are preserved. Default visuals remain provisional and user approval is separate from technical tests. No production configuration or `main` branch has been modified.
+Commit `22c6ef4d71af3c0b2d2e2045d7520fb083af7334` addresses the run #90 decoder, date, accessibility-frame, search-dismissal, and calendar-return defects. **Actions #91 is running**; these changes remain unverified until it finishes. The local `git diff --check` was clean before commit. Current Home geometry, five-icon dock, all existing themes and HealthKit-off configuration are preserved. Default visuals remain provisional and user approval is separate from technical tests. No production configuration or `main` branch has been modified.
