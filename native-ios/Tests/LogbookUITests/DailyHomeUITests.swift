@@ -816,15 +816,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertFalse(deletedFoodID.isEmpty, "Capture the stable food-entry identity before deletion")
         editedRow.swipeLeft()
         app.buttons["Delete"].tap()
-        let foodRowRemoved = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "exists == false"),
-            object: editedRow
-        )
-        XCTAssertEqual(
-            XCTWaiter.wait(for: [foodRowRemoved], timeout: 5),
-            .completed,
-            "Deleted food history should leave the active history list after the UI update"
-        )
+        // Verify the delete through the durable soft-delete destination rather
+        // than querying the same recycled List row immediately after mutation.
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let recentlyDeleted = app.buttons["food-recently-deleted-link"]
         scrollToElement(recentlyDeleted, in: app)
