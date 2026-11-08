@@ -630,7 +630,8 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         scrollToElement(historyRows.firstMatch, in: app)
-        XCTAssertEqual(historyRows.count, 1, "Deleting a session removes it from the two-session active history list")
+        XCTAssertEqual(todaySessions.count, 1, "Deleting one of two same-day sessions leaves the other active session visible")
+        XCTAssertEqual(historyRows.count, 2, "The previous-day baseline record remains in the active history list")
         XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
         XCTAssertEqual(visiblePRRows.count, 1, "The earlier retained session still appears as a PR after the newest record is edited or deleted")
@@ -646,8 +647,9 @@ final class DailyHomeUITests: XCTestCase {
         let restoredWorkout = app.buttons["history-workout-\(deletedWorkoutID)"]
         scrollToElement(restoredWorkout, in: app, towardTop: true)
         XCTAssertTrue(restoredWorkout.waitForExistence(timeout: 5), "Restoring should return that exact record to the Training history list")
-        XCTAssertEqual(historyRows.count, 2, "Restoring the session returns both same-day records")
-        XCTAssertEqual(visiblePRRows.count, 1, "Restoration recalculates records without duplicating the retained earlier PR")
+        XCTAssertEqual(todaySessions.count, 2, "Restoring the session returns both same-day records")
+        XCTAssertEqual(historyRows.count, 3, "Restoration preserves the separate previous-day baseline history record")
+        XCTAssertEqual(visiblePRRows.count, 1, "Restoration recalculates records without duplicating the retained PR")
     }
 
     func testProgramSwitchingPreservesIndependentRotationAndSkipAdvancesOnlyScheduledProgram() throws {
@@ -768,7 +770,14 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["food-option-manual"].tap()
         XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5))
         replaceText(in: app.textFields["manual-food-name"], with: "QA Manual Oats")
-        replaceText(in: app.textFields["manual-food-quantity"], with: "50")
+        let manualAmount = app.textFields["manual-food-quantity"]
+        manualAmount.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
+        let amountBeforeReplacement = manualAmount.value as? String ?? ""
+        if !amountBeforeReplacement.isEmpty {
+            manualAmount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: amountBeforeReplacement.count))
+        }
+        manualAmount.typeText("50")
+        XCTAssertEqual(manualAmount.value as? String, "50", "The manual serving amount must be replaced, not appended to its 100 g default")
         replaceText(in: app.textFields["manual-food-calories"], with: "380")
         replaceText(in: app.textFields["manual-food-protein"], with: "13")
         replaceText(in: app.textFields["manual-food-carbohydrates"], with: "68")
