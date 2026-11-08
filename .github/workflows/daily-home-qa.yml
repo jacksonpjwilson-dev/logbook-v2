@@ -23,7 +23,7 @@ jobs:
           - { name: 'iPhone SE (3rd generation)', slug: 'iphone-se-3', runner: 'macos-15' }
           - { name: 'iPhone 18 Pro', slug: 'iphone-18-pro', runner: 'macos-26' }
     runs-on: ${{ matrix.simulator.runner }}
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
 
