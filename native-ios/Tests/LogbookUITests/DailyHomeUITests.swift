@@ -1046,8 +1046,11 @@ final class DailyHomeUITests: XCTestCase {
         copy.tap()
         XCTAssertTrue(app.navigationBars["Copy meals"].waitForExistence(timeout: 5))
         app.buttons["copy-food-add"].tap()
-        XCTAssertTrue(app.staticTexts["copy-food-status"].label.contains("Copied 1 food entries"))
-        XCTAssertEqual(app.staticTexts["copy-food-status"].label, "Copied 1 food entries to \(today).")
+        app.swipeUp()
+        let copyStatus = app.staticTexts["copy-food-status"]
+        XCTAssertTrue(copyStatus.waitForExistence(timeout: 5))
+        XCTAssertTrue(copyStatus.label.contains("Copied 1 food entries"))
+        XCTAssertEqual(copyStatus.label, "Copied 1 food entries to \(today).")
         app.buttons["copy-food-replace"].tap()
         XCTAssertEqual(app.staticTexts["copy-food-status"].label, "Copied 1 food entries to \(today).")
         attachScreenshot(of: app, named: "Food-Copy-Add-Replace-Candidate")
