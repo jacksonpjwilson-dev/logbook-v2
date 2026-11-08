@@ -78,14 +78,6 @@ struct FoodScreen: View {
                 nutritionTrendsSection
                 foodToolsSection
             }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 24).onEnded { value in
-                    let horizontal = value.translation.width
-                    let vertical = value.translation.height
-                    guard abs(horizontal) > abs(vertical) * 1.4 else { return }
-                    shiftDay(horizontal < 0 ? 1 : -1)
-                }
-            )
             .navigationTitle("Food")
             .onAppear { applyPendingFoodFocus(using: proxy) }
             .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
@@ -197,9 +189,17 @@ struct FoodScreen: View {
                 MacroTile(name: "Carbs", value: totals.carbohydrates ?? 0, goal: targets.carbohydrates, color: .blue)
                 MacroTile(name: "Fat", value: totals.fat ?? 0, goal: targets.fat, color: .orange)
             }
+            .contentShape(Rectangle())
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24).onEnded { value in
+                    let horizontal = value.translation.width
+                    let vertical = value.translation.height
+                    guard abs(horizontal) > abs(vertical) * 1.4 else { return }
+                    shiftDay(horizontal < 0 ? 1 : -1)
+                }
+            )
             .accessibilityIdentifier("food-macro-swipe-area")
             .accessibilityElement(children: .combine)
-            .contentShape(Rectangle())
 
         } header: {
             HStack {
