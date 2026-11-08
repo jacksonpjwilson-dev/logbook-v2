@@ -1,40 +1,27 @@
 # Logbook v2 handoff audit and Default gate
 
-## Current Training UI verification — 2026-11-07
+## Current Training UI verification — 2026-11-08
 
-The current UI workflow milestone is not green. Branch `codex/default-theme-gate1` retains run #42 (`85783dac2f65767e4d762064df46b9d81cda8c35`) as the last fully green app-source baseline. Run #66 (`7492512db7cb1085c90ccee193d376289561f781`) compiled and passed 34 unit tests on iPhone 16 and SE but failed UI cases on both. iPhone 18 Pro remains skipped/untested. See the current test-by-test record in [REPORT.md](REPORT.md) and [TRAINING_PHASE2.md](TRAINING_PHASE2.md).
+**Branch:** `codex/default-theme-gate1`
+**App source:** `f4b2cca17b3ba6bab2207783438f2296ffe93083`
+**Tested commit:** `dfd8678efdc354d47aac0e549850a46bae533cdd`
+**Evidence:** [GitHub Actions run #80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049)
 
-Runs #65–#66 verified some flows partially on iPhone 16: the split editor reorder/search/custom exercise workflow and explicit progression acceptance each passed in one run; subsequent full-run failures show the drag assertion is intermittent. Completion-summary UI opened, but historical completion assertion used an incorrect expected label. Timer pause state and small-device set-entry access remain unresolved in those runs.
+Run #80 compiled and executed the QA workflow on iPhone 16 and iPhone SE (3rd generation), iOS 18.5. Each ran 34 unit tests and 7 UI tests: **41 passed, 0 failed, 0 skipped per device**. The iPhone 18 Pro test step was skipped; it remains **untested**. Run #79 previously failed the iPhone 16 drag-reorder assertion (40/41 there) but passed on SE (41/41). The test-only centered/slow-drop correction in `dfd8678` passed on both devices in #80. Run #80 is the latest fully green app/test evidence; run #42 is the historical green baseline before these expanded UI tests.
 
-Commits `8e20443`, `33e5356` and `5fa556d` contain targeted UI-state and test-selector corrections. The current source head is not considered verified until the queued simulator run completes. Home exterior geometry and the approved theme catalogue were not changed.
+The passing UI suite drives real app screens through: Daily and all four Home pages, small check-in regions, Training Home/calendar, workout start and set entry, pinned rest timer and relaunch recovery, Workout Split editing/reordering, exercise search/selection/custom creation and prescription changes, explicit progression acceptance, completion summary, historical corrections, deletion and Recently Deleted restoration. The 34 unit tests include timer controls/recovery, rotation rules, split order, session persistence, PR baseline/recalculation and related Training business logic.
 
-The Training Split’s empty unused positions when the synthetic program has one real workout match master spec §2.3 (“for fewer than 8 items, leave room rather than fabricating tiles”). The 8-workout fixture capture fills all eight positions. No invented workout content was added.
+The blue rest timer is pinned immediately below the Active Workout header and outside the scrollable set list. Run #80 includes captures and an assertion that it stays visible above the exercise fields while scrolling. The approved 2×4 Home geometry and five-icon dock are unchanged.
 
-No visual baseline was approved. Original binary references remain outside the GitHub repository; see `docs/handoff-v2/themes/REFERENCE_INDEX.md` for the exact 26 filenames and target folders. HealthKit remains disabled, and no production configuration or main branch changed.
+The Training Split with one actual workout leaves seven cells empty. This follows master spec §2.3, which says not to fabricate entries. The eight-workout synthetic candidate fills the same fixed geometry. The request to remove the empty-space appearance is in tension with this explicit rule; no alternate approved content is available, so the empty positions remain and the conflict is recorded.
 
----
+Default appearance and active-workout visuals remain **pending human review**. Actual candidates from iPhone 16 and SE are in `/workspace/logbook-training-review-run80/index.html` and `/workspace/logbook-training-review-run80.zip`; none is a protected baseline. Active Workout and completion/history sheets use grouped system surfaces instead of Home’s translucent style, and completion has substantial unused upper area. There is no screen-specific source art to authorize a correction.
 
-## Latest Training Phase 2 audit — 2026-11-07
+The 26 original binary theme references are present in the supplied handoff workspace but not in the repository. Their exact filenames and target category folders are listed in `docs/handoff-v2/themes/REFERENCE_INDEX.md`; four Glass images are thumbnail-only. No theme, baseline, production configuration or `main` branch was changed. HealthKit remains disabled.
 
-**Branch:** `codex/default-theme-gate1`  
-**Tested implementation commit:** `85783dac2f65767e4d762064df46b9d81cda8c35`  
-**CI evidence:** [run #42](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800), iPhone 16 and iPhone SE.
+## Historical audit record — 2026-11-06
 
-The Training source changes are implemented on the isolated development branch. The last successful run built the app and passed 33 unit tests plus 4 UI tests on each available device (37/37 on each). The UI test exercised timer start and app termination/relaunch recovery. Run #41 failed on both devices because the blue timer card showed stale “Ready” text while the workout footer counted down. Commit `85783da` corrected the timer read path; run #42 passed on both devices.
-
-- [iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13584290732) and [iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583373258) contain six real simulator PNG captures and test reports each.
-- [iPhone 18 Pro artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800/artifacts/13583483232) contains only the simulator-unavailable report. The test was skipped; this device is untested.
-- Run #26 failed to compile before tests; subsequent simulator runs verify that issue was corrected.
-- Program rotations, sessions, sets, supersets, history, PRs, timer controls and recovery have store-level tests. UI coverage is narrower: Home navigation, Training Split/calendar navigation, workout start, timer and session recovery. Full UI entry/completion, split editor, progression prompt and historical recovery interactions remain to be automated.
-- Home grid geometry was not changed. The iPhone SE / iPhone 16 measurements and 36 pt dock clearance are recorded in `TRAINING_PHASE2.md`.
-- Default visual candidates remain unapproved. No baseline or approved theme was changed. HealthKit stayed disabled; no production configuration or `main` branch was modified.
-
-This current status supersedes the historical snapshots below. Earlier audit notes are retained as dated project history and may describe older source states.
-
-**Original audit snapshot date:** 2026-11-06 (historical; current status is above)  
-**Source package:** `LOGBOOK_CODEX_COMPLETE_VISUAL_HANDOFF_v2.zip`  
-**Authority:** `LOGBOOK_MASTER_SPEC.md` v1.2 and theme addendum §16.  
-**Historical source snapshot:** branch `codex/default-theme-gate1`, commit `9d6a724655218de42f0f4b70f66f9be37c7db12e`, tested in run 42274999088. This historical note is superseded by the current Training Phase 2 source commit above.
+The audit sections below are retained for provenance and describe older snapshots. The current evidence above and the row-level canonical tracker supersede their historical test counts and implementation statuses.
 
 ## Environment and evidence limits
 
@@ -82,8 +69,8 @@ For gap `g = 9 pt`, safe grid width `W`, and available grid height `H`, the impl
 
 `cell = min((W - g) / 2, (H - 3g) / 4)`
 
-`small = cell × cell`  
-`medium = (2 × cell + g) × cell`  
+`small = cell × cell`
+`medium = (2 × cell + g) × cell`
 `large = (2 × cell + g) × (2 × cell + g)`
 
 The UI test asserts these equations and checks the bottom small widgets remain above the dock. iPhone 16 / iOS 18.5 measured: large `(62.67, 177.00, 267.67, 267.67)`, medium `(62.67, 453.67, 267.67, 129.00)`, small-left `(62.67, 591.67, 129.33, 129.33)`, small-right `(201.00, 591.67, 129.33, 129.33)`, dock item top at `y=755.67`. Small widgets end at `y=721`, 34.33 points above the dock. iPhone 18 Pro and smaller-size capture remain to be run.

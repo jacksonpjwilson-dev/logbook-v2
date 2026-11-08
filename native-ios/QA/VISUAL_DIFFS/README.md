@@ -1,19 +1,21 @@
 # Default visual comparison status
 
-## Actual simulator evidence
+## Current real Simulator evidence
 
-Four real simulator PNG candidates were captured on iPhone 16 / iOS 18.5 from tested commit `9d6a724655218de42f0f4b70f66f9be37c7db12e` in [GitHub Actions run 42274999088](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42274999088). The run passed 7 tests and reported no missing asset warnings. The downloadable review gallery contains Daily, Training, Food, and Progress & History. No screenshot is a protected baseline.
+The latest candidate captures were produced from test commit `dfd8678efdc354d47aac0e549850a46bae533cdd` on iPhone SE (3rd generation) and iPhone 16 / iOS 18.5 in [GitHub Actions run #80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049). Each device passed 34 unit + 7 UI tests. The iPhone 18 Pro QA step was skipped and remains untested.
+
+- Gallery HTML: `/workspace/logbook-training-review-run80/index.html`
+- Downloadable gallery ZIP: `/workspace/logbook-training-review-run80.zip`
+- There are 24 actual XCTest PNG captures (12 per available device). They are candidates only, not approved or protected baselines.
 
 ## Default reference comparison
 
-- `themes/references/defaults/default_CONCEPT.png` and `default_COMPOSITE_CROP.png` are concept/promotional visual-style references, not exact pixel baselines. Per the handoff, their widget layouts and placeholder content were not copied.
-- `themes/backgrounds/default_PROVISIONAL_BLUR.jpg` is provisional background artwork, not the final approved source. It loaded in the latest simulator run.
-- `themes/tokens/theme_manifest.PROVISIONAL.json` explicitly labels palette/material estimates as provisional.
+- `themes/references/defaults/default_CONCEPT.png` and `default_COMPOSITE_CROP.png` are visual-style references, not exact pixel baselines. Their promotional widget content and layout are not copied.
+- The current Daily candidate uses the pale neutral/blue background, rounded translucent card surfaces, blue progress accents and five-icon dock. The four Daily widgets remain in the approved order and fit above the dock on both tested simulators.
+- Daily geometry from run #80: iPhone SE large 212.35 × 212.35 pt, medium 211.5 × 101.25 pt, small ~102 × 102 pt; iPhone 16 large 268.52 × 268.52 pt, medium 267.5 × 129.25 pt, small 130.18 × 130.18 pt.
+- Training Home has a large empty region when the active program contains one real workout. This is consistent with master spec §2.3, which requires unused positions to remain empty rather than fabricating workouts. The eight-workout QA candidate fills the fixed arrangement. Do not populate those cells with invented content or change the exterior geometry without a new approved specification.
+- Active Workout and completion/history sheets use native grouped/light surfaces that differ from the translucent Home surface. No original screen-specific reference was supplied for these details, and no visual approval has been recorded. The completion sheet also has a large unused upper area; leave it for user review before changing presentation.
 
-The captured Default candidate uses the pale, blurred blue background, rounded translucent pale-blue cards, dark blue text, and blue accents. Its layout was changed to the master-spec grid and correct Daily widget order. Because there is no approved full-screen Default image or exact color/material values, pixel-difference scoring against the concept would be misleading. The final visual decision remains with the user.
+The supplied original theme binaries are available in the local handoff workspace but are not mirrored into GitHub. Their exact 26 filenames and destination folders are in `docs/handoff-v2/themes/REFERENCE_INDEX.md`; the four White/Blue/Grey/Champagne Glass references are thumbnail-only.
 
-## Measured geometry and visual findings
-
-The iPhone 16 capture shows a large square Calories & Protein Remaining card, a full-width medium Next Workout card, and two small square cards. All four are above the fixed five-item dock. See `AUDIT_RESULTS.md` for exact point frames. The Daily small-card header now fits; other pages visibly contain generic or incomplete widget content and remain audit-only. Daily Habits/check-in content and Next Workout details need implementation against the master spec in a later approved scope.
-
-No theme baselines have been approved, replaced, or added. Do not implement remaining v2 themes until the user approves this Default candidate.
+No theme baseline has been approved, overwritten or added. Do not propagate the remaining themes until Default receives explicit visual approval.

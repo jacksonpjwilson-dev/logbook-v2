@@ -1,46 +1,47 @@
 # Current Logbook milestone
 
-**Objective:** Complete end-to-end Training editor, active-workout, progression, completion and history UI verification, then review Default visuals. This is not a beta-complete milestone.
+**Objective:** Finish the Training UI workflow verification, review the actual Default Home and active-workout captures, and reconcile the canonical tracker. This milestone does not complete the app or authorize theme approval.
 
-**Development branch:** `codex/default-theme-gate1`  
-**Latest app/test source commit:** `5fa556da6da8775d26bffeb5c56cf899f6fd035b` (UI-test corrections; simulator result pending run #71). Later commits update evidence documents only and do not change app/test source.  
-**Last fully green app-source baseline:** `85783dac2f65767e4d762064df46b9d81cda8c35`, run [#42](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42396256800).  
-**Latest completed attempt:** run [#66](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418581935), source `7492512db7cb1085c90ccee193d376289561f781), failed UI tests.  
-**Newer attempts:** #67 and #68 in progress; #69–#71 queued when this note was written. The current source fixes are not yet simulator-verified.
+**Development branch:** `codex/default-theme-gate1`
+**App source under test:** `f4b2cca17b3ba6bab2207783438f2296ffe93083` (pinned rest timer card)
+**UI-test-only follow-up:** `dfd8678efdc354d47aac0e549850a46bae533cdd` (centered, slower drag gesture)
+**Last fully green source/test run:** [#80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049), tested commit `dfd8678efdc354d47aac0e549850a46bae533cdd`. Run #42 remains the historical green app-source baseline before the current Training workflows. Run #79 was not fully green.
+**Docs update:** the tracker, audit and report now reflect #80. This documentation-only commit will trigger the QA matrix again; it does not change the tested app-source or test bytes.
 
 ## Evidence status
 
-Run #42 remains the last complete green baseline: on iPhone 16 and iPhone SE (3rd generation), iOS 18.5, each ran 33 unit + 4 UI tests (37 passed, 0 failed, 0 skipped). Run #42 does not verify the newer Training editor, set-entry, progression, completion or history UI workflows. Its iPhone 18 Pro step was skipped; that device remains **untested**.
+Run #79 ran 34 unit tests and 7 UI tests per available device (iOS 18.5): SE passed 41/41; iPhone 16 passed 40 and failed 1 (the workout split drag assertion); iPhone 18 Pro test was skipped/untested.
 
-Run #66 compiled and passed all 34 unit tests on each available device. Its UI suite had 7 tests:
-- iPhone 16: 4 passed, 3 failed (rest timer Pause/Resume state, historical completion assertion, split reorder assertion).
-- iPhone SE: 3 passed, 4 failed (weight entry controls not exposed in the then-current collapsed-state UI, plus planned-exercise control discovery).
-- iPhone 18 Pro: skipped; **untested**.
-
-Run #65 separately passed the progression-acceptance workflow and split editor reorder/search/custom-exercise workflow on iPhone 16, while its full UI suite still failed 2 of 7 tests. A green isolated workflow does not make the full milestone green.
-
-Commits #8e20443, #33e5356 and #5fa556d address the observed collapsed initial exercise, timer control/test state, history label assertion, and unstable drag/stepper selectors. They are **implemented, awaiting run #69–#71 evidence**. Do not mark them verified until the simulator jobs complete.
+Run #80 ran the same 34 unit + 7 UI tests per available device: iPhone SE **41 passed, 0 failed, 0 skipped**; iPhone 16 **41 passed, 0 failed, 0 skipped**. The iPhone 18 Pro step was skipped and remains **untested**. Commit `dfd8678` adjusts the test gesture to drop at the destination-row center and briefly hold; the actual reorder UI test passed on both devices in #80. #42 remains the older green baseline before the expanded Training workflows; #80 is now the newer fully green source/test evidence.
 
 ## Current implementation boundary
 
-The source has persistent program/template editing, exercise search and custom creation, tracking modes and prescriptions, superset controls, active workout logging and rest timer, explicit progression acceptance, completion summary, historical set editing and Recently Deleted recovery. Store/business-logic coverage is broad, but the complete UI workflows are not yet verified across both available simulators.
+The app has real persistent Training UI flows for workout creation/reorder, exercise search and selection, custom exercises, prescription changes, active workout set entry, timer controls/recovery, explicit progression acceptance, completion summary, history editing, deletion and restoration. Run #80 passed the associated end-to-end UI flows on both available simulators. Superset editor interactions, program switching/skip in the UI, all tracking modes, declined progression, multi-session calendar drill-in, and PR presentation/recalculation UI still need dedicated acceptance tests.
 
-The approved Home geometry is unchanged. An eight-workout synthetic Training split fills the numbered 2-column × 4-row widget. With one actual workout, the other positions remain blank as required by §2.3 of the master specification; do not fabricate workouts to fill the card. The Default style remains pending visual review and no screenshot baseline is approved.
+The rest timer is now pinned in a blue card below the workout header and outside the scrollable exercise list. Run #80 screenshots and UI assertions confirm this on both devices, including after scrolling the set table. The approved 2×4 Home grid and dock have not changed.
 
-## Visual references and artifacts
+The Training Split screenshot with one real workout has seven unused positions. Master spec §2.3 explicitly says to leave room instead of fabricating tiles; no alternate content is approved. An eight-workout QA fixture fills all positions. This discrepancy is documented rather than “fixed” by inventing workouts or changing the approved geometry.
 
-Actual screenshots from earlier simulator runs are review candidates only:
-- [iPhone 16 run #65 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418302117/artifacts/13593435114)
-- [iPhone SE run #65 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42418302117/artifacts/13592459439)
-- Earlier local gallery: `/workspace/logbook-training-review/index.html` and PNGs under `/workspace/logbook-training-review/screenshots/` (run #58 candidates, predating the expanded-exercise fix).
+## Screenshots and visual status
 
-The 26 original binary reference files are still not mirrored in GitHub. Their exact names and destination folders are listed in [REFERENCE_INDEX.md](handoff-v2/themes/REFERENCE_INDEX.md); copy unchanged to `docs/handoff-v2/themes/references/{defaults,featured,glass,overview}/`. The local handoff workspace contains them. Four glass references are thumbnail-only and remain resolution-limited.
+A downloadable gallery of 24 real PNG candidates from run #80 is available at `/workspace/logbook-training-review-run80/index.html` and `/workspace/logbook-training-review-run80.zip`. Every capture is labeled by device and workflow and is **not an approved baseline**. See `native-ios/QA/VISUAL_DIFFS/README.md`.
+
+Daily grid measurements from run #80 (points):
+
+| Device | Large | Medium measured | Small left / right | Dock frame |
+|---|---:|---:|---:|---:|
+| iPhone SE (3rd generation) | 212.35 × 212.35 | 211.5 × 101.25 | 101.85 × 101.85 / 102.35 × 101.85 | (19, 606.5, 67.5, 47) |
+| iPhone 16 | 268.52 × 268.52 | 267.5 × 129.25 | 130.18 × 130.18 / 130.18 × 130.18 | (19, 757.67, 71, 47) |
+
+No widget baseline was approved. The Home candidates show no clipping and the dock remains visible. The Active Workout and completion-summary sheets use standard grouped/light surfaces rather than the Home’s translucent Default surface; no original screen-specific visual reference is available to make a pixel comparison. Review remains pending.
+
+The 26 original theme binary references are accessible in the supplied local handoff but are not in the repository. Their exact filenames and destination subfolders are recorded in `docs/handoff-v2/themes/REFERENCE_INDEX.md`. Four Glass assets are thumbnail-only. No theme or baseline was modified.
 
 ## Next work
 
-1. Let runs #67–#71 finish; inspect both iPhone 16 and SE job logs, not only the aggregate run badge.
-2. Fix any remaining app or test failures; capture active workout set entry, split editor, completion summary and history on current source.
-3. Preserve the fixed Home geometry and intentional unused split cells; review actual screenshot layout and default appearance without changing themes.
-4. Update the tracker and audit from exact completed evidence. Keep visual approval separate from test success.
+1. Check the Actions run triggered by this documentation update; keep #80 as the app-source test evidence.
+2. Resolve remaining Training UI coverage gaps without changing Home geometry.
+3. Review Default appearance and resolve the Training Split empty-space request against the explicit master-spec rule before changing its internal layout.
+4. Keep HealthKit disabled, and keep all changes on this development branch; no production configuration or `main` changes.
 
-HealthKit remains disabled. No production configuration or `main` branch changes were made. The local execution workspace has no Xcode or iOS Simulator.
+This workspace has no local Xcode or iOS Simulator. Simulator builds and screenshots are produced by GitHub Actions.
