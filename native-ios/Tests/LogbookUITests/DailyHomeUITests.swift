@@ -501,7 +501,7 @@ final class DailyHomeUITests: XCTestCase {
             guard let raw = suggestedText.components(separatedBy: "·").last else { return nil }
             return Double(raw.replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces))
         }()
-        XCTAssertNotNil(suggestedLoad, "The suggestion should expose its proposed load: \(suggestedText)")
+        let expectedSuggestedLoad = try XCTUnwrap(suggestedLoad, "The suggestion should expose its proposed load: \(suggestedText)")
         let weight = inputField(app, labelled: "Weight in kilograms")
         XCTAssertTrue(weight.exists)
         XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), suggestedLoad, "Suggested load must not be applied before explicit acceptance")
@@ -514,8 +514,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertFalse(suggestion.exists, "Accepting the suggestion dismisses the optional prompt")
         let acceptedWeight = inputField(app, labelled: "Weight in kilograms")
         XCTAssertTrue(acceptedWeight.waitForExistence(timeout: 5))
-        let displayedWeight = Double(String(describing: acceptedWeight.value ?? "").replacingOccurrences(of: ",", with: "."))
-        XCTAssertEqual(displayedWeight, suggestedLoad, accuracy: 0.01,
+        let displayedWeight = try XCTUnwrap(Double(String(describing: acceptedWeight.value ?? "").replacingOccurrences(of: ",", with: ".")))
+        XCTAssertEqual(displayedWeight, expectedSuggestedLoad, accuracy: 0.01,
                        "Accepting \(suggestedText) should update the current set weight")
         attachScreenshot(of: app, named: "Training-Progression-Acceptance-Candidate")
     }
