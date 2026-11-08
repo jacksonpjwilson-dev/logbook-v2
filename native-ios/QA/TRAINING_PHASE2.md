@@ -1,40 +1,26 @@
 # Training system UI milestone status
 
-**Branch:** `codex/default-theme-gate1`
-**Latest completed Training source/test evidence:** run #80 (`dfd8678efdc354d47aac0e549850a46bae533cdd`); subsequent Training/Food changes are not yet verified.
-**UI-test-only follow-up:** `dfd8678efdc354d47aac0e549850a46bae533cdd`
-**Latest fully green evidence:** [run #80](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42430593049), tested commit `dfd8678efdc354d47aac0e549850a46bae533cdd`.
+**Development branch:** `codex/default-theme-gate1`
+**Latest tested commit:** `10fd85f930b437f8189c048b7e3d2e598b547e8a`
+**Evidence:** [Actions run #85](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42449791762)
 
-## Implemented workflows and verified scope
+## Run #85
 
-- **Workout editor:** The end-to-end UI test creates a workout, enters edit mode, drags a workout, searches the built-in exercise library, selects an exercise, creates a custom exercise, and changes sets, reps and exercise-specific rest. Run #80 passed the workflow on both iPhone SE and iPhone 16. Expanded program/superset/tracking/decline/multi-session/PR UI assertions were not executed in #83 because compilation failed; the fix is published in `7b7ba8c` and run #84 is in progress.
-- **Active workout and rest timer:** UI test verifies current exercise expansion, the five-column set table, weight entry, completion of a set, +15-second extension, pause/resume, termination/relaunch recovery and Resume Workout navigation. The blue timer is tested and captured above the scrollable exercise list. Passed on both available devices in run #80.
-- **Progression:** A real saved prior workout produces a suggestion on the next session; the test proves it is not applied before explicit acceptance and is applied afterward. Passed on both devices in #80. Declining a suggestion is not yet UI-tested.
-- **Completion/history:** The UI test saves a partially completed session, captures the summary, edits historical weight/reps/completion/notes, deletes the workout and restores it from Recently Deleted. Passed on both devices in #80. PR-display/recalculation and multi-session calendar navigation are not covered end to end.
-- **Training Home:** The UI test exercises the split/calendar and date/session navigation. A real one-workout fixture leaves seven positions empty; an eight-workout screenshot candidate fills the full fixed 2×4 layout.
+Build succeeded on iPhone SE (3rd generation) and iPhone 16. Each executed 42 unit tests with 40 passing and 2 failing. iPhone 16 executed 11 UI tests with 8 passing and 3 failing; iPhone SE executed 11 UI tests with 7 passing and 4 failing. The iPhone 18 Pro test step was skipped and remains **untested**. Failures are described in `REPORT.md`.
 
-## Exact run #80 outcomes
+The unit failures were inaccurate test setup/expectations: missing required legacy recipe identifier and an undercount of three matching destination entries soft-deleted by Replace. The UI decline check matched an ambiguous TextField and the restore assertion checked a differently sorted History row; both are corrected locally using stable identifiers. Neither correction has yet been run in CI.
 
-Each device executed **34 unit tests + 7 UI tests** on iOS 18.5.
+## Evidence for implemented Training paths
 
-- **iPhone SE (3rd generation):** 41 passed, 0 failed, 0 skipped.
-- **iPhone 16:** 41 passed, 0 failed, 0 skipped.
-- **iPhone 18 Pro:** QA test action skipped because the simulator was unavailable; **untested**.
+- **Program and rotation:** UI path switches between independently rotating programs and confirms scheduled skip advances only the selected program without creating history. Passed in run #85 on both available simulators.
+- **Workout Split editor:** UI path creates and reorders templates, searches/selects a catalog exercise, creates a custom exercise, and configures prescription/tracking; passed in #85 on SE and iPhone 16.
+- **Superset and tracking:** UI path creates a superset and checks rest starts after the round; exercise mode selection and its store behavior were exercised. Passed in #85 on available devices.
+- **Timer and live session:** existing UI and store coverage exercises the blue pinned timer, default/override durations, +15, pause/resume, skip/Ready behavior and persisted recovery. Earlier green evidence is run #80; current changes are covered by #85 where cases executed.
+- **Progression:** acceptance path and completion summary/PR presentation ran in #85; the new decline check failed due to an ambiguous element, and the corrected stable-set check is pending CI.
+- **History:** store tests cover multiple same-day sessions, edits, soft delete/recovery, first-session baseline and PR recalculation. The UI path reached deletion/recovery but SE’s final assertion used the wrong history row; exact restored-ID check is pending CI. Calendar drill-in for multiple same-date sessions and UI-visible PR recalculation after historical edit/deletion remain incomplete.
 
-The iPhone 16 drag assertion had failed in #79. Commit `dfd8678` adjusts the XCTest drop point to the destination-row center and holds briefly. Run #80 passed the actual reorder UI test on both available simulators.
+## Current scope gaps
 
-## Remaining Training acceptance
+Training implementation is broad but not yet fully accepted. Remaining direct checks include a rest-day UI path; preserving a draft's originating program when switching programs; calendar navigation among multiple sessions on one date; visible PR updates after historical corrections/deletions; and all currently pending corrected UI assertions. Run #85 aggregate failures mean no blanket Training completion claim is appropriate.
 
-- Explicit UI flows for creating/switching programs, program-specific rotations, scheduled skip and rest days.
-- UI interaction for tracking-mode changes and superset grouping/round completion.
-- Declined progression path; all prescription modes and validation.
-- Multi-session dates and individual session navigation in History; complete PR presentation/recalculation after historical edits/deletes.
-- Visual review of workout editor, active workout, completion summary and History.
-
-## Visual and device limits
-
-The Home grid and five-icon dock remain unchanged. The single-workout split’s open cells are intentional per master spec §2.3; adding filler would contradict the specification. The full eight-item screenshot is included for comparison. The Active Workout and summary sheets have grouped iOS surfaces and a large unused upper area in the completion presentation; the supplied original references do not define those screens closely enough to approve a redesign.
-
-A gallery of 24 real run #80 PNG captures is at `/workspace/logbook-training-review-run80/index.html` and `/workspace/logbook-training-review-run80.zip`. Images are review candidates only. Reference binary filenames and target subfolders are listed in `docs/handoff-v2/themes/REFERENCE_INDEX.md`; the 26 supplied images are not yet mirrored into the GitHub repository.
-
-This Linux workspace cannot run Xcode locally. HealthKit remains disabled. No production configuration or `main` branch was changed.
+The approved Home grid remains 2×4 with exact widget sizes; programs with fewer than eight workouts leave unused cells empty. Visual styling is provisionally accepted only; no final visual approval or baseline protection action has been taken. Home geometry, dock and 16 theme designs were not changed. The iPhone 18 Pro is untested. HealthKit is disabled.

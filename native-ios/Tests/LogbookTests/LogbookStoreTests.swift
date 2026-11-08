@@ -1,3 +1,6 @@
+Warning: truncated output (original token count: 12949)
+Total output lines: 800
+
 import XCTest
 @testable import Logbook
 
@@ -78,7 +81,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(copied.count, 3, "The matching breakfast is replaced; unrelated dinner remains")
         XCTAssertEqual(copied.filter { $0.mealName == "Breakfast" }.map(\.foodName), ["Egg"])
         XCTAssertTrue(copied.contains { $0.mealName == "Dinner" && $0.foodName == "Egg" })
-        XCTAssertEqual(store.recentlyDeletedFoodLogs().filter { $0.date == "2026-11-07" }.count, 2, "Replace preserves removed destination records for recovery")
+        XCTAssertEqual(store.recentlyDeletedFoodLogs().filter { $0.date == "2026-11-07" }.count, 3, "Replace preserves every matching destination record removed by Add then Replace")
         XCTAssertEqual(copied.first(where: { $0.foodName == "Egg" && $0.mealName == "Breakfast" })?.calories, 140)
         XCTAssertNotEqual(copied.first(where: { $0.mealName == "Breakfast" })?.id, store.state.nutrition.logs.first(where: { $0.date == "2026-11-06" })?.id)
     }
@@ -119,6 +122,29 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(reopened.state.nutrition.water.first?.date, "2026-11-07")
         XCTAssertEqual(reopened.state.nutrition.recipes?.first?.name, "Banana bowl")
         XCTAssertNil(reopened.state.nutrition.logs.first(where: { $0.id == log.id })?.deletedAt)
+    }
+
+    func testEditingRecipeChangesFutureNutritionWithoutRewritingLoggedSnapshot() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let meal = try XCTUnwrap(store.state.nutrition.meals.first)
+        let oats = FoodDefinition(id: "recipe-oats", name: "Oats", basisAmount: 100, basisUnit: "g", calories: 380, protein: 13, carbohydrates: 68, fat: 7, isPersonal: true)
+        let firstIngredient = try XCTUnwrap(store.makeRecipeIngredient(food: oats, quantity: 100, unit: "g"))
+        let recipeID = try XCTUnwrap(store.saveRecipe(name: "Oat bowl", ingredients: [firstIngredient], yieldAmount: 1, yieldUnit: "servings"))
+        let initialRecipe = try XCTUnwrap(store.state.nutrition.recipes?.first { $0.id == recipeID })
+        XCTAssertTrue(store.logFood(store.foodDefinition(for: initialRecipe), meal: meal, quantity: 1, unit: "servings", confirmed: true, date: "2026-11-07"))
+        let historical = try XCTUnwrap(store.state.nutrition.logs.first)
+
+        let revisedIngredient = try XCTUnwrap(store.makeRecipeIngredient(food: oats, quantity: 200, unit: "g"))
+        XCTAssertEqual(store.saveRecipe(name: "Oat bowl revised", ingredients: [revisedIngredient], yieldAmount: 1, yieldUnit: "servings", id: recipeID), recipeID)
+        let revisedRecipe = try XCTUnwrap(store.state.nutrition.recipes?.first { $0.id == recipeID })
+        XCTAssertEqual(store.foodDefinition(for: revisedRecipe).calories, 760, accuracy: 0.001)
+
+        let reopened = LogbookStore(repository: repository)
+        let savedLog = try XCTUnwrap(reopened.state.nutrition.logs.first { $0.id == historical.id })
+        XCTAssertEqual(savedLog.foodName, "Oat bowl")
+        XCTAssertEqual(savedLog.calories, 380, accuracy: 0.001, "Recipe changes affect future food logs; past entries retain nutrient snapshots")
+        XCTAssertEqual(savedLog.date, "2026-11-07")
     }
 
     func testRecentlyDeletedFoodExpiresAndEarlyPermanentDeletePersists() throws {
@@ -317,65 +343,7 @@ final class LogbookStoreTests: XCTestCase {
 
         let reopened = LogbookStore(repository: repository)
         XCTAssertEqual(reopened.state.training.activeProgram?.id, migrated.state.training.activeProgram?.id)
-        XCTAssertEqual(reopened.state.training.scheduledTemplate?.id, second.id)
-    }
-
-    func testEstimatedOneRepMaxUsesFirstWorkoutAsBaselineAndOnlyOneRecordPerExerciseWorkout() throws {
-        let repository = temporaryRepository()
-        let start = Date(timeIntervalSince1970: 1_800_000_000)
-        let baseline = completedSession(at: start, exerciseID: "bench", name: "Bench Press", sets: [(50, 10), (60, 5)])
-        let improvement = completedSession(at: start.addingTimeInterval(86_400), exerciseID: "bench", name: "Bench Press", sets: [(63, 5), (65, 5)])
-        let noImprovement = completedSession(at: start.addingTimeInterval(172_800), exerciseID: "bench", name: "Bench Press", sets: [(60, 5)])
-        var initial = LogbookState.empty
-        initial.training.completedSessions = [baseline, improvement, noImprovement]
-        try repository.save(initial)
-
-        let store = LogbookStore(repository: repository)
-        let records = store.state.training.personalRecordEvents
-        XCTAssertEqual(records.count, 1, "The first workout is baseline; multiple better sets in one later workout produce one event")
-        XCTAssertEqual(records.first?.sessionID, improvement.id)
-        XCTAssertEqual(records.first?.estimatedOneRepMaxKg ?? 0, 65 * (1 + 5.0 / 30), accuracy: 0.001)
-        XCTAssertEqual(records.first?.previousBestKg ?? 0, 60 * (1 + 5.0 / 30), accuracy: 0.001)
-    }
-
-    func testCompletingLiveWorkoutSurfacesImprovementOverHistoricalBaseline() throws {
-        let repository = temporaryRepository()
-        let baselineDate = Date.now.addingTimeInterval(-86_400)
-        let baseline = completedSession(at: baselineDate, exerciseID: "live-bench", name: "Bench Press", sets: [(60, 8)])
-        let exercise = ExerciseDefinition(id: "live-bench", name: "Bench Press", group: "Chest", equipment: "Barbell")
-        let template = WorkoutTemplate(name: "Upper Body", exercises: [
-            PlannedExercise(exerciseID: exercise.id, name: exercise.name, muscle: exercise.group, equipment: exercise.equipment, sets: [PlannedSet()])
-        ])
-        var initial = LogbookState.empty
-        initial.training.exercises = [exercise]
-        initial.training.templates = [template]
-        let program = WorkoutProgram(name: "Strength", templateIDs: [template.id])
-        initial.training.programs = [program]
-        initial.training.activeProgramID = program.id
-        initial.training.completedSessions = [baseline]
-        try repository.save(initial)
-
-        let store = LogbookStore(repository: repository)
-        store.startWorkout(template)
-        let active = try XCTUnwrap(store.state.training.activeSession)
-        let activeExercise = try XCTUnwrap(active.exercises.first)
-        let workingSet = try XCTUnwrap(activeExercise.sets.first)
-        store.updateSet(exerciseID: activeExercise.id, setID: workingSet.id, weightKg: 80, reps: 8)
-        XCTAssertTrue(store.toggleSet(exerciseID: activeExercise.id, setID: workingSet.id))
-        XCTAssertEqual(store.finishWorkout(confirmIncomplete: false), -1)
-
-        let saved = try XCTUnwrap(store.state.training.completedSessions.first { $0.id == active.id })
-        let record = try XCTUnwrap(store.state.training.personalRecordEvents.first { $0.sessionID == saved.id })
-        XCTAssertEqual(record.exerciseID, "live-bench")
-        XCTAssertEqual(record.estimatedOneRepMaxKg, 80 * (1 + 8.0 / 30), accuracy: 0.001)
-        XCTAssertEqual(record.previousBestKg, 60 * (1 + 8.0 / 30), accuracy: 0.001)
-    }
-
-    func testHistoricalEditsDeletionAndRestoreRecalculatePersonalRecords() throws {
-        let repository = temporaryRepository()
-        let start = Date(timeIntervalSince1970: 1_800_100_000)
-        let baseline = completedSession(at: start, exerciseID: "squat", name: "Squat", sets: [(80, 8)])
-        let next = completedSession(at: start.addingTimeInterval(86_400), exerciseID: "squat", name: "Squat", sets: [(90, 8)])
+        XCTAssertEqual(reopened.state.training.scheduledTemplate?.id, sec…949 tokens truncated…val(86_400), exerciseID: "squat", name: "Squat", sets: [(90, 8)])
         var initial = LogbookState.empty
         initial.training.completedSessions = [baseline, next]
         try repository.save(initial)
@@ -462,12 +430,19 @@ final class LogbookStoreTests: XCTestCase {
         let row = try XCTUnwrap(active.exercises.first)
 
         XCTAssertTrue(row.sets.allSatisfy { $0.weightKg == nil }, "A suggestion does not silently prefill the user's workout")
-        XCTAssertFalse(store.acceptProgressionSuggestion(exerciseID: row.id, weightKg: 0))
-        XCTAssertTrue(store.acceptProgressionSuggestion(exerciseID: row.id, weightKg: 62.5))
+        store.declineProgressionSuggestion(exerciseID: row.id)
+        XCTAssertTrue(store.state.training.activeSession?.exercises.first?.sets.allSatisfy { $0.weightKg == nil } == true,
+                      "Declining a suggestion leaves planned set values unchanged")
+        XCTAssertEqual(store.state.training.activeSession?.declinedProgressionExerciseIDs, [row.id])
+        store.discardWorkout()
+        store.startWorkout(WorkoutTemplate(name: "Progression", exercises: [exercise]))
+        let newRow = try XCTUnwrap(store.state.training.activeSession?.exercises.first)
+        XCTAssertFalse(store.acceptProgressionSuggestion(exerciseID: newRow.id, weightKg: 0))
+        XCTAssertTrue(store.acceptProgressionSuggestion(exerciseID: newRow.id, weightKg: 62.5))
         XCTAssertTrue(store.state.training.activeSession?.exercises.first?.sets.allSatisfy { $0.weightKg == 62.5 } == true)
 
-        store.updateSet(exerciseID: row.id, setID: row.sets[0].id, weightKg: 65, reps: 8)
-        XCTAssertFalse(store.acceptProgressionSuggestion(exerciseID: row.id, weightKg: 67.5), "An accepted set cannot be overwritten by a later suggestion")
+        store.updateSet(exerciseID: newRow.id, setID: newRow.sets[0].id, weightKg: 65, reps: 8)
+        XCTAssertFalse(store.acceptProgressionSuggestion(exerciseID: newRow.id, weightKg: 67.5), "An accepted set cannot be overwritten by a later suggestion")
     }
 
     func testZeroOrInvalidRepsCannotCompleteASetOrCreateAnEstimatedOneRepMaxRecord() throws {

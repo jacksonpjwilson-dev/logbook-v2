@@ -1,5 +1,16 @@
 # Logbook v2 handoff audit and Default gate
 
+## Current milestone snapshot — 2026-11-08 (run #85)
+
+Latest tested commit `10fd85f930b437f8189c048b7e3d2e598b547e8a` built on iPhone SE and iPhone 16 but did not pass the complete suites. Each device ran 42 unit tests (40 pass, 2 fail); iPhone 16 ran 11 UI tests (8 pass, 3 fail) and iPhone SE ran 11 UI tests (7 pass, 4 fail). iPhone 18 Pro was skipped/untested. Exact failed checks and screenshots are recorded in `REPORT.md`.
+
+- **Training evidence:** run #85 passed program switching/scheduled skip, split editor/reorder/search/custom exercise, tracking mode/superset/rest, and workout completion summary/PR presentation paths on devices where those cases reached completion. UI coverage for declining a suggestion and restoring a historical session had unstable element selection; targeted stable-ID corrections are pending CI. The suite is therefore not a complete Training acceptance pass. Calendar drill-in for multiple same-day sessions and visible PR recalculation after history edits/deletes remain open.
+- **Food evidence:** run #85 passed most Food storage and UI cases but failed two incorrect test assumptions (legacy recipe fixture omitted required `id`; Replace test undercounted matching soft-deleted rows) and UI checks for the date swipe and hydration row. Selected-date Food persistence itself passed through the underlying assertions. New trend, copy, and food/water/recipe recovery tests remain unexecuted.
+- **Current local candidate:** adds a four-metric Nutrition trends control, omits unlogged days from chart marks and averages, adds recipe snapshot/copy/recovery UI coverage, corrects the #85 fixtures/assertions, and keeps date swipes off the compact DatePicker. It is not yet published or tested.
+- **Design and safety:** the user accepted Default visual styling only as provisional direction. Home widget geometry and all themes remain unchanged; no baseline is approved or overwritten. HealthKit stays disabled; no production data/configuration or `main` branch was touched.
+
+See `CURRENT_MILESTONE.md`, `REQUIREMENTS_TRACEABILITY.csv`, and `REPORT.md` for the tested/pending boundary.
+
 ## Training verification and Food milestone — current source audit (2026-11-08)
 
 Current source commit under review: `1cd8109f3e203d1b6d9e3241e975a2edaaa081e7` on development branch `codex/default-theme-gate1`. Run #84 compiled and executed on iPhone SE and iPhone 16 but failed (40 unit tests / 14 failures and 10 UI tests / 3 failures on each). Run #84 failure details and the local fixes are documented in REPORT.md and CURRENT_MILESTONE.md. Its iPhone 18 Pro QA step was skipped, so that simulator remains untested. Run #82 failed both available builds before tests because the large Food view expression exceeded Swift's type-check limit; the view was split into smaller computed sections/helpers before #83. See `REPORT.md` for actual results once completed.

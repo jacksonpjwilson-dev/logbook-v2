@@ -1,12 +1,37 @@
+Warning: truncated output (original token count: 13609)
+Total output lines: 1032
+
 import Charts
 import SwiftUI
 
 private enum FoodEntryMode { case search, recent, scan, manual }
+private enum FoodTrendMetric: String, CaseIterable, Identifiable, Hashable {
+    case calories, protein, carbohydrates, fat
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .calories: "Calories"
+        case .protein: "Protein"
+        case .carbohydrates: "Carbs"
+        case .fat: "Fats"
+        }
+    }
+    var unit: String { self == .calories ? "kcal" : "g" }
+    func value(in totals: NutritionTargets) -> Double? {
+        switch self {
+        case .calories: totals.calories
+        case .protein: totals.protein
+        case .carbohydrates: totals.carbohydrates
+        case .fat: totals.fat
+        }
+    }
+}
 
 struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var selectedDate = Date.now
     @State private var selectedMealID: UUID?
+    @State private var trendMetric: FoodTrendMetric = .calories
     @State private var addFoodMenu = false
     @State private var entryMode: FoodEntryMode = .search
     @State private var showAddFlow = false
@@ -33,12 +58,6 @@ struct FoodScreen: View {
             nutritionTrendsSection
             foodToolsSection
         }
-        .simultaneousGesture(DragGesture(minimumDistance: 48).onEnded { value in
-            let horizontal = value.translation.width
-            let vertical = value.translation.height
-            guard abs(horizontal) > abs(vertical) * 1.5 else { return }
-            shiftDay(horizontal < 0 ? 1 : -1)
-        })
         .navigationTitle("Food")
         .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
             Button("Search Foods") { entryMode = .search; showAddFlow = true }
@@ -101,6 +120,13 @@ struct FoodScreen: View {
                 MacroTile(name: "Carbs", value: totals.carbohydrates ?? 0, goal: targets.carbohydrates, color: .blue)
                 MacroTile(name: "Fat", value: totals.fat ?? 0, goal: targets.fat, color: .orange)
             }
+            .contentShape(Rectangle())
+            .simultaneousGesture(DragGesture(minimumDistance: 48).onEnded { value in
+                let horizontal = value.translation.width
+                let vertical = value.translation.height
+                guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+                shiftDay(horizontal < 0 ? 1 : -1)
+            })
         } header: {
             HStack {
                 Text(selectedDate.formatted(date: .complete, time: .omitted))
@@ -185,6 +211,7 @@ struct FoodScreen: View {
                 NavigationLink(destination: WaterLogEditorScreen(logID: log.id)) {
                     LabeledContent("\(log.milliliters) mL", value: log.createdAt.formatted(date: .omitted, time: .shortened))
                 }
+                .accessibilityIdentifier("water-history-\(log.id.uuidString)")
             }
             Button("Water goal…") { showWaterGoal = true }.accessibilityIdentifier("water-goal-edit")
         } header: { Text("Hydration") }
@@ -192,21 +219,39 @@ struct FoodScreen: View {
 
     private var nutritionTrendsSection: some View {
         let days = lastSevenDays(endingAt: selectedDate)
+        let calorieAverage = average(days.compactMap { $0.value.calories })
+        let proteinAverage = average(days.compactMap { $0.value.protein })
         return Section {
+            Picker("Nutrition trend", selection: $trendMetric) {
+                ForEach(FoodTrendMetric.allCases) { metric in Text(metric.title).tag(metric) }
+            }
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("food-trend-metric")
             Chart(days, id: \.key) { item in
-                BarMark(x: .value("Day", item.key), y: .value("Calories", item.value.calories ?? 0))
+                if let value = trendMetric.value(in: item.value) {
+                    BarMark(x: .value("Day", item.key), y: .value(trendMetric.title, value))
                     .foregroundStyle(.blue.gradient)
-                if let goal = store.state.nutritionTargets(on: item.key).calories {
+                }
+                if trendMetric == .calories, let goal = store.state.nutritionTargets(on: item.key).calories {
                     RuleMark(y: .value("Target", goal)).foregroundStyle(.secondary.opacity(0.5)).lineStyle(StrokeStyle(dash: [3, 3]))
                 }
             }
             .frame(height: 150)
             .accessibilityIdentifier("food-seven-day-chart")
+            .accessibilityLabel("\(trendMetric.title) over the last seven days")
+            HStack {
+                Text("Logged-day avg · \(calorieAverage.map(format) ?? "—") kcal")
+                    .accessibilityIdentifier("food-average-calories")
+                Spacer(minLength: 8)
+                Text("Protein avg · \(proteinAverage.map(format) ?? "—") g")
+                    .accessibilityIdentifier("food-average-protein")
+            }
+            .font(.caption)
             ForEach(days, id: \.key) { item in
                 HStack {
                     Text(item.date.formatted(.dateTime.weekday(.abbreviated).day()))
                     Spacer()
-                    Text(item.value.calories.map { "\(Int($0)) kcal" } ?? "No log")
+                    Text(trendMetric.value(in: item.value).map { "\(Int($0)) \(trendMetric.unit)" } ?? "No log")
                     Text(adherenceLabel(store.state.nutritionAdherence(on: item.key)))
                         .foregroundStyle(adherenceColor(store.state.nutritionAdherence(on: item.key)))
                         .frame(width: 92, alignment: .trailing)
@@ -264,6 +309,10 @@ struct FoodScreen: View {
     private func ratio(_ value: Double?, _ goal: Double?) -> Double { min(1, max(0, (value ?? 0) / max(1, goal ?? 1))) }
     private func remaining(_ goal: Double?, _ value: Double?) -> Int { max(0, Int((goal ?? 0) - (value ?? 0))) }
     private func format(_ value: Double) -> String { value.formatted(.number.precision(.fractionLength(0...2))) }
+    private func average(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
     private func lastSevenDays(endingAt end: Date) -> [(key: String, date: Date, value: NutritionTargets)] {
         (0..<7).compactMap { offset in
             guard let date = Calendar.current.date(byAdding: .day, value: offset - 6, to: end) else { return nil }
@@ -427,130 +476,7 @@ private struct FoodSearchScreen: View {
             }
             if isSearching { ProgressView("Searching Canadian Nutrient File and Open Food Facts…") }
             if let searchError { Text(searchError).font(.footnote).foregroundStyle(.secondary) }
-            Section(recentOnly ? "Recently logged" : (favoriteOnly ? "Favorites" : "Foods")) {
-                ForEach(visibleFoods) { food in
-                    HStack(spacing: 10) {
-                        Button { onSelect(food) } label: {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(food.name).font(.headline)
-                                Text("\(Int(food.calories)) kcal · \(Int(food.protein)) g protein per \(food.basisAmount.formatted()) \(food.basisUnit)")
-                                    .font(.caption).foregroundStyle(.secondary)
-                                Text(food.source).font(.caption2).foregroundStyle(.tertiary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("food-search-result-\(food.id)")
-                        Button {
-                            store.setFoodFavorite(food.id, isFavorite: !favorites.contains(food.id))
-                        } label: {
-                            Image(systemName: favorites.contains(food.id) ? "star.fill" : "star")
-                                .foregroundStyle(favorites.contains(food.id) ? .yellow : .secondary)
-                        }
-                        .buttonStyle(.plain).accessibilityLabel(favorites.contains(food.id) ? "Remove favorite" : "Add favorite")
-                        .accessibilityIdentifier("food-favorite-\(food.id)")
-                    }
-                }
-                if visibleFoods.isEmpty && !isSearching {
-                    ContentUnavailableView(recentOnly ? "No recent foods" : "No matching foods", systemImage: "fork.knife", description: Text(recentOnly ? "Logged foods are saved here for quick access." : "Search the local catalog and the Canadian Nutrient File / Open Food Facts, or use Manual Entry."))
-                }
-            }
-            if !recentOnly {
-                Section { Text("Canadian Nutrient File · Health Canada. Packaged-product data from Open Food Facts is community-contributed under its database license. Review provider values and verify the package label. Unverified portions are not offered as servings.").font(.caption2).foregroundStyle(.secondary) }
-            }
-        }
-        .searchable(text: $query, prompt: "Food or product name")
-        .task(id: query) { await runSearch(query) }
-    }
-
-    @MainActor private func runSearch(_ value: String) async {
-        remoteFoods = []
-        searchError = nil
-        guard !recentOnly, value.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else { return }
-        try? await Task.sleep(for: .milliseconds(350))
-        guard !Task.isCancelled else { return }
-        isSearching = true
-        defer { isSearching = false }
-        do {
-            let found = try await FoodCatalogService.shared.search(value)
-            guard !Task.isCancelled else { return }
-            remoteFoods = found
-            store.cacheFoodDefinitions(found)
-        } catch {
-            searchError = "Online providers are unavailable. Saved foods, recent foods and manual entry still work offline."
-        }
-    }
-}
-
-private struct FoodQuantityConfirmationScreen: View {
-    @EnvironmentObject private var store: LogbookStore
-    @Environment(\.dismiss) private var dismiss
-    let food: FoodDefinition
-    let meal: MealSlot
-    let date: String
-    @State private var quantity: Double
-    @State private var unit: String
-
-    init(food: FoodDefinition, meal: MealSlot, date: String) {
-        self.food = food; self.meal = meal; self.date = date
-        let options = FoodQuantityConfirmationScreen.units(for: food)
-        let initialUnit = options.first ?? food.basisUnit
-        _unit = State(initialValue: initialUnit)
-        let initialQuantity: Double
-        switch initialUnit {
-        case "g": initialQuantity = food.basisAmount
-        case "oz": initialQuantity = food.basisAmount * 0.0352739619
-        default: initialQuantity = 1
-        }
-        _quantity = State(initialValue: initialQuantity)
-    }
-
-    private var multiplier: Double { food.multiplier(for: quantity, unit: unit) ?? 0 }
-    private static func units(for food: FoodDefinition) -> [String] {
-        guard food.basisUnit.caseInsensitiveCompare("g") == .orderedSame else { return [food.basisUnit] }
-        var result = ["g", "oz"]
-        if let serving = food.verifiedServingGrams, serving > 0 { result.append("serving") }
-        return result
-    }
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                Section("Confirm amount · \(meal.name)") {
-                    Text(food.name).font(.headline)
-                    HStack {
-                        TextField("Amount", value: $quantity, format: .number.precision(.fractionLength(0...2)))
-                            .keyboardType(.decimalPad).accessibilityIdentifier("food-quantity")
-                        Picker("Unit", selection: $unit) {
-                            ForEach(Self.units(for: food), id: \.self) { Text($0).tag($0) }
-                        }
-                        .pickerStyle(.menu).accessibilityIdentifier("food-quantity-unit")
-                    }
-                    Text("\(date) · \(food.source)").font(.caption).foregroundStyle(.secondary)
-                }
-                Section("Nutrition preview") {
-                    LabeledContent("Calories", value: "\(Int(food.calories * multiplier)) kcal")
-                    LabeledContent("Protein", value: "\(Int(food.protein * multiplier)) g")
-                    LabeledContent("Carbohydrates", value: "\(Int(food.carbohydrates * multiplier)) g")
-                    LabeledContent("Fat", value: "\(Int(food.fat * multiplier)) g")
-                }
-            }
-            .navigationTitle("Review food")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Log food") {
-                        if store.logFood(food, meal: meal, quantity: quantity, unit: unit, confirmed: true, date: date) { dismiss() }
-                    }
-                    .disabled(quantity <= 0 || multiplier <= 0).accessibilityIdentifier("food-confirm-log")
-                }
-            }
-        }
-    }
-}
-
-private struct ManualFoodEntryScreen: View {
+            Section(recentOnly ? "Recently logged" : (favoriteOnly ? "Favorites" : "Foods")) …1609 tokens truncated…oodEntryScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
     let meal: MealSlot
