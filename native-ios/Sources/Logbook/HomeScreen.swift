@@ -218,69 +218,7 @@ private struct HomePageGrid: View {
 
     var body: some View {
         GeometryReader { proxy in
-            // One scalar controls both axes: the eight cells are true squares.
-            // Constrain the grid by the safe vertical space first when needed,
-            // then center the two-column grid instead of stretching its rows.
-            let cellSide = max(1, min((proxy.size.width - gap) / 2, (proxy.size.height - gap * 3) / 4))
-            let gridWidth = cellSide * 2 + gap
-            let gridLeading = max(0, (proxy.size.width - gridWidth) / 2)
-            ZStack(alignment: .topLeading) {
-                ForEach(page.widgets) { widget in
-                    let columns = widget.size == .small ? 1 : 2
-                    let rows = widget.size == .large ? 2 : 1
-                    let width = cellSide * CGFloat(columns) + gap * CGFloat(columns - 1)
-                    let height = cellSide * CGFloat(rows) + gap * CGFloat(rows - 1)
-                    ZStack(alignment: .topTrailing) {
-                        widgetContent(for: widget, width: width, height: height)
-
-                        if editing {
-                            Button { remove(widget.id) } label: {
-                                Image(systemName: "minus")
-                                    .font(.system(size: 11, weight: .bold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 25, height: 25)
-                                    .background(Color.red, in: Circle())
-                                    .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1))
-                            }
-                            .offset(x: -7, y: 7)
-                            .accessibilityLabel("Remove \(widget.kind.title) widget")
-                        }
-                    }
-                    .frame(width: width, height: height)
-                    .overlay {
-                        Rectangle().fill(Color.clear)
-                            .frame(width: width, height: height)
-                            .accessibilityElement(children: .ignore)
-                            .accessibilityFrame(CGRect(
-                                x: proxy.frame(in: .global).minX + gridLeading + CGFloat(widget.column) * (cellSide + gap),
-                                y: proxy.frame(in: .global).minY + CGFloat(widget.row) * (cellSide + gap),
-                                width: width,
-                                height: height
-                            ))
-                            .accessibilityLabel("\(widget.kind.title) widget frame")
-                            .accessibilityIdentifier("home-widget-frame-\(widget.kind.rawValue)")
-                            .allowsHitTesting(false)
-                    }
-                    .position(
-                        x: gridLeading + CGFloat(widget.column) * (cellSide + gap) + width / 2,
-                        y: CGFloat(widget.row) * (cellSide + gap) + height / 2
-                    )
-                    .rotationEffect(.degrees(editing ? ((widget.row + widget.column).isMultiple(of: 2) ? -1 : 1) * (wigglePhase ? 0.6 : -0.6) : 0))
-                    .transaction { transaction in
-                        if !editing { transaction.animation = nil }
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-            .overlay {
-                if page.widgets.isEmpty {
-                    VStack(spacing: 10) {
-                        Image(systemName: "square.grid.2x2").font(.system(size: 28, weight: .light))
-                        Text("This page is ready for your widgets.").font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(store.state.home.theme.palette.textColor.opacity(0.78))
-                }
-            }
+            gridBody(size: proxy.size, globalOrigin: proxy.frame(in: .global).origin)
         }
         .task(id: editing) {
             guard editing else {
@@ -295,6 +233,80 @@ private struct HomePageGrid: View {
                     break
                 }
             }
+        }
+    }
+
+    private func gridBody(size: CGSize, globalOrigin: CGPoint) -> some View {
+        // One scalar controls both axes: the eight cells are true squares.
+        // Constrain the grid by the safe vertical space first when needed,
+        // then center the two-column grid instead of stretching its rows.
+        let cellSide = max(1, min((size.width - gap) / 2, (size.height - gap * 3) / 4))
+        let gridWidth = cellSide * 2 + gap
+        let gridLeading = max(0, (size.width - gridWidth) / 2)
+        return ZStack(alignment: .topLeading) {
+            ForEach(page.widgets) { widget in
+                widgetCell(widget, cellSide: cellSide, gridLeading: gridLeading, globalOrigin: globalOrigin)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .overlay {
+            if page.widgets.isEmpty {
+                VStack(spacing: 10) {
+                    Image(systemName: "square.grid.2x2").font(.system(size: 28, weight: .light))
+                    Text("This page is ready for your widgets.").font(.system(size: 14, weight: .medium))
+                }
+                .foregroundStyle(store.state.home.theme.palette.textColor.opacity(0.78))
+            }
+        }
+    }
+
+    private func widgetCell(
+        _ widget: HomeWidget,
+        cellSide: CGFloat,
+        gridLeading: CGFloat,
+        globalOrigin: CGPoint
+    ) -> some View {
+        let isSmall = widget.size == .small
+        let isLarge = widget.size == .large
+        let columns: CGFloat = isSmall ? 1 : 2
+        let rows: CGFloat = isLarge ? 2 : 1
+        let width = cellSide * columns + gap * (columns - 1)
+        let height = cellSide * rows + gap * (rows - 1)
+        let originX = gridLeading + CGFloat(widget.column) * (cellSide + gap)
+        let originY = CGFloat(widget.row) * (cellSide + gap)
+        let frame = CGRect(x: globalOrigin.x + originX, y: globalOrigin.y + originY, width: width, height: height)
+        let angle = (widget.row + widget.column).isMultiple(of: 2) ? -1.0 : 1.0
+        let rotation = editing ? angle * (wigglePhase ? 0.6 : -0.6) : 0
+
+        return ZStack(alignment: .topTrailing) {
+            widgetContent(for: widget, width: width, height: height)
+            if editing {
+                Button { remove(widget.id) } label: {
+                    Image(systemName: "minus")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 25, height: 25)
+                        .background(Color.red, in: Circle())
+                        .overlay(Circle().stroke(.white.opacity(0.7), lineWidth: 1))
+                }
+                .offset(x: -7, y: 7)
+                .accessibilityLabel("Remove \(widget.kind.title) widget")
+            }
+        }
+        .frame(width: width, height: height)
+        .overlay {
+            Rectangle().fill(Color.clear)
+                .frame(width: width, height: height)
+                .accessibilityElement(children: .ignore)
+                .accessibilityFrame(frame)
+                .accessibilityLabel("\(widget.kind.title) widget frame")
+                .accessibilityIdentifier("home-widget-frame-\(widget.kind.rawValue)")
+                .allowsHitTesting(false)
+        }
+        .position(x: originX + width / 2, y: originY + height / 2)
+        .rotationEffect(.degrees(rotation))
+        .transaction { transaction in
+            if !editing { transaction.animation = nil }
         }
     }
 
