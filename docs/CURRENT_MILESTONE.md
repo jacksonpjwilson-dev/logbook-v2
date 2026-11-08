@@ -1,44 +1,41 @@
 # Current Logbook milestone — Training verification and Food/Nutrition
 
-**Objective:** Close meaningful Training verification and implement/test approved Food workflows. The user accepts current Default visuals as a provisional working direction only. Preserve the approved Home layout and all themes; no final visual approval, theme propagation, HealthKit, production configuration changes or merge to `main` is authorized.
+**Objective:** Close meaningful Training verification and implement the approved Food workflows. Current Default visuals are accepted as provisional working direction only. Preserve the approved Home layout and all themes. No final visual approval, theme propagation, HealthKit, production configuration change, or merge to `main` is authorized.
 
-**Development branch:** `codex/default-theme-gate1` (local isolated worktree: `work/logbook-next-milestone`).
+**Development branch:** `codex/default-theme-gate1` (local isolated worktree `work/logbook-next-milestone`).
 
-**Remote source head:** `f04bfdd2d5184a31c99bc41f165d6348b2a7c8f6`.
-**Latest executed run:** Actions #87, source commit `f04bfdd2d5184a31c99bc41f165d6348b2a7c8f6`: https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246. Builds succeeded on iPhone SE (3rd generation) and iPhone 16, but tests failed. iPhone 18 Pro's test step was skipped; that device remains **untested**.
+**Remote source head:** `f28e71c9fcfa4ddf3289e5467d3e591737eedb35`.
+**Latest completed CI:** [Actions #88](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156), source commit `f28e71c9fcfa4ddf3289e5467d3e591737eedb35`.
 
 | Simulator | Build | Unit tests | UI tests | Result |
 |---|---|---:|---:|---|
-| iPhone SE (3rd generation) | Passed | 43: 42 passed, 1 failed | 13: 9 passed, 4 failed | Failed |
-| iPhone 16 | Passed | 43: 42 passed, 1 failed | 13: 8 passed, 5 failed | Failed |
-| iPhone 18 Pro | Not run | Not run | Not run | Untested (test step skipped) |
+| iPhone SE (3rd generation) | Passed | 42/43 passed | 6/13 passed | Failed |
+| iPhone 16 | Passed | 42/43 passed | 8/13 passed | Failed |
+| iPhone 18 Pro | Availability check only | Not run | Not run | Untested; workflow skipped test step |
 
-The single unit failure is a legacy `WaterLog` JSON fixture that omits its required `id`; production decoding is not implicated. The UI failures include Food previous-day/date-swipe assertions, Food water-goal sheet presentation, a missing lazy-list hydration control on one simulator, and a progression-decline test that reselected a different lazy TextField. A source-level Food screen issue was identified: several independent `.sheet` modifiers were attached to the same List. The local candidate consolidates these routes into one typed sheet presentation. Tests now target the Food macro gesture surface, wait for date changes and retain the exact workout set accessibility identifier.
+The common unit failure is an invalid UUID in the `WaterLog` legacy fixture. UI failures include Home widget accessibility-frame measurement, Food date navigation, ambiguous macro accessibility identifiers, Water Goal sheet presentation, an unstable decline-value assertion, and on SE only a hydration lookup and split drag. Run #88 artifacts are actual, unapproved captures/reports: [SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156/artifacts/13607506214), [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156/artifacts/13607580740), and the [18 Pro availability note](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156/artifacts/13607275657).
 
-Run #87 produced unapproved screenshot/test artifacts: [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246/artifacts/13606208757), [iPhone SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246/artifacts/13605984952), and the [iPhone 18 Pro availability note](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246/artifacts/13606187009). Captures are candidates only; no approved visual baseline was overwritten.
+The local candidate adds a valid UUID fixture, parent-frame measurements that exclude child overflow, grouped macro accessibility, explicit date identity, Food sheets attached to the screen container, custom hydration entry, full-length nutrition streak logic, saved-recipe search/favorites, same-day calendar session drill-in and visible PR recalculation assertions. It has not been published or run. `git diff --check` passes. This Linux workspace has no Xcode, Swift compiler or iOS Simulator.
 
-**Last fully green source baseline:** run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd`: 34 unit + 7 UI = 41/41 on iPhone SE and iPhone 16 (iOS 18.5). It does not verify later app-source changes.
+**Last fully green source baseline:** run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd`, 34 unit + 7 UI tests = 41/41 on SE and iPhone 16. It does not verify later source. Run #87 was also red; see `native-ios/QA/REPORT.md`.
 
 ## Training status
 
-Persistent code and business logic cover named workout programs and independent flexible rotations; split editing and exercise search/custom exercises; alternate tracking modes and supersets; workout persistence, rest timer and progression; completion summaries; multiple sessions, historical correction/deletion/recovery; and estimated-1RM PR recalculation. The latest UI run passed key editor, program switching/skip, workout/superset/timer, completion/history and PR-summary paths. Overall Training is **not yet closed** because run #87 is red and the new out-of-order completion assertion in the candidate is unexecuted. Explicit direct UI evidence is still needed for rest-day behavior, calendar navigation to multiple same-day sessions, and PR display recalculation after historical edit/delete/restore. Store-level tests cover rotation/reopen, timer recovery, superset timing, alternate modes, and PR recalculation.
+Persistent business logic and store tests cover independent flexible program rotations, scheduled skip/out-of-order completion/discard, draft program ownership, timer lifecycle/recovery, superset rest timing, exercise tracking modes, explicit progression acceptance/decline, same-day sessions, historical editing/deletion/recovery and estimated-1RM PR calculation/recalculation. Run #88's UI suite remained red. The local follow-up adds direct same-date calendar navigation and visible PR recalculation after history edits. Remaining direct UI evidence includes rest-day non-advance, PR recalculation after deletion/restoration, and session recovery after app termination. Training is not verified complete.
 
 ## Food and Nutrition status
 
-Existing core workflows use persisted local data: meal/food logging and correction; the four exact Add Food options; CNF/Open Food Facts search and barcode adapters; unknown-barcode manual fallback; only verified servings; recent/favourite foods; recipes with logged nutrient snapshots; Add/Replace copy; dated targets and adherence; water logs and recovery. The candidate adds Food Home's seven-day metric selector and hydration actions, direct widget-to-Food destinations, and additional UI paths for trends, recipes, copy, and recovery. These changes have not yet run in Actions.
+Persistent source workflows cover meal logging/editing, the exact four Add Food options, Canadian Nutrient File and Open Food Facts search adapters, barcode scanning with unknown-code manual fallback, verified serving conversion, manual correction, recents/favorites, recipes and nutrient snapshots, Add/Replace copying, dated nutrition goals/adherence, seven-day trends, water history and recoverable deletion. Run #88 did not verify the Food/Home changes because UI tests failed. The local candidate adds tests and bounded custom hydration entry, and fixes the observed route/accessibility issues.
 
-Public CNF/Open Food Facts endpoints require no credentials. Live availability, catalog completeness, licensing/attribution review, exhaustive offline/network transition behavior and physical-device camera barcode recognition remain unverified. Simulator tests exercise manual barcode fallback, not camera recognition.
+CNF and Open Food Facts endpoints require no credentials. Live service availability, catalog completeness/licensing review, network transition/offline guarantees and physical camera scanning remain unverified. Do not describe provider or hardware behavior as tested from parser/simulator tests.
 
-## Visual and device limits
+## Constraints and next actions
 
-The user's latest review accepts styling only as a provisional working direction. Preserve four horizontally swipeable Home pages, exact 2-column × 4-row square-cell geometry, approved 1×1/2×1/2×2 widget sizes, the fixed five-icon athlete dock, no vertical Home scroll, and all current themes. Empty workout positions are valid for shorter splits. No screenshot is approved. The repository's original art gaps remain recorded in `docs/handoff-v2/themes/REFERENCE_INDEX.md`.
+Keep four swipeable Home pages, the exact 2×4 grid and 1×1/2×1/2×2 widget sizing, the fixed five-icon dock, no Home vertical scrolling, empty split cells for short programs and all existing themes. No screenshot is approved. The original theme-reference image gaps remain listed in `docs/handoff-v2/themes/REFERENCE_INDEX.md`.
 
-This Linux workspace has no Xcode or iOS Simulator. Simulator builds, tests and screenshots must be produced by the GitHub Actions macOS workflow. CI uses isolated synthetic data. HealthKit stays disabled.
+1. Publish the local candidate on the development branch and run CI on SE and iPhone 16.
+2. Diagnose each failure from actual logs, fix functional defects and repeat until the relevant tests pass. Capture screenshots as unapproved artifacts; leave iPhone 18 Pro untested unless its test step executes.
+3. Update the canonical tracker and audit only from actual run evidence; keep Training and Food open until every applicable acceptance criterion is verified.
+4. After Training verification and substantial Food coverage, define the next milestone for remaining History, Sleep, Weight, Supplements, Habits and external account/coaching setup.
 
-## Next actions
-
-1. Publish the local candidate, including the Food single-sheet route, Food Home widgets/interactions, corrected UI assertions and test fixture.
-2. Run candidate on iPhone SE and iPhone 16; capture current Home/Food/Training/active-workout screens as unapproved artifacts. Keep iPhone 18 Pro untested unless its UI test step actually executes.
-3. Diagnose any remaining red tests from actual logs and fix genuine product issues. Do not mark Training or Food verified from build success alone.
-4. Update `native-ios/QA/REQUIREMENTS_TRACEABILITY.csv`, `AUDIT_RESULTS.md`, `TRAINING_PHASE2.md`, `REPORT.md`, and generated `docs/REQUIREMENTS_PROGRESS.md` from the resulting evidence.
-5. Keep remaining direct Training acceptance paths open until the UI evidence is complete; then plan the next Food/Health/Accounts work without changing the constraints above.
+CI uses isolated synthetic data. HealthKit remains disabled. No production configuration or `main` branch was modified.

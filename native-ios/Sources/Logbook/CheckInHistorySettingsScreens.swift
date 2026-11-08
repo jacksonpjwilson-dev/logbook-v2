@@ -210,6 +210,7 @@ struct HistoryScreen: View {
                                     .font(.caption).foregroundStyle(.secondary)
                             }
                         }
+                        .accessibilityIdentifier("history-pr-\(record.sessionID.uuidString)-\(record.exerciseID)")
                     }
                 }
             }
@@ -500,6 +501,7 @@ struct WorkoutCalendarScreen: View {
                                     .padding(10)
                                     .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
                                 }
+                                .accessibilityIdentifier("calendar-workout-\(session.id.uuidString)")
                                 .buttonStyle(.plain)
                             }
                         }

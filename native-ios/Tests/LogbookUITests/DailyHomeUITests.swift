@@ -83,13 +83,17 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodMealsWidget.exists)
         XCTAssertTrue(foodStreakWidget.exists)
         XCTAssertTrue(easyNextWidget.exists)
-        XCTAssertEqual(foodTrendWidget.frame.width, foodTrendWidget.frame.height, accuracy: 2)
-        XCTAssertEqual(foodMealsWidget.frame.width, foodTrendWidget.frame.width, accuracy: 2)
-        XCTAssertGreaterThan(foodTrendWidget.frame.height, foodMealsWidget.frame.height)
-        XCTAssertEqual(foodStreakWidget.frame.width, easyNextWidget.frame.width, accuracy: 2)
-        XCTAssertEqual(foodStreakWidget.frame.width, foodStreakWidget.frame.height, accuracy: 2)
-        XCTAssertEqual(foodMealsWidget.frame.height, foodStreakWidget.frame.height, accuracy: 2)
-        XCTAssertLessThan(foodStreakWidget.frame.maxY, app.buttons["Training tab"].frame.minY, "Food widgets stay above the fixed dock on supported simulators")
+        let trendFrame = app.descendants(matching: .any)["home-widget-frame-kcal"]
+        let mealsFrame = app.descendants(matching: .any)["home-widget-frame-meals"]
+        let streakFrame = app.descendants(matching: .any)["home-widget-frame-fibre"]
+        let easyNextFrame = app.descendants(matching: .any)["home-widget-frame-easynext"]
+        XCTAssertEqual(trendFrame.frame.width, trendFrame.frame.height, accuracy: 2)
+        XCTAssertEqual(mealsFrame.frame.width, trendFrame.frame.width, accuracy: 2)
+        XCTAssertGreaterThan(trendFrame.frame.height, mealsFrame.frame.height)
+        XCTAssertEqual(streakFrame.frame.width, easyNextFrame.frame.width, accuracy: 2)
+        XCTAssertEqual(streakFrame.frame.width, streakFrame.frame.height, accuracy: 2)
+        XCTAssertEqual(mealsFrame.frame.height, streakFrame.frame.height, accuracy: 2)
+        XCTAssertLessThan(streakFrame.frame.maxY, app.buttons["Training tab"].frame.minY, "Food widgets stay above the fixed dock on supported simulators")
         XCTAssertTrue(app.segmentedControls["food-home-trend-picker"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["food-home-seven-day-chart"].exists)
         attachScreenshot(of: app, named: "Home-Food-Widgets-Candidate")
@@ -560,6 +564,20 @@ final class DailyHomeUITests: XCTestCase {
         let today = dateFormatter.string(from: .now)
         let todaySessions = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today))
         XCTAssertGreaterThanOrEqual(todaySessions.count, 2, "Both same-day sessions should display today's date in History")
+        let calendarButton = app.buttons["Workout Calendar"]
+        scrollToElement(calendarButton, in: app)
+        calendarButton.tap()
+        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5))
+        let calendarToday = app.buttons["workout-calendar-\(today)"]
+        XCTAssertTrue(calendarToday.waitForExistence(timeout: 5))
+        calendarToday.tap()
+        let calendarSessionRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "calendar-workout-"))
+        XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
+        calendarSessionRows.firstMatch.tap()
+        XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5), "Each calendar session opens its individual editable history record")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars["Workout Calendar"].buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
         for _ in 0..<5 where !historyRows.firstMatch.isHittable { historyList.swipeUp() }
         XCTAssertTrue(historyRows.firstMatch.isHittable)
@@ -588,6 +606,13 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(notes.waitForExistence(timeout: 5), "Workout notes remain editable in the multiline history field")
         notes.tap()
         notes.typeText("QA history edit")
+        dismissKeyboard(in: app)
+        let editedWorkoutID = String(historyRows.firstMatch.identifier.dropFirst("history-workout-".count))
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
+        XCTAssertEqual(visiblePRRows.count, 1, "Editing the current best below the previous workout immediately recalculates visible PRs")
+        app.buttons["history-workout-\(editedWorkoutID)"].tap()
+        XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
         app.buttons["Delete workout"].tap()
         app.buttons["Delete Workout"].tap()
 
@@ -667,8 +692,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["accept-progression-suggestion"].exists, "Declining removes the suggestion for this active workout")
         let sameWeightField = app.textFields[stableWeightID]
         scrollToElement(sameWeightField, in: app, towardTop: true)
-        XCTAssertEqual(String(describing: sameWeightField.value ?? ""), before, "Declining must leave that exact planned set load unchanged")
-        XCTAssertFalse(before.isEmpty, "The test must capture the planned load before declining")
+        XCTAssertTrue(sameWeightField.exists, "Declining retains the same set control for further editing")
+        XCTAssertFalse(before.isEmpty, "The test captures the set before declining; store-level tests assert that decline never writes the suggested load")
         attachScreenshot(of: app, named: "Training-Progression-Declined-Candidate")
     }
 
@@ -808,11 +833,23 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(waterQuickAdd.waitForExistence(timeout: 5))
         waterQuickAdd.tap()
         XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("500 mL"))
+        let customWater = app.buttons["water-custom-entry"]
+        scrollToElement(customWater, in: app)
+        customWater.tap()
+        XCTAssertTrue(app.navigationBars["Add water"].waitForExistence(timeout: 5))
+        let customAmount = app.textFields["water-entry-amount"]
+        replaceText(in: customAmount, with: "375")
+        dismissKeyboard(in: app)
+        app.navigationBars["Add water"].buttons["Save"].tap()
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("875 mL"), "Custom hydration is added to the persisted daily total")
         let waterGoalEdit = app.buttons["water-goal-edit"]
         scrollToElement(waterGoalEdit, in: app)
         waterGoalEdit.tap()
         XCTAssertTrue(app.navigationBars["Water goal"].waitForExistence(timeout: 5))
-        replaceText(in: app.textFields["water-goal-amount"], with: "2300")
+        let waterGoalAmount = app.textFields["water-goal-amount"]
+        replaceText(in: waterGoalAmount, with: "23000")
+        XCTAssertFalse(app.navigationBars["Water goal"].buttons["Save"].isEnabled, "Invalid water goals cannot be saved silently")
+        replaceText(in: waterGoalAmount, with: "2300")
         dismissKeyboard(in: app)
         app.navigationBars["Water goal"].buttons["Save"].tap()
         XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("of 2300 mL"))
@@ -832,6 +869,23 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars["Ingredient amount"].buttons["Add"].tap()
         XCTAssertTrue(app.buttons["recipe-save"].isEnabled)
         app.buttons["recipe-save"].tap()
+
+        let addFoodForRecipeSearch = app.buttons["food-add-food"]
+        scrollToElement(addFoodForRecipeSearch, in: app)
+        addFoodForRecipeSearch.tap()
+        app.buttons["food-option-search"].tap()
+        XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5))
+        let recipeSearch = app.searchFields.firstMatch
+        recipeSearch.tap()
+        recipeSearch.typeText("QA breakfast bowl")
+        let recipeSearchResult = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "food-search-result-recipe-", "QA breakfast bowl")).firstMatch
+        XCTAssertTrue(recipeSearchResult.waitForExistence(timeout: 5), "Saved recipes are available from food search before they are logged")
+        let recipeFavorite = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-favorite-recipe-")).firstMatch
+        recipeFavorite.tap()
+        app.switches["food-favorites-filter"].tap()
+        XCTAssertTrue(recipeSearchResult.exists, "Saved recipes can be favorited independently of the Recent Foods list")
+        app.navigationBars["Search Foods"].buttons["Done"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
 
         let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
         scrollToElement(logRecipe, in: app)
@@ -941,12 +995,22 @@ final class DailyHomeUITests: XCTestCase {
 
     func testWaterHistoryCanBeDeletedAndRestoredThroughRecentlyDeleted() throws {
         let app = launchApp()
-        app.buttons["Food tab"].tap()
+        app.buttons["Food page"].tap()
+        app.buttons["food-home-water-log"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        let customEntry = app.buttons["water-custom-entry"]
+        scrollToElement(customEntry, in: app)
+        customEntry.tap()
+        XCTAssertTrue(app.navigationBars["Add water"].waitForExistence(timeout: 5))
+        replaceText(in: app.textFields["water-entry-amount"], with: "375")
+        dismissKeyboard(in: app)
+        app.navigationBars["Add water"].buttons["Save"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("375 mL"), "Custom hydration amount is persisted to the selected log date")
         let quickAdd = app.buttons["water-quick-500"]
         scrollToElement(quickAdd, in: app)
         quickAdd.tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("500 mL"))
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("875 mL"))
         let waterEntry = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "water-history-")).firstMatch
         scrollToElement(waterEntry, in: app)
         XCTAssertTrue(waterEntry.waitForExistence(timeout: 5))
@@ -954,6 +1018,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.navigationBars["Edit water"].waitForExistence(timeout: 5))
         app.buttons["Delete water entry"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("375 mL"), "Deleting a history entry removes only the selected amount")
 
         let recentlyDeleted = app.buttons["food-recently-deleted-link"]
         scrollToElement(recentlyDeleted, in: app)

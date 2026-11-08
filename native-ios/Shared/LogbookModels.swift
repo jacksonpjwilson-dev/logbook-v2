@@ -840,6 +840,24 @@ struct LogbookState: Codable {
         if let proteinGoal = targets.protein, (totals.protein ?? 0) < proteinGoal { return .belowGoal }
         return .onTarget
     }
+
+    func nutritionOnTargetStreak(asOf date: Date = .now) -> Int {
+        let activeLoggedDays = Set(nutrition.logs.filter { $0.deletedAt == nil }.map(\.date)).count
+        guard activeLoggedDays > 0 else { return 0 }
+        var cursor = date
+        if nutritionAdherence(on: LocalDay.string(cursor)) == .unlogged,
+           let yesterday = Calendar.current.date(byAdding: .day, value: -1, to: cursor) {
+            cursor = yesterday
+        }
+        var streak = 0
+        for _ in 0..<activeLoggedDays {
+            guard nutritionAdherence(on: LocalDay.string(cursor)) == .onTarget else { break }
+            streak += 1
+            guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: cursor) else { break }
+            cursor = previousDay
+        }
+        return streak
+    }
 }
 
 enum LogbookRoute: String, Hashable {

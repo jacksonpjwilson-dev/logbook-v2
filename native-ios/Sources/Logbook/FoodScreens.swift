@@ -9,6 +9,7 @@ private enum FoodPresentedSheet: Identifiable {
     case recipeBuilder
     case editRecipe(FoodRecipe)
     case waterGoal
+    case waterEntry(date: String)
 
     var id: String {
         switch self {
@@ -18,6 +19,7 @@ private enum FoodPresentedSheet: Identifiable {
         case .recipeBuilder: "recipe-builder"
         case .editRecipe(let recipe): "edit-recipe-\(recipe.id)"
         case .waterGoal: "water-goal"
+        case .waterEntry(let date): "water-entry-\(date)"
         }
     }
 }
@@ -73,7 +75,8 @@ struct FoodScreen: View {
             .navigationTitle("Food")
             .onAppear { applyPendingFoodFocus(using: proxy) }
             .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
-            .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
+        }
+        .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
                 Button("Search Foods") { presentFoodEntry(.search) }
                     .accessibilityIdentifier("food-option-search")
                 Button("Scan Barcode") { presentFoodEntry(.scan) }
@@ -99,6 +102,8 @@ struct FoodScreen: View {
                         RecipeEditorScreen(recipe: recipe).presentationDetents([.large])
                     case .waterGoal:
                         WaterGoalScreen().presentationDetents([.medium])
+                    case .waterEntry(let date):
+                        WaterEntryScreen(date: date).presentationDetents([.medium, .large])
                     }
                 }
                 .presentationDragIndicator(.visible)
@@ -108,7 +113,6 @@ struct FoodScreen: View {
                 Button("Save") { if let renameMealID { store.renameMeal(renameMealID, name: mealNameDraft) }; renameMealID = nil }
                 Button("Cancel", role: .cancel) { renameMealID = nil }
             } message: { Text("Past food entries keep the meal name recorded when they were logged.") }
-        }
     }
 
     private func applyPendingFoodFocus(using proxy: ScrollViewProxy) {
@@ -164,7 +168,7 @@ struct FoodScreen: View {
                 MacroTile(name: "Fat", value: totals.fat ?? 0, goal: targets.fat, color: .orange)
             }
             .accessibilityIdentifier("food-macro-swipe-area")
-            .accessibilityElement(children: .contain)
+            .accessibilityElement(children: .combine)
             .contentShape(Rectangle())
             .highPriorityGesture(DragGesture(minimumDistance: 48).onEnded { value in
                 let horizontal = value.translation.width
@@ -179,7 +183,7 @@ struct FoodScreen: View {
                 Button("Targets") { presentedSheet = .targets(date: dateKey) }.accessibilityIdentifier("food-targets")
             }
         }
-        .id("food-nutrition-summary")
+        .id("food-nutrition-summary-\(dateKey)")
     }
 
     private var mealsSection: some View {
@@ -256,6 +260,8 @@ struct FoodScreen: View {
                         .buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("water-quick-\(amount)")
                 }
             }
+            Button("Add custom amount…") { presentedSheet = .waterEntry(date: dateKey) }
+                .accessibilityIdentifier("water-custom-entry")
             if let goal = store.state.nutrition.waterGoalMilliliters {
                 ProgressView(value: min(1, Double(waterTotal) / Double(max(1, goal))))
             }
@@ -516,7 +522,9 @@ private struct FoodSearchScreen: View {
         }
     }
     private var visibleFoods: [FoodDefinition] {
-        let local = recentOnly ? recentFoods : store.state.nutrition.foods.filter {
+        let savedRecipes = (store.state.nutrition.recipes ?? []).filter { $0.deletedAt == nil }.map { store.foodDefinition(for: $0) }
+        let searchableFoods = store.state.nutrition.foods + savedRecipes
+        let local = recentOnly ? recentFoods : searchableFoods.filter {
             query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || ($0.barcode?.contains(query) ?? false)
         }
         let combined = local + (recentOnly ? [] : remoteFoods)
@@ -924,11 +932,58 @@ private struct WaterGoalScreen: View {
             .navigationTitle("Water goal")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button("Save") { store.setWaterGoal(Int(amount)); dismiss() }.disabled(!amount.isEmpty && Int(amount) == nil) }
+                ToolbarItem(placement: .confirmationAction) { Button("Save") { store.setWaterGoal(Int(amount)); dismiss() }.disabled(!valid) }
             }
             .onAppear { amount = store.state.nutrition.waterGoalMilliliters.map(String.init) ?? "" }
         }
     }
+    private var valid: Bool {
+        let value = amount.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !value.isEmpty else { return true }
+        return Int(value).map { (1...10_000).contains($0) } ?? false
+    }
+}
+
+private struct WaterEntryScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @Environment(\.dismiss) private var dismiss
+    let date: String
+    @State private var amount = ""
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Water amount") {
+                    TextField("Milliliters", text: $amount)
+                        .keyboardType(.numberPad)
+                        .focused($inputFocused)
+                        .accessibilityIdentifier("water-entry-amount")
+                    Text("Enter a custom amount from 1 to 5,000 mL.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                Section("Log date") { Text(date) }
+            }
+            .navigationTitle("Add water")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        guard let milliliters = Int(amount), (1...5000).contains(milliliters) else { return }
+                        store.addWater(milliliters, date: date)
+                        dismiss()
+                    }
+                    .disabled(!valid)
+                }
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { dismissKeyboard() }.accessibilityIdentifier("keyboard-done")
+                }
+            }
+        }
+    }
+    private var valid: Bool { Int(amount).map { (1...5000).contains($0) } ?? false }
+    @FocusState private var inputFocused: Bool
+    private func dismissKeyboard() { inputFocused = false }
 }
 
 private struct RecipeEditorScreen: View {
@@ -1074,7 +1129,7 @@ struct NutritionTargetsScreen: View {
                         store.setNutritionTargets(calories: Double(calories), protein: Double(protein), carbohydrates: Double(carbohydrates), fat: Double(fat), effectiveDate: effectiveDate)
                         dismiss()
                     }
-                    .disabled([calories, protein, carbohydrates, fat].contains { !$0.isEmpty && ((Double($0) ?? -1) < 0) })
+                    .disabled(!validTargets)
                 }
             }
             .onAppear {
@@ -1088,5 +1143,12 @@ struct NutritionTargetsScreen: View {
     }
     private func targetField(_ label: String, text: Binding<String>, unit: String) -> some View {
         HStack { TextField(label, text: text).keyboardType(.decimalPad).accessibilityIdentifier("nutrition-target-\(label.lowercased())"); Text(unit).foregroundStyle(.secondary) }
+    }
+    private var validTargets: Bool {
+        [calories, protein, carbohydrates, fat].allSatisfy { raw in
+            guard !raw.isEmpty else { return true }
+            guard let value = Double(raw) else { return false }
+            return value.isFinite && value >= 0
+        }
     }
 }

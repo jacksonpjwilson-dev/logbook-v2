@@ -43,6 +43,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertNil(oats.multiplier(for: 1, unit: "cup"), "Unverified volume conversions are not offered")
         store.setNutritionTargets(calories: 2_000, protein: 100, carbohydrates: 220, fat: 65, effectiveDate: "2026-11-07")
         store.setNutritionTargets(calories: 2_200, protein: 120, carbohydrates: 240, fat: 70, effectiveDate: "2026-11-08")
+        store.setNutritionTargets(calories: -1, protein: nil, carbohydrates: nil, fat: nil, effectiveDate: "2026-11-08")
         XCTAssertEqual(store.state.nutritionTargets(on: "2026-11-07").calories ?? -1, 2_000)
         XCTAssertEqual(store.state.nutritionTargets(on: "2026-11-08").calories ?? -1, 2_200)
         XCTAssertTrue(store.logFood(oats, meal: meal, quantity: 1, unit: "serving", confirmed: true, date: "2026-11-07"))
@@ -55,6 +56,25 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(reopened.state.nutrition.targetHistory?.count, 3, "The legacy baseline remains alongside the two effective-dated goals")
         XCTAssertEqual(reopened.state.nutrition.foods.first(where: { $0.id == oats.id })?.verifiedServingGrams, 40)
         XCTAssertEqual(reopened.state.nutrition.logs.first?.date, "2026-11-07")
+    }
+
+    func testNutritionOnTargetStreakCountsBeyondChartWindowAndSkipsOnlyTodayWhenUnlogged() throws {
+        let store = LogbookStore(repository: temporaryRepository())
+        let today = Calendar.current.startOfDay(for: .now)
+        let food = FoodDefinition(id: "streak-food", name: "Balanced meal", basisAmount: 1, basisUnit: "serving",
+            calories: 2_000, protein: 120, carbohydrates: 220, fat: 65, isPersonal: true)
+        let meal = try XCTUnwrap(store.state.nutrition.meals.first)
+        for daysAgo in 1...9 {
+            let date = try XCTUnwrap(Calendar.current.date(byAdding: .day, value: -daysAgo, to: today))
+            let key = LocalDay.string(date)
+            store.setNutritionTargets(calories: 2_000, protein: 100, carbohydrates: 220, fat: 65, effectiveDate: key)
+            XCTAssertTrue(store.logFood(food, meal: meal, quantity: 1, unit: "serving", confirmed: true, date: key))
+        }
+
+        XCTAssertEqual(store.state.nutritionAdherence(on: LocalDay.string(today)), .unlogged)
+        XCTAssertEqual(store.state.nutritionOnTargetStreak(asOf: today), 9, "An unlogged current day retains yesterday's streak, beyond the seven-day chart range")
+        XCTAssertTrue(store.logFood(food, meal: meal, quantity: 1, unit: "serving", confirmed: true, date: LocalDay.string(today)))
+        XCTAssertEqual(store.state.nutritionOnTargetStreak(asOf: today), 10, "A successful current day joins the existing streak")
     }
 
     func testMealCopyReplaceOnlyTouchesMatchingMealsAndKeepsEntrySnapshots() throws {
@@ -119,6 +139,20 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(reopened.state.nutrition.water.first?.date, "2026-11-07")
         XCTAssertEqual(reopened.state.nutrition.recipes?.first?.name, "Banana bowl")
         XCTAssertNil(reopened.state.nutrition.logs.first(where: { $0.id == log.id })?.deletedAt)
+    }
+
+    func testCustomWaterAmountValidatesRangeAndKeepsItsHistoricalDate() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        store.addWater(0, date: "2026-11-07")
+        store.addWater(5_001, date: "2026-11-07")
+        XCTAssertTrue(store.state.nutrition.water.isEmpty, "Amounts outside the supported custom-entry range are ignored")
+        store.addWater(375, date: "2026-11-07")
+        XCTAssertEqual(store.state.nutrition.water.first?.milliliters, 375)
+        XCTAssertEqual(store.state.nutrition.water.first?.date, "2026-11-07")
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertEqual(reopened.state.nutrition.water.first?.milliliters, 375)
+        XCTAssertEqual(reopened.state.nutrition.water.first?.date, "2026-11-07")
     }
 
     func testEditingRecipeChangesFutureNutritionWithoutRewritingLoggedSnapshot() throws {
@@ -203,7 +237,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertNil(decoded.targetHistory)
         XCTAssertNil(decoded.recipes)
 
-        let oldWater = try JSONDecoder.logbook.decode(WaterLog.self, from: Data(#"{"id":"legacy-water","date":"2026-11-08","milliliters":250}"#.utf8))
+        let oldWater = try JSONDecoder.logbook.decode(WaterLog.self, from: Data(#"{"id":"00000000-0000-0000-0000-000000000001","date":"2026-11-08","milliliters":250}"#.utf8))
         let oldRecipe = try JSONDecoder.logbook.decode(FoodRecipe.self, from: Data(#"{"id":"legacy-recipe","name":"Legacy","ingredients":[],"yieldAmount":1,"yieldUnit":"servings"}"#.utf8))
         XCTAssertNil(oldWater.deletedAt)
         XCTAssertNil(oldRecipe.deletedAt)

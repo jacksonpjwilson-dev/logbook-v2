@@ -288,6 +288,13 @@ private struct HomePageGrid: View {
                         }
                     }
                     .frame(width: width, height: height)
+                    .overlay {
+                        Rectangle().fill(Color.clear)
+                            .accessibilityElement(children: .ignore)
+                            .accessibilityLabel("\(widget.kind.title) widget frame")
+                            .accessibilityIdentifier("home-widget-frame-\(widget.kind.rawValue)")
+                            .allowsHitTesting(false)
+                    }
                     .position(
                         x: gridLeading + CGFloat(widget.column) * (cellSide + gap) + width / 2,
                         y: CGFloat(widget.row) * (cellSide + gap) + height / 2
@@ -597,13 +604,7 @@ private struct DefaultFoodHomeWidgetView: View {
     private var calorieAverage: Double? { average(days.compactMap { $0.value.calories }) }
     private var proteinAverage: Double? { average(days.compactMap { $0.value.protein }) }
     private var nutritionStreak: Int {
-        var count = 0
-        let streakDays = state.nutritionAdherence(on: today) == .unlogged ? Array(days.dropLast()) : days
-        for day in streakDays.reversed() {
-            guard state.nutritionAdherence(on: day.key) == .onTarget else { break }
-            count += 1
-        }
-        return count
+        state.nutritionOnTargetStreak()
     }
     private var easyNext: (title: String, reason: String, focus: FoodNavigationFocus?) {
         if todayTargets.calories == nil || todayTargets.protein == nil {
