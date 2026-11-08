@@ -630,7 +630,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(editedWorkoutRow.waitForExistence(timeout: 5), "The edited history row remains available after returning from detail")
         editedWorkoutRow.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5))
-        app.buttons["Delete workout"].tap()
+        let deleteWorkout = app.buttons["Delete workout"]
+        scrollToElement(deleteWorkout, in: app)
+        XCTAssertTrue(deleteWorkout.waitForExistence(timeout: 5), "The delete action is below the completed set and notes history")
+        deleteWorkout.tap()
         app.buttons["Delete Workout"].tap()
 
         let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))

@@ -47,7 +47,7 @@ private enum FoodTrendMetric: String, CaseIterable, Identifiable, Hashable {
 
 struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
-    @State private var selectedDateKey = LocalDay.string()
+    @State private var selectedDate = Calendar.current.startOfDay(for: .now)
     @State private var selectedMealID: UUID?
     @State private var expandedMealIDs = Set<UUID>()
     @State private var trendMetric: FoodTrendMetric = .calories
@@ -56,12 +56,11 @@ struct FoodScreen: View {
     @State private var renameMealID: UUID?
     @State private var mealNameDraft = ""
 
-    private var dateKey: String { selectedDateKey }
-    private var selectedDate: Date { LocalDay.formatter.date(from: selectedDateKey) ?? .now }
+    private var dateKey: String { LocalDay.string(selectedDate) }
     private var selectedDateBinding: Binding<Date> {
         Binding(
             get: { selectedDate },
-            set: { selectedDateKey = LocalDay.string($0) }
+            set: { selectedDate = Calendar.current.startOfDay(for: $0) }
         )
     }
     private var logs: [FoodLog] { store.state.nutrition.logs.filter { $0.date == dateKey && $0.deletedAt == nil } }
@@ -126,24 +125,24 @@ struct FoodScreen: View {
         guard let focus = store.consumeFoodNavigationFocus() else { return }
         switch focus {
         case .meal(let id):
-            selectedDateKey = LocalDay.string()
+            selectedDate = Calendar.current.startOfDay(for: .now)
             selectedMealID = id
             expandedMealIDs.insert(id)
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-meal-\(id.uuidString)", anchor: .center) } }
         case .meals:
-            selectedDateKey = LocalDay.string()
+            selectedDate = Calendar.current.startOfDay(for: .now)
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-meals", anchor: .center) } }
         case .addFood:
-            selectedDateKey = LocalDay.string()
+            selectedDate = Calendar.current.startOfDay(for: .now)
             selectedMealID = suggestedMealID
             addFoodMenu = true
         case .water:
-            selectedDateKey = LocalDay.string()
+            selectedDate = Calendar.current.startOfDay(for: .now)
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-hydration", anchor: .center) } }
         case .adherence:
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-trends", anchor: .center) } }
         case .targets:
-            selectedDateKey = LocalDay.string()
+            selectedDate = Calendar.current.startOfDay(for: .now)
             presentedSheet = .targets(date: dateKey)
         }
     }
@@ -151,10 +150,24 @@ struct FoodScreen: View {
     private var nutritionSummarySection: some View {
         Section {
             HStack(spacing: 18) {
-                Button { shiftDay(-1) } label: { Image(systemName: "chevron.left") }.accessibilityLabel("Previous food day").accessibilityIdentifier("food-day-previous")
+                Button { shiftDay(-1) } label: {
+                    Image(systemName: "chevron.left")
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Previous food day")
+                .accessibilityIdentifier("food-day-previous")
                 DatePicker("Choose Food Log date", selection: selectedDateBinding, displayedComponents: .date)
                     .datePickerStyle(.compact).labelsHidden().accessibilityIdentifier("food-day-picker")
-                Button { shiftDay(1) } label: { Image(systemName: "chevron.right") }.accessibilityLabel("Next food day").accessibilityIdentifier("food-day-next")
+                Button { shiftDay(1) } label: {
+                    Image(systemName: "chevron.right")
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Next food day")
+                .accessibilityIdentifier("food-day-next")
             }
             .frame(maxWidth: .infinity)
             HStack {
@@ -179,12 +192,6 @@ struct FoodScreen: View {
             .accessibilityIdentifier("food-macro-swipe-area")
             .accessibilityElement(children: .combine)
             .contentShape(Rectangle())
-            .highPriorityGesture(DragGesture(minimumDistance: 48).onEnded { value in
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) > abs(vertical) * 1.5 else { return }
-                shiftDay(horizontal < 0 ? 1 : -1)
-            })
         } header: {
             HStack {
                 Text(selectedDate.formatted(date: .complete, time: .omitted))
@@ -193,6 +200,12 @@ struct FoodScreen: View {
             }
         }
         .id("food-nutrition-summary-\(dateKey)")
+        .simultaneousGesture(DragGesture(minimumDistance: 30).onEnded { value in
+            let horizontal = value.translation.width
+            let vertical = value.translation.height
+            guard abs(horizontal) > abs(vertical) * 1.5 else { return }
+            shiftDay(horizontal < 0 ? 1 : -1)
+        })
     }
 
     private var mealsSection: some View {
@@ -380,7 +393,7 @@ struct FoodScreen: View {
         calendar.timeZone = .autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: selectedDate)
         if let date = calendar.date(byAdding: .day, value: amount, to: dayStart) {
-            selectedDateKey = LocalDay.string(date)
+            selectedDate = calendar.startOfDay(for: date)
         }
     }
     private func ratio(_ value: Double?, _ goal: Double?) -> Double { min(1, max(0, (value ?? 0) / max(1, goal ?? 1))) }
