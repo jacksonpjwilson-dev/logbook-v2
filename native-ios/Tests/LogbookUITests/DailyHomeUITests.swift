@@ -121,6 +121,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restTimer.waitForExistence(timeout: 5), "Starting Workout opens the active session with its rest card")
         XCTAssertEqual(restTimer.label, "Ready", "A new workout starts in the Ready timer state")
         XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
+        // Leave enough time for the persistence/relaunch steps on the slower SE
+        // simulator while still exercising the normal timer controls.
+        app.buttons["rest-duration-menu"].tap()
+        app.buttons["180 seconds"].tap()
         XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
         let activeExerciseHeader = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "active-exercise-header-")
@@ -153,9 +157,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before pausing")
         let timerToggle = app.buttons["rest-toggle"]
         XCTAssertTrue(timerToggle.waitForExistence(timeout: 5), "The rest timer needs one stable pause/resume control")
+        XCTAssertTrue(timerToggle.isEnabled, "The extended rest interval should still be running before pausing")
         timerToggle.tap()
         let timerPaused = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == %@", "Paused"),
+            predicate: NSPredicate(format: "label == %@", "Resume rest timer"),
             object: timerToggle
         )
         XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should persist the timer state and expose Resume")
@@ -176,9 +181,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(resumeTimer.waitForExistence(timeout: 5), "The recovered timer should preserve its paused state")
         XCTAssertEqual(resumeTimer.value as? String, "Paused")
         XCTAssertEqual(resumeTimer.label, "Resume rest timer")
+        XCTAssertTrue(resumeTimer.isEnabled, "A paused rest interval can be resumed after relaunch")
         resumeTimer.tap()
         let timerRunning = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "value == %@", "Running"),
+            predicate: NSPredicate(format: "label == %@", "Pause rest timer"),
             object: resumeTimer
         )
         XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume and expose Pause")
@@ -242,9 +248,14 @@ final class DailyHomeUITests: XCTestCase {
         let reorderHandles = app.descendants(matching: .any)
             .matching(NSPredicate(format: "label CONTAINS[cd] %@", "reorder"))
         XCTAssertGreaterThanOrEqual(reorderHandles.count, 2, "Edit mode should expose a drag handle for each workout row. UI: \(app.debugDescription)")
+        attachScreenshot(of: app, named: "Training-Split-Editor-Reorder-Candidate")
         let sourceHandle = reorderHandles.element(boundBy: 0)
-        let destinationHandle = reorderHandles.element(boundBy: 1)
-        sourceHandle.press(forDuration: 1.2, thenDragTo: destinationHandle)
+        let destinationRow = app.buttons[secondID]
+        XCTAssertTrue(destinationRow.exists, "Both workout rows should remain in the list while editing")
+        // Drop into the lower portion of the destination row. Dragging handle to
+        // handle can be treated as a no-op on compact iPhone SE table rows.
+        let dropPoint = destinationRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.85))
+        sourceHandle.press(forDuration: 1.2, thenDragTo: dropPoint)
         let reordered = XCTNSPredicateExpectation(
             predicate: NSPredicate(format: "identifier == %@", secondID),
             object: rows.element(boundBy: 0)
