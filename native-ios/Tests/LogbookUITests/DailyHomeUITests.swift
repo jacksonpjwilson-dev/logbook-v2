@@ -511,14 +511,12 @@ final class DailyHomeUITests: XCTestCase {
         // back above the pinned footer before verifying its accepted value.
         scrollToElement(weight, in: app, towardTop: true)
         XCTAssertTrue(weight.isHittable, "The current set field should scroll above the pinned workout controls")
-        let accepted = XCTNSPredicateExpectation(predicate: NSPredicate { object, _ in
-            guard let field = object as? XCUIElement, let target = suggestedLoad else { return false }
-            let value = String(describing: field.value ?? "")
-            if let number = field.value as? NSNumber { return abs(number.doubleValue - target) < 0.01 }
-            return Double(value.replacingOccurrences(of: ",", with: ".")).map { abs($0 - target) < 0.01 } ?? false
-        }, object: weight)
-        XCTAssertEqual(XCTWaiter.wait(for: [accepted], timeout: 5), .completed,
-                       "Accepting \(suggestedText) should update the current set weight; current value: \(weight.value ?? "nil")")
+        XCTAssertFalse(suggestion.exists, "Accepting the suggestion dismisses the optional prompt")
+        let acceptedWeight = inputField(app, labelled: "Weight in kilograms")
+        XCTAssertTrue(acceptedWeight.waitForExistence(timeout: 5))
+        let displayedWeight = Double(String(describing: acceptedWeight.value ?? "").replacingOccurrences(of: ",", with: "."))
+        XCTAssertEqual(displayedWeight, suggestedLoad, accuracy: 0.01,
+                       "Accepting \(suggestedText) should update the current set weight")
         attachScreenshot(of: app, named: "Training-Progression-Acceptance-Candidate")
     }
 
