@@ -639,7 +639,6 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreButtons.firstMatch.waitForExistence(timeout: 5), "Deleting a workout should move it into Recently Deleted")
         XCTAssertTrue(restoreButtons.firstMatch.isHittable)
         let deletedWorkoutID = String(restoreButtons.firstMatch.identifier.dropFirst("restore-deleted-workout-".count))
-        let deletedWorkoutID = String(restoreButtons.firstMatch.identifier.dropFirst("restore-deleted-workout-".count))
         XCTAssertEqual(deletedWorkoutID, editedWorkoutID, "Recently Deleted preserves the selected record identity")
         restoreButtons.firstMatch.tap()
         let restoredWorkout = app.buttons["history-workout-\(deletedWorkoutID)"]
