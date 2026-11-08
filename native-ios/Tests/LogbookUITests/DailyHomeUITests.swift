@@ -730,9 +730,7 @@ final class DailyHomeUITests: XCTestCase {
         let originalDate = dateKey.label
         let swipeArea = app.descendants(matching: .any)["food-macro-swipe-area"].firstMatch
         XCTAssertTrue(swipeArea.waitForExistence(timeout: 5))
-        let swipeStart = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.5))
-        let swipeEnd = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.5))
-        swipeStart.press(forDuration: 0.1, thenDragTo: swipeEnd)
+        swipeArea.swipeLeft()
         let advancedDate = app.staticTexts.matching(NSPredicate(
             format: "identifier == %@ AND label != %@", "food-date-key", originalDate
         )).firstMatch
@@ -1055,7 +1053,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(app.staticTexts["copy-food-status"].label, "Copied 1 food entries to \(today).")
         attachScreenshot(of: app, named: "Food-Copy-Add-Replace-Candidate")
         app.navigationBars["Copy meals"].buttons["Done"].tap()
-        XCTAssertEqual(app.staticTexts["food-calories-total"].label, "900", "Replace swaps matching Meal 4 entries while preserving the unrelated Meal 1 log")
+        let destinationCalories = app.staticTexts["food-calories-total"]
+        scrollToElement(destinationCalories, in: app, towardTop: true)
+        XCTAssertEqual(destinationCalories.label, "900", "Replace swaps matching Meal 4 entries while preserving the unrelated Meal 1 log")
     }
 
     func testWaterHistoryCanBeDeletedAndRestoredThroughRecentlyDeleted() throws {

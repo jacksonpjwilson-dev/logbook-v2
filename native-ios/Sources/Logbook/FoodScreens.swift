@@ -78,16 +78,16 @@ struct FoodScreen: View {
                 nutritionTrendsSection
                 foodToolsSection
             }
-            .simultaneousGesture(DragGesture(minimumDistance: 20).onEnded { value in
-                let horizontal = value.translation.width
-                let vertical = value.translation.height
-                guard abs(horizontal) > max(32, abs(vertical) * 1.25) else { return }
-                shiftDay(horizontal < 0 ? 1 : -1)
-            })
             .navigationTitle("Food")
             .onAppear { applyPendingFoodFocus(using: proxy) }
             .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
         }
+        .simultaneousGesture(DragGesture(minimumDistance: 0).onEnded { value in
+            let horizontal = value.translation.width
+            let vertical = value.translation.height
+            guard abs(horizontal) > max(32, abs(vertical) * 1.25) else { return }
+            shiftDay(horizontal < 0 ? 1 : -1)
+        })
         .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
                 Button("Search Foods") { presentFoodEntry(.search) }
                     .accessibilityIdentifier("food-option-search")
