@@ -83,10 +83,12 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodMealsWidget.exists)
         XCTAssertTrue(foodStreakWidget.exists)
         XCTAssertTrue(easyNextWidget.exists)
-        let trendFrame = app.descendants(matching: .any)["home-widget-frame-kcal"]
-        let mealsFrame = app.descendants(matching: .any)["home-widget-frame-meals"]
-        let streakFrame = app.descendants(matching: .any)["home-widget-frame-fibre"]
-        let easyNextFrame = app.descendants(matching: .any)["home-widget-frame-easynext"]
+        // Measure the actual accessible widget roots. Transparent frame probes
+        // can report zero-size AX frames on some iOS simulator versions.
+        let trendFrame = foodTrendWidget
+        let mealsFrame = foodMealsWidget
+        let streakFrame = foodStreakWidget
+        let easyNextFrame = easyNextWidget
         XCTAssertEqual(trendFrame.frame.width, trendFrame.frame.height, accuracy: 2)
         XCTAssertEqual(mealsFrame.frame.width, trendFrame.frame.width, accuracy: 2)
         XCTAssertGreaterThan(trendFrame.frame.height, mealsFrame.frame.height)
@@ -575,7 +577,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
         calendarSessionRows.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5), "Each calendar session opens its individual editable history record")
-        app.swipeRight()
+        app.buttons["workout-history-back"].tap()
         XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Back navigation returns to the selected calendar date")
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
@@ -893,7 +895,8 @@ final class DailyHomeUITests: XCTestCase {
         recipeFavorite.tap()
         app.switches["food-favorites-filter"].tap()
         XCTAssertTrue(recipeSearchResult.exists, "Saved recipes can be favorited independently of the Recent Foods list")
-        app.navigationBars["Search Foods"].buttons["Done"].tap()
+        if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+        app.buttons["food-add-done"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
 
         let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
@@ -915,7 +918,8 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["food-favorite-qa-breakfast"].tap()
         app.switches["food-favorites-filter"].tap()
         XCTAssertTrue(result.exists, "Favorites are a search filter, not a fifth Add Food option")
-        app.navigationBars["Search Foods"].buttons["Done"].tap()
+        if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
+        app.buttons["food-add-done"].tap()
 
         scrollToElement(addFood, in: app)
         addFood.tap()

@@ -1,15 +1,15 @@
 # Training verification status
 
 **Branch:** `codex/default-theme-gate1`
-**Tested source:** `f6c2bb3b58972616e7b10c302212c1ac30d19d44`
-**Evidence:** [Actions run #89](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938)
+**Tested source:** `54c236485bcd16ffa685ce5cea02d9e27a0220f2`
+**Evidence:** [Actions run #90](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622)
 
 ## Results
 
-On both iPhone SE and iPhone 16, the build succeeded; 44/45 unit tests and 8/13 UI tests passed. The iPhone 18 Pro runner skipped app tests after its availability check and is untested. Run #89 artifacts are [SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13607604595) and [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13608365639); neither set is approved.
+On iPhone SE and iPhone 16 the build passed, and each device ran 45 unit tests (44 passed, 1 failed) and 13 UI tests (8 passed, 5 failed). The only unit failure was the legacy nutrition payload fixture missing `FoodRecipe.updatedAt`, unrelated to Training. The iPhone 18 Pro test step was skipped by the workflow availability check and remains untested.
 
-Store/business-logic coverage passed for flexible independent rotations, scheduled skip and out-of-order behavior, discard, origin-program association, timer/superset timing, tracking modes, accepted/declined progression, multiple sessions per date, record edits/recovery and PR calculation. The only unit failure is old WaterLog JSON missing `createdAt`; the follow-up adds a backward-compatible default and is unverified.
+Unit/store behavior passed for independent flexible rotations, program switching, scheduled skips, out-of-order completions, discard, program association for drafts, timer/superset behavior, tracking modes, progression decisions, multiple sessions per day, edits/recovery, and PR calculations. The UI suite passed program switching and rotation, split reorder/search/custom exercise, progression accept/decline, Next Workout start, check-in interactions, and hydration history recovery.
 
-UI passed on both devices for switching programs/skip/out-of-order completion, progression accept/decline, split reordering/search/custom exercise, Next Workout launch, Daily check-in interactions and hydration history recovery. The broader History UI test failed at an ambiguous Workout Calendar selector before its edit/delete/recovery assertions. Food/UI failures and the zero-sized Food widget AX-frame probe also make the overall run red. Rest-day non-advance, PR recalculation after deletion/restoration and app termination/relaunch still lack direct UI evidence. Do not close Training yet.
+The calendar history UI path failed when returning from a selected workout detail to the calendar. A local follow-up now gives the calendar a dedicated navigation path, but has not been built or tested. Rest-day non-advance, app termination/relaunch recovery, and UI-level PR recalculation after deletion/restoration still need direct evidence. Training is not closed.
 
-The follow-up currently being prepared adds a unique Calendar opener ID and more reliable back navigation. It also corrects the legacy decoder and Food/Home test issues; none of those changes have run. This Linux environment cannot run Xcode or Simulator. Keep the exact grid and empty split cells for short programs. HealthKit is disabled; no production changes or merge to `main`.
+Run #90 artifacts are actual captures and test results, not approved baselines: [iPhone SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13608512203), [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13609390347), and [18 Pro availability](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13607842943). Keep the exact two-column by four-row grid and empty cells for short splits. This Linux workspace cannot run Xcode or Simulator.

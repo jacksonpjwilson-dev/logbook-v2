@@ -719,6 +719,29 @@ struct FoodRecipe: Codable, Identifiable, Hashable {
     var updatedAt: Date = .now
     var deletedAt: Date? = nil
 
+    private enum CodingKeys: String, CodingKey { case id, name, ingredients, yieldAmount, yieldUnit, updatedAt, deletedAt }
+
+    init(id: String, name: String, ingredients: [FoodRecipeIngredient], yieldAmount: Double, yieldUnit: String, updatedAt: Date = .now, deletedAt: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.ingredients = ingredients
+        self.yieldAmount = yieldAmount
+        self.yieldUnit = yieldUnit
+        self.updatedAt = updatedAt
+        self.deletedAt = deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(String.self, forKey: .id)
+        name = try values.decode(String.self, forKey: .name)
+        ingredients = try values.decode([FoodRecipeIngredient].self, forKey: .ingredients)
+        yieldAmount = try values.decode(Double.self, forKey: .yieldAmount)
+        yieldUnit = try values.decode(String.self, forKey: .yieldUnit)
+        updatedAt = try values.decodeIfPresent(Date.self, forKey: .updatedAt) ?? .now
+        deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
+    }
+
     var total: NutritionTargets {
         NutritionTargets(
             calories: ingredients.reduce(0) { $0 + $1.calories },

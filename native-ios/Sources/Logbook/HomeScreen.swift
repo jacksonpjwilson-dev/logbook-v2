@@ -292,6 +292,12 @@ private struct HomePageGrid: View {
                         Rectangle().fill(Color.clear)
                             .frame(width: width, height: height)
                             .accessibilityElement(children: .ignore)
+                            .accessibilityFrame(CGRect(
+                                x: proxy.frame(in: .global).minX + gridLeading + CGFloat(widget.column) * (cellSide + gap),
+                                y: proxy.frame(in: .global).minY + CGFloat(widget.row) * (cellSide + gap),
+                                width: width,
+                                height: height
+                            ))
                             .accessibilityLabel("\(widget.kind.title) widget frame")
                             .accessibilityIdentifier("home-widget-frame-\(widget.kind.rawValue)")
                             .allowsHitTesting(false)

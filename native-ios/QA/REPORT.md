@@ -1,39 +1,51 @@
 # Logbook QA report
 
-## Latest test run
+## Latest completed CI
 
 **Branch:** `codex/default-theme-gate1`
-**Tested source:** `f6c2bb3b58972616e7b10c302212c1ac30d19d44`
-**Actions run:** [#89](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938)
+**Tested source:** `54c236485bcd16ffa685ce5cea02d9e27a0220f2`
+**Actions run:** [#90](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622)
 
 | Simulator | Build | Unit tests | UI tests | Result |
 |---|---|---:|---:|---|
 | iPhone SE (3rd generation) | Passed | 44/45 passed | 8/13 passed | Failed |
 | iPhone 16 | Passed | 44/45 passed | 8/13 passed | Failed |
-| iPhone 18 Pro | Availability check only | Not run | Not run | Untested; test step skipped |
+| iPhone 18 Pro | Availability check only | Not run | Not run | Untested; step skipped |
 
-The shared unit failure is legacy `WaterLog` decoding without `createdAt`. The follow-up adds a backward-compatible timestamp default. UI failures are: Food Home frame probes returning zero-sized AX frames; selected Food date not changing in the tested control path; macro-swipe element ambiguity; a Food hydration/recipe-navigation control not being visible after scrolling; and duplicate Workout Calendar button matching/history navigation. Follow-up changes address these failures but have not run yet. Exact device failure logs are in the linked Actions run.
+The single unit failure on both tested devices is `testLegacyNutritionPayloadDecodesWithoutNewFoodFields`: a legacy saved recipe lacks the newer `updatedAt` field. The local follow-up adds a backwards-compatible decoder default, but it is not in the tested commit yet.
 
-Run #89 screenshots and reports are actual, unapproved artifacts:
+The five UI failures on both available simulators were:
 
-- [iPhone 16 captures](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13608365639)
-- [iPhone SE captures](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13607604595)
-- [iPhone 18 Pro availability note](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13607691705)
+- `testDailyHomeLayoutAndCaptureAllHomePages`: Food-page frame probes had zero-sized accessibility frames.
+- `testFoodCopyAddAndReplaceUsesSelectedDateAndMatchingMeal`: tapping the previous-day control did not change the selected date as asserted.
+- `testFoodManualEntryOptionsHistoryCorrectionAndRecovery`: the Food date swipe did not change the selected date as asserted.
+- `testFoodTargetsHydrationFavoritesRecentsAndRecipeWorkflow`: active search presented Cancel/Clear instead of the Done toolbar action.
+- `testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery`: returning from an individual calendar workout did not restore the calendar date screen.
+
+The local follow-up changes the frame test to inspect accessible widget roots, stores the selected Food date as a stable date key, exits search before pressing Done, and gives the calendar its own navigation path. These changes have not been built or run. The Linux development environment has no Xcode, Swift compiler or iOS Simulator.
+
+## Screenshots and results
+
+Actual, unapproved run #90 artifacts:
+
+- [iPhone SE result bundle, screenshots, and test logs](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13608512203)
+- [iPhone 16 result bundle, screenshots, and test logs](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13609390347)
+- [iPhone 18 Pro availability report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622/artifacts/13607842943)
+
+These are simulator captures from the failed run and are candidates for review only. No image is automatically approved or used to overwrite a baseline.
 
 ## Training verification
 
-On both SE and iPhone 16, the UI suite passed the program switching/rotation/skip/out-of-order path, progression acceptance and decline, Workout Split drag/search/custom-exercise path, Next Workout start, Daily small-widget interactions and water history recovery. The unit suites passed 44 of 45 tests; the passing cases cover independent rotations, scheduled/out-of-order completion, superset timing, tracking modes, progression logic, same-day sessions, persistent drafts, historical edits/deletion/recovery and PR calculation. The failed unit case is data-compatibility decoding for legacy water logs. The History UI test did not finish its full edit/recovery path because its calendar navigation selector was ambiguous. Rest-day non-advance and app termination recovery remain without direct UI evidence. Training is not closed.
+Run #90 passed business/store tests for independent flexible workout-program rotations, scheduled skip and out-of-order behavior, discard, workout origin-program retention, rest timer and supersets, exercise tracking modes, progression accept/decline, multiple same-day sessions, completed-record edits and recovery, and PR calculation. On both simulators, UI tests passed for program switching/rotation, split reordering/search/custom exercise, progression decisions, starting the next workout, daily check-in regions and hydration history recovery. The calendar history UI test failed as listed above. Rest-day non-advance, app termination recovery, and PR recalculation after deleting/restoring a record still lack direct UI proof. Training is not fully verified.
 
-## Food / Nutrition verification
+## Food and Nutrition verification
 
-The app source includes persistent meal entry/editing, the four required Add Food choices, CNF/Open Food Facts adapters, barcode fallback, manual foods, verified serving conversions, recents/favorites, recipes, Add/Replace copying, date-specific nutrition goals and snapshots, remaining totals, seven-day metrics/adherence, custom and preset hydration, history editing and recovery. Store tests for these functions passed in #89 except the unrelated WaterLog legacy decoder fixture. Food UI tests did not pass end to end: date navigation, Food widget frame measurement, macro swipe selection, hydration controls and recipe search flow need another run after the fixes.
+The implementation includes persistent meal logging/editing, the exact four Add Food choices, CNF/Open Food Facts adapters, barcode scan and unknown-code manual fallback, serving conversions, manual food correction, recent/favorite foods, saved recipes, Add/Replace copying, dated goals/snapshots, remaining calorie/macro calculations, nutrition trends/adherence, hydration history, Food History and recoverable deletion. The #90 store suite ran 45 tests (44 passed, 1 failed) on each available simulator. Food-specific end-to-end UI scenarios were not green, so the Food milestone is not complete.
 
-Public CNF and Open Food Facts endpoints need no credentials. Live network availability, provider completeness and licensing/attribution review, offline transitions, and physical-camera barcode scanning remain unverified. The simulator cannot prove physical camera behavior.
+The #90 UI suite did verify Home navigation to the Food page, hydration quick-add/history recovery, individual meal navigation, four Add Food options, and some Food navigation; it failed in the four Food cases listed above. The current local candidate must pass those scenarios before reporting the user-facing flows as verified.
 
-## Candidate follow-up and guardrails
+Canadian Nutrient File and Open Food Facts public APIs require no credentials. Live API availability/completeness, provider attribution and licensing review, offline transitions, and physical-camera barcode scanning remain unverified. The simulator scanner UI uses manual barcode entry and does not prove camera behavior.
 
-The current unpublished candidate fixes legacy decoding with a timestamp default, gives the Food summary a stable identity, normalizes date shifting, frames the Home widget AX probe, uses a stable Workout Calendar identifier, makes History back navigation explicit, and adjusts Food UI navigation/scroll behavior. It has not been built or tested. The Linux workspace has no Xcode, Swift compiler or Simulator. `git diff --check` passes.
+## Current untested follow-up
 
-The last fully green source baseline remains run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd` (34 unit + 7 UI = 41/41 on SE and iPhone 16); it does not verify later source. No screenshot is approved or replaces a baseline.
-
-The four Home pages, exact 2×4 grid and 1×1/2×1/2×2 geometry, five-icon dock, all themes, HealthKit-off setting and isolated synthetic data are preserved. No production configuration or `main` branch was modified.
+Local changes address the run #90 decoder, date, accessibility-frame, search-dismissal, and calendar-return defects. `git diff --check` must pass before commit. They will be reported only after a new Actions run completes. Current Home geometry, five-icon dock, all existing themes and HealthKit-off configuration are preserved. Default visuals remain provisional and user approval is separate from technical tests. No production configuration or `main` branch has been modified.

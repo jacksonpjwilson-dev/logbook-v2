@@ -242,6 +242,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertNil(oldWater.deletedAt)
         XCTAssertNotEqual(oldWater.createdAt, .distantPast, "Legacy water entries without a timestamp receive a usable creation date")
         XCTAssertNil(oldRecipe.deletedAt)
+        XCTAssertNotEqual(oldRecipe.updatedAt, .distantPast, "Legacy recipes without an edit timestamp receive a usable update date")
     }
 
     func testWorkoutSetCanBeLoggedAndFinishedThenReopened() throws {

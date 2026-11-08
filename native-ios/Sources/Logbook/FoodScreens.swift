@@ -47,7 +47,7 @@ private enum FoodTrendMetric: String, CaseIterable, Identifiable, Hashable {
 
 struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
-    @State private var selectedDate = Date.now
+    @State private var selectedDateKey = LocalDay.string()
     @State private var selectedMealID: UUID?
     @State private var expandedMealIDs = Set<UUID>()
     @State private var trendMetric: FoodTrendMetric = .calories
@@ -56,7 +56,14 @@ struct FoodScreen: View {
     @State private var renameMealID: UUID?
     @State private var mealNameDraft = ""
 
-    private var dateKey: String { LocalDay.string(selectedDate) }
+    private var dateKey: String { selectedDateKey }
+    private var selectedDate: Date { LocalDay.formatter.date(from: selectedDateKey) ?? .now }
+    private var selectedDateBinding: Binding<Date> {
+        Binding(
+            get: { selectedDate },
+            set: { selectedDateKey = LocalDay.string($0) }
+        )
+    }
     private var logs: [FoodLog] { store.state.nutrition.logs.filter { $0.date == dateKey && $0.deletedAt == nil } }
     private var totals: NutritionTargets { store.state.nutritionTotals(on: dateKey) }
     private var targets: NutritionTargets { store.state.nutritionTargets(on: dateKey) }
@@ -119,24 +126,24 @@ struct FoodScreen: View {
         guard let focus = store.consumeFoodNavigationFocus() else { return }
         switch focus {
         case .meal(let id):
-            selectedDate = .now
+            selectedDateKey = LocalDay.string()
             selectedMealID = id
             expandedMealIDs.insert(id)
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-meal-\(id.uuidString)", anchor: .center) } }
         case .meals:
-            selectedDate = .now
+            selectedDateKey = LocalDay.string()
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-meals", anchor: .center) } }
         case .addFood:
-            selectedDate = .now
+            selectedDateKey = LocalDay.string()
             selectedMealID = suggestedMealID
             addFoodMenu = true
         case .water:
-            selectedDate = .now
+            selectedDateKey = LocalDay.string()
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-hydration", anchor: .center) } }
         case .adherence:
             DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-trends", anchor: .center) } }
         case .targets:
-            selectedDate = .now
+            selectedDateKey = LocalDay.string()
             presentedSheet = .targets(date: dateKey)
         }
     }
@@ -145,7 +152,7 @@ struct FoodScreen: View {
         Section {
             HStack(spacing: 18) {
                 Button { shiftDay(-1) } label: { Image(systemName: "chevron.left") }.accessibilityLabel("Previous food day").accessibilityIdentifier("food-day-previous")
-                DatePicker("Choose Food Log date", selection: $selectedDate, displayedComponents: .date)
+                DatePicker("Choose Food Log date", selection: selectedDateBinding, displayedComponents: .date)
                     .datePickerStyle(.compact).labelsHidden().accessibilityIdentifier("food-day-picker")
                 Button { shiftDay(1) } label: { Image(systemName: "chevron.right") }.accessibilityLabel("Next food day").accessibilityIdentifier("food-day-next")
             }
@@ -371,7 +378,7 @@ struct FoodScreen: View {
         calendar.timeZone = .autoupdatingCurrent
         let dayStart = calendar.startOfDay(for: selectedDate)
         if let date = calendar.date(byAdding: .day, value: amount, to: dayStart) {
-            selectedDate = date
+            selectedDateKey = LocalDay.string(date)
         }
     }
     private func ratio(_ value: Double?, _ goal: Double?) -> Double { min(1, max(0, (value ?? 0) / max(1, goal ?? 1))) }
@@ -472,7 +479,7 @@ private struct FoodAddFlowScreen: View {
             }
             .navigationTitle(mode == .recent ? "Recent Foods" : (mode == .scan ? "Scan Barcode" : "Search Foods"))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() }.accessibilityIdentifier("food-add-done") } }
             .sheet(item: $selectedFood) { food in
                 FoodQuantityConfirmationScreen(food: food, meal: meal, date: date)
                     .presentationDetents([.medium, .large]).presentationDragIndicator(.visible)

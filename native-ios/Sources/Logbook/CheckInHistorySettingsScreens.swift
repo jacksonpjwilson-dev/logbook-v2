@@ -273,6 +273,7 @@ private struct WorkoutHistoryDetailScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @Environment(\.dismiss) private var dismiss
     let sessionID: UUID
+    var onCalendarBack: (() -> Void)? = nil
     @State private var confirmDelete = false
 
     private var session: WorkoutSession? { store.state.training.visibleCompletedSessions.first { $0.id == sessionID } }
@@ -320,6 +321,15 @@ private struct WorkoutHistoryDetailScreen: View {
                 }
                 .navigationTitle(session.templateName)
                 .navigationBarTitleDisplayMode(.inline)
+                .navigationBarBackButtonHidden(onCalendarBack != nil)
+                .toolbar {
+                    if let onCalendarBack {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Back", action: onCalendarBack)
+                                .accessibilityIdentifier("workout-history-back")
+                        }
+                    }
+                }
                 .confirmationDialog("Delete this workout?", isPresented: $confirmDelete, titleVisibility: .visible) {
                     Button("Delete Workout", role: .destructive) {
                         store.deleteCompletedWorkout(sessionID)
@@ -406,6 +416,7 @@ struct WorkoutCalendarScreen: View {
     @Environment(\.dismiss) private var dismiss
     @State private var month: Date
     @State private var selectedDate: Date
+    @State private var historyPath: [UUID] = []
 
     init(initialDate: Date = .now) {
         let calendar = Calendar.current
@@ -449,7 +460,7 @@ struct WorkoutCalendarScreen: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $historyPath) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
                     HStack {
@@ -489,7 +500,7 @@ struct WorkoutCalendarScreen: View {
                         } else {
                             WorkoutDaySessionSummary(sessions: selectedSessions, weightUnit: store.state.home.preferredWeightUnit)
                             ForEach(selectedSessions) { session in
-                                NavigationLink(destination: WorkoutHistoryDetailScreen(sessionID: session.id)) {
+                                NavigationLink(value: session.id) {
                                     HStack {
                                         VStack(alignment: .leading, spacing: 3) {
                                             Text(session.templateName).font(.subheadline.weight(.semibold))
@@ -512,6 +523,11 @@ struct WorkoutCalendarScreen: View {
             }
             .navigationTitle("Workout Calendar")
             .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: UUID.self) { sessionID in
+                WorkoutHistoryDetailScreen(sessionID: sessionID) {
+                    if !historyPath.isEmpty { historyPath.removeLast() }
+                }
+            }
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         }
     }
