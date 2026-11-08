@@ -4,8 +4,9 @@
 
 **Development branch:** `codex/default-theme-gate1` (local isolated worktree `work/logbook-next-milestone`).
 
-**Remote source head:** `f28e71c9fcfa4ddf3289e5467d3e591737eedb35`.
+**Remote source head:** `f6c2bb3b58972616e7b10c302212c1ac30d19d44`.
 **Latest completed CI:** [Actions #88](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156), source commit `f28e71c9fcfa4ddf3289e5467d3e591737eedb35`.
+**Current candidate CI:** [Actions #89](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938), source commit `f6c2bb3b58972616e7b10c302212c1ac30d19d44`; iPhone SE and iPhone 16 test steps are still running, while the iPhone 18 Pro lane skipped tests after its simulator availability check.
 
 | Simulator | Build | Unit tests | UI tests | Result |
 |---|---|---:|---:|---|
@@ -15,7 +16,7 @@
 
 The common unit failure is an invalid UUID in the `WaterLog` legacy fixture. UI failures include Home widget accessibility-frame measurement, Food date navigation, ambiguous macro accessibility identifiers, Water Goal sheet presentation, an unstable decline-value assertion, and on SE only a hydration lookup and split drag. Run #88 artifacts are actual, unapproved captures/reports: [SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156/artifacts/13607506214), [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156/artifacts/13607580740), and the [18 Pro availability note](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42454022156/artifacts/13607275657).
 
-The local candidate adds a valid UUID fixture, parent-frame measurements that exclude child overflow, grouped macro accessibility, explicit date identity, Food sheets attached to the screen container, custom hydration entry, full-length nutrition streak logic, saved-recipe search/favorites, same-day calendar session drill-in and visible PR recalculation assertions. It has not been published or run. `git diff --check` passes. This Linux workspace has no Xcode, Swift compiler or iOS Simulator.
+The candidate adds a valid UUID fixture, parent-frame measurements that exclude child overflow, grouped macro accessibility, explicit date identity, Food sheets attached to the screen container, custom hydration entry, full-length nutrition streak logic, saved-recipe search/favorites, same-day calendar session drill-in and visible PR recalculation assertions. It is published as `f6c2bb3`; CI is running and no result is claimed yet. `git diff --check` passes. This Linux workspace has no Xcode, Swift compiler or iOS Simulator.
 
 **Last fully green source baseline:** run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd`, 34 unit + 7 UI tests = 41/41 on SE and iPhone 16. It does not verify later source. Run #87 was also red; see `native-ios/QA/REPORT.md`.
 
@@ -33,7 +34,7 @@ CNF and Open Food Facts endpoints require no credentials. Live service availabil
 
 Keep four swipeable Home pages, the exact 2×4 grid and 1×1/2×1/2×2 widget sizing, the fixed five-icon dock, no Home vertical scrolling, empty split cells for short programs and all existing themes. No screenshot is approved. The original theme-reference image gaps remain listed in `docs/handoff-v2/themes/REFERENCE_INDEX.md`.
 
-1. Publish the local candidate on the development branch and run CI on SE and iPhone 16.
+1. Wait for Actions #89 to complete, inspect device logs and screenshots, and fix any actual failures.
 2. Diagnose each failure from actual logs, fix functional defects and repeat until the relevant tests pass. Capture screenshots as unapproved artifacts; leave iPhone 18 Pro untested unless its test step executes.
 3. Update the canonical tracker and audit only from actual run evidence; keep Training and Food open until every applicable acceptance criterion is verified.
 4. After Training verification and substantial Food coverage, define the next milestone for remaining History, Sleep, Weight, Supplements, Habits and external account/coaching setup.
