@@ -763,6 +763,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["food-confirm-log"].isEnabled, "The quantity step requires confirmation before adding a food")
         app.buttons["food-confirm-log"].tap()
         XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5), "Search stays open so another item can be logged")
+        if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
         app.buttons["food-add-done"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Done returns to the selected Food day")
 
@@ -927,13 +928,13 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["food-add-done"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
 
-        let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
-        scrollToElement(logRecipe, in: app)
-        XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
         let caloriesTotal = app.staticTexts["food-calories-total"]
         scrollToElement(caloriesTotal, in: app, towardTop: true)
         XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
         let caloriesBeforeRecipe = Int(caloriesTotal.label) ?? 0
+        let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
+        scrollToElement(logRecipe, in: app)
+        XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
         logRecipe.tap()
         scrollToElement(caloriesTotal, in: app, towardTop: true)
         XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
@@ -1019,6 +1020,7 @@ final class DailyHomeUITests: XCTestCase {
             XCTAssertTrue(app.buttons["food-confirm-log"].waitForExistence(timeout: 5))
             app.buttons["food-confirm-log"].tap()
             XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5), "Confirmed items leave the picker available for additional entries")
+            if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
             app.buttons["food-add-done"].tap()
             XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Done closes Food search and returns to the selected log date")
         }
