@@ -113,7 +113,12 @@ final class LogbookStore: ObservableObject {
             PlannedExercise(exerciseID: id, name: name, muscle: muscle, equipment: "Dumbbell")
         }
         let templateID = UUID(uuidString: "F0D8D0A0-33A2-4E7F-8B0A-318BE1F79F51")!
-        let template = WorkoutTemplate(id: templateID, name: "Upper Body", exercises: exercises)
+        // The compact history UI test opts into one planned exercise so its
+        // notes and deletion controls remain reachable on iPhone SE.
+        let templateExercises = ProcessInfo.processInfo.arguments.contains("--qa-single-exercise")
+            ? Array(exercises.prefix(1))
+            : exercises
+        let template = WorkoutTemplate(id: templateID, name: "Upper Body", exercises: templateExercises)
         let fullSplitNames = ["Upper Body", "Lower Body", "Push", "Pull", "Legs", "Upper Accessory", "Lower Accessory", "Full Body"]
         let fullSplitFixture = ProcessInfo.processInfo.arguments.contains("--qa-training-split-eight")
         let programRotationFixture = ProcessInfo.processInfo.arguments.contains("--qa-training-programs")
