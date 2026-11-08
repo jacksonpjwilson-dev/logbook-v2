@@ -1,6 +1,5 @@
 import Charts
 import SwiftUI
-import UIKit
 
 private enum FoodEntryMode: String { case search, recent, scan, manual }
 private enum FoodPresentedSheet: Identifiable {
@@ -46,70 +45,6 @@ private enum FoodTrendMetric: String, CaseIterable, Identifiable, Hashable {
     }
 }
 
-private struct FoodDateSwipeInstaller: UIViewRepresentable {
-    let onSwipe: (Int) -> Void
-
-    func makeCoordinator() -> Coordinator { Coordinator(onSwipe: onSwipe) }
-
-    func makeUIView(context: Context) -> UIView {
-        let view = UIView(frame: .zero)
-        view.isUserInteractionEnabled = true
-        view.backgroundColor = .clear
-        view.isOpaque = false
-        view.accessibilityElementsHidden = true
-        return view
-    }
-
-    func updateUIView(_ view: UIView, context: Context) {
-        context.coordinator.onSwipe = onSwipe
-        context.coordinator.install(on: view)
-    }
-
-    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
-        var onSwipe: (Int) -> Void
-        weak var swipeView: UIView?
-        private var recognizers: [UISwipeGestureRecognizer] = []
-
-        init(onSwipe: @escaping (Int) -> Void) { self.onSwipe = onSwipe }
-
-        deinit {
-            if let swipeView {
-                recognizers.forEach { swipeView.removeGestureRecognizer($0) }
-            }
-        }
-
-        func install(on view: UIView) {
-            guard swipeView !== view else { return }
-            if let oldView = swipeView {
-                recognizers.forEach { oldView.removeGestureRecognizer($0) }
-            }
-            swipeView = view
-            let left = UISwipeGestureRecognizer(target: self, action: #selector(swipedLeft))
-            left.direction = .left
-            let right = UISwipeGestureRecognizer(target: self, action: #selector(swipedRight))
-            right.direction = .right
-            for recognizer in [left, right] {
-                recognizer.delegate = self
-                recognizer.cancelsTouchesInView = false
-                recognizer.delaysTouchesBegan = false
-                recognizer.delaysTouchesEnded = false
-                view.addGestureRecognizer(recognizer)
-            }
-            recognizers = [left, right]
-        }
-
-        @objc private func swipedLeft() { onSwipe(1) }
-        @objc private func swipedRight() { onSwipe(-1) }
-
-        func gestureRecognizer(
-            _ gestureRecognizer: UIGestureRecognizer,
-            shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
-        ) -> Bool {
-            true
-        }
-    }
-}
-
 struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var selectedDate = Calendar.current.startOfDay(for: .now)
@@ -143,6 +78,14 @@ struct FoodScreen: View {
                 nutritionTrendsSection
                 foodToolsSection
             }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 24).onEnded { value in
+                    let horizontal = value.translation.width
+                    let vertical = value.translation.height
+                    guard abs(horizontal) > abs(vertical) * 1.4 else { return }
+                    shiftDay(horizontal < 0 ? 1 : -1)
+                }
+            )
             .navigationTitle("Food")
             .onAppear { applyPendingFoodFocus(using: proxy) }
             .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
@@ -257,7 +200,6 @@ struct FoodScreen: View {
             .accessibilityIdentifier("food-macro-swipe-area")
             .accessibilityElement(children: .combine)
             .contentShape(Rectangle())
-            .overlay(FoodDateSwipeInstaller { shiftDay($0) })
 
         } header: {
             HStack {
