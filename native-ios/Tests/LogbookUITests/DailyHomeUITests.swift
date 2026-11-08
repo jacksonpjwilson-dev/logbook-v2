@@ -835,7 +835,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "QA Manual Oats")).firstMatch.waitForExistence(timeout: 5), "Restored food entry returns to Food History")
         app.navigationBars.buttons.element(boundBy: 0).tap()
         let addAgain = app.buttons["food-add-food"]
-        scrollToElement(addAgain, in: app)
+        scrollToElement(addAgain, in: app, towardTop: true)
         addAgain.tap()
         app.buttons["food-option-scan"].tap()
         XCTAssertTrue(app.navigationBars["Scan Barcode"].waitForExistence(timeout: 5))
