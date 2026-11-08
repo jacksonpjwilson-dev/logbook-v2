@@ -594,8 +594,8 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         XCTAssertTrue(historyRows.firstMatch.waitForExistence(timeout: 5), "A saved workout should appear in History after scrolling past the charts")
-        for _ in 0..<5 where !historyRows.firstMatch.isHittable { historyList.swipeUp() }
-        XCTAssertTrue(historyRows.firstMatch.isHittable)
+        scrollToElement(historyRows.firstMatch, in: app)
+        XCTAssertTrue(historyRows.firstMatch.isHittable, "The first saved session is revealed after scrolling History past the charts")
         let editedWorkoutID = String(historyRows.firstMatch.identifier.dropFirst("history-workout-".count))
         XCTAssertFalse(editedWorkoutID.isEmpty, "Capture the stable workout ID before pushing the detail screen")
         historyRows.firstMatch.tap()
