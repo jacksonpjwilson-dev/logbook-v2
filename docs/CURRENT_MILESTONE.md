@@ -3,9 +3,10 @@
 **Objective:** Close meaningful Training verification and implement the approved Food workflows. Current Default visuals are accepted as a provisional working direction only. Preserve approved Home layout and themes. No final visual approval, theme propagation, HealthKit, production configuration change, or merge to `main` is authorized.
 
 **Development branch:** `codex/default-theme-gate1` (isolated worktree `work/logbook-next-milestone`).
-**Current branch head:** documentation-only commit `e3b03399bf87af70dd15de6947c5f99a5c043dc8`.
+**Current branch head:** `54c236485bcd16ffa685ce5cea02d9e27a0220f2`.  
 **Latest tested app source:** `f6c2bb3b58972616e7b10c302212c1ac30d19d44`.
 **Latest completed CI:** [Actions #89](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938).
+**Current CI:** [Actions #90](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42457771622), source `54c236485bcd16ffa685ce5cea02d9e27a0220f2`; SE, iPhone 16, and 18 Pro runner jobs are active, with app tests pending.
 
 | Simulator | Build | Unit tests | UI tests | Result |
 |---|---|---:|---:|---|
@@ -15,7 +16,7 @@
 
 Run #89's shared unit failure was legacy WaterLog JSON missing `createdAt`. UI failures included zero-sized Home frame probes, Food date navigation not updating as asserted, ambiguous macro swipe query, missing hydration/recipe controls after navigation or scrolling, and duplicate Workout Calendar/history navigation selectors. See `native-ios/QA/REPORT.md` for exact cases. Actual, unapproved artifacts: [SE](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13607604595), [iPhone 16](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13608365639), and [18 Pro availability](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42455968938/artifacts/13607691705).
 
-A local, untested follow-up fixes old WaterLog decoding with a safe timestamp fallback; stabilizes Food date identity and day shifts; supplies the frame probe's actual dimensions; gives Workout Calendar a unique accessibility identifier; switches the History back navigation to a swipe; and makes Food test navigation return to the relevant Home/list sections. `git diff --check` passes. The local Linux workspace has no Xcode, Swift compiler or iOS Simulator. No test result is claimed for this follow-up.
+The #90 candidate fixes old WaterLog decoding with a safe timestamp fallback; stabilizes Food date identity and day shifts; supplies the frame probe's actual dimensions; gives Workout Calendar a unique accessibility identifier; switches History back navigation to a swipe; and makes Food test navigation return to the relevant Home/list sections. The current CI is running; no result is claimed for this source yet. `git diff --check` passes. The local Linux workspace has no Xcode, Swift compiler or iOS Simulator.
 
 **Last fully green source baseline:** run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd`, 34 unit + 7 UI tests = 41/41 on SE and iPhone 16. It does not verify later source.
 
