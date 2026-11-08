@@ -1,46 +1,56 @@
 # Logbook QA report
 
-## Latest executed CI evidence
+## Latest executed source evidence
 
 **Development branch:** `codex/default-theme-gate1`
-**Latest tested commit:** `10fd85f930b437f8189c048b7e3d2e598b547e8a`
-**Actions run #85:** https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42449791762
-**Builds:** succeeded on iPhone SE (3rd generation) and iPhone 16. iPhone 18 Pro test action was skipped; it is **untested**.
+**Latest tested commit:** `f04bfdd2d5184a31c99bc41f165d6348b2a7c8f6`
+**Actions run #87:** https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246
 
-| Simulator | Unit tests | UI tests | Result |
-|---|---:|---:|---|
-| iPhone SE (3rd generation) | 42 executed, 40 passed, 2 failed | 11 executed, 7 passed, 4 failed | Failed |
-| iPhone 16 | 42 executed, 40 passed, 2 failed | 11 executed, 8 passed, 3 failed | Failed |
-| iPhone 18 Pro | Not executed | Not executed | Untested (job test step skipped) |
+| Simulator | Build | Unit tests | UI tests | Result |
+|---|---|---:|---:|---|
+| iPhone SE (3rd generation), macOS 15 | Passed | 42 passed / 1 failed (43 executed) | 9 passed / 4 failed (13 executed) | Failed |
+| iPhone 16, macOS 15 | Passed | 42 passed / 1 failed (43 executed) | 8 passed / 5 failed (13 executed) | Failed |
+| iPhone 18 Pro, macOS 26 | Availability check only | Not executed | Not executed | Untested; test step skipped |
 
-The two unit failures were test-fixture/expectation problems rather than production logic regressions: the legacy recipe payload omitted required `id`, and the Add-then-Replace unit case expected two soft-deleted records although three destination rows matched meals represented in the source. Both test corrections are in the pending local candidate.
+The common unit failure was `testLegacyNutritionPayloadDecodesWithoutNewFoodFields`: its old `WaterLog` fixture omitted the model's required `id`. The candidate fixture now includes a legacy identifier.
 
-UI failures on both devices:
+The iPhone 16 UI failures were Food previous-day selection/date swipe, water-goal presentation, the hydration control not entering the accessibility tree during one lazy-list traversal, and progression decline comparing different lazy set fields. iPhone SE had the date and progression failures plus two Food navigation/hydration failures. App and simulator builds succeeded; the test suite did not.
 
-- Food day swipe interacted with the compact date picker, leaving the selected day one day off after the follow-up action. The gesture is now limited to the macro summary area and the test swipes away from the picker.
-- Food hydration `+500` could not be found after the nutrition-target sheet closed on iPhone SE; the next test adds an explicit Food-screen return assertion and will re-check the row on both sizes.
-- Progression decline compared different lazy-list TextFields because the prior query matched by label. The test now follows one stable set-field accessibility ID; a store test explicitly checks that decline leaves prescription values unchanged.
+## Training verification
 
-Additional iPhone SE UI failure:
+Run #87 passed several Training flows on available simulators: Daily/Training Home navigation, split editing and exercise selection, tracking modes/superset/rest behavior, completion summary/PR presentation, program switch/skip, and history editing/deletion/recovery where those cases completed. Do not count the branch's aggregate suite as passing. The candidate adds an out-of-order-completion UI assertion and binds the progression decline assertion to the same stable set identifier; both await a fresh run.
 
-- Workout Recently Deleted restoration assertion checked the first history row rather than the exact restored workout. The test now carries the workout UUID from the Restore button to the corresponding History row.
+Store-level coverage in the candidate includes independent program rotations and repository reopen, discard/scheduled completion behavior, persistent active session/rest timer recovery, superset round timing, alternate tracking modes, first-lift PR baseline, and recalculation after historical edit/delete/restore. Exact test outcomes for those sources will be reported from the next CI run, not inferred here.
 
-The workflow still produced actual Simulator screenshot candidates. Download them from the run’s [iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42449791762/artifacts/13606170507) or [iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42449791762/artifacts/13605871052). Neither is an approved visual baseline. The iPhone 16 log measured the Daily layout at: large 268.52 × 268.52 pt; medium 267.5 × 129.25 pt interior measurement; small 130.18 × 130.18 pt each; dock top at y=757.67 pt. Geometry assertions passed in that run.
+Open direct UI acceptance includes rest-day display/non-advance, multiple same-day session calendar drill-in, PR recalculation displayed after historical changes, and end-to-end saved-session recovery after app termination.
 
-## Current implementation and remaining verification
+## Food and Nutrition implementation
 
-Training has persistent programs/rotations, templates, exercise selection and prescriptions, supersets, active workout lifecycle, timer recovery, progression, history, deletion recovery and PR calculation. Run #85 passed several focused UI paths, including program switching/skip, Workout Split editor/search/custom exercise, tracking mode/superset/rest, workout summary/PR presentation. However, the aggregate run failed; the corrected decline and restore UI checks have not run yet. Direct calendar drill-in for multiple sessions, rest-day UI, and UI-visible PR recalculation after historical edits/deletes remain open.
+The app has real local persistence and navigation for meal logging/editing, exact Search Foods / Scan Barcode / Manual Entry / Recent Foods options, food search, provider provenance, verified serving conversions, manual correction, independent favourites/recents, recipes, meal/day copying with Add/Replace, date-specific goals, calories/macros/adherence, water history, and Recently Deleted recovery. Public Canadian Nutrient File and Open Food Facts adapters are implemented without credential requirements.
 
-Food implementation includes logged meals and edits, local/public search, exact four Add Food options, CNF/Open Food Facts adapters, unknown-barcode fallback, verified conversions, manual corrections, independent favourites/recent items, recipes, Add/Replace copy, historical nutrition goals, remaining totals/adherence/trends, hydration history, offline persistence and Food History/recovery. The latest source adds selectable calories/protein/carbs/fat trends and omits unlogged dates from plotted averages. Added metric, Add/Replace, recipe recovery and water recovery UI tests are not yet executed. Run #85 Food tests failed at the assertions described above, so Food has **not** passed end-to-end verification.
+The current candidate adds the Default Food Home widgets and their actions: 7-day Calories/Protein/Carbs/Fats trends with historical goals, hydration status/quick add/full log, compact meal rows with direct meal navigation, adherence streak markers and contextual Easy Next. Food routes deep-link into the appropriate list section or exact four-option Add Food menu. This source candidate and its expanded UI coverage have **not yet run** in CI.
 
-External CNF/Open Food Facts calls use public APIs and require no credential. Live uptime/catalog completeness, applicable licensing and attribution review, runtime network-loss/offline transitions, and camera barcode recognition on a physical iPhone are unverified. Simulator barcode flow tests only the manual fallback.
+## Artifacts and screenshots
 
-## Pending candidate changes
+Run #87 artifacts are actual Simulator captures and test reports, not approved baselines:
 
-Local source changes currently correct the #85 assertions, constrain the Food swipe gesture, add Food trend metric selection, exercise Add/Replace copy and water/recipe recovery, and add a recipe snapshot unit regression. They have not yet been published or run in CI. Record their exact commit and outcome here after the next workflow completes.
+- [iPhone 16 screenshots and test result bundle](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246/artifacts/13606208757)
+- [iPhone SE screenshots and test result bundle](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246/artifacts/13605984952)
+- [iPhone 18 Pro runner availability report](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246/artifacts/13606187009)
+
+Run #87 measured iPhone 16 Daily Home frames (points): large `268.52 × 268.52` at `(62.24, 176.57)`, medium measured interior `267.5 × 129.25` at approximately `(62.24, 453.24)`, small widgets `130.18 × 130.18` at x `62.24` and `200.57`, dock top y `757.67`. Geometry assertions completed; the approved geometry is unchanged. iPhone SE's captured layout was also measured by the workflow. Candidate captures remain for review and were not accepted as reference baselines.
+
+## Candidate changes awaiting CI
+
+- Consolidate Food-screen modal routes into one typed `.sheet(item:)` presentation, eliminating multiple `.sheet` modifiers on a single List.
+- Preserve the required four Add Food choices with distinct sheet identities.
+- Make Food date swipe a high-priority gesture on the macro summary surface and give that region an accessibility identifier.
+- Wait for day selection to settle in UI assertions and compare the same progression set field before/after declining.
+- Add the required identifier to the legacy `WaterLog` fixture, make the UI scroll helper fall back to app-level swipes when no List collection view is exposed, and test out-of-order workout completion.
+- Add Food Home trend/hydration/meals/adherence/Easy Next interactions and screenshots.
+
+**Candidate source commit:** pending publication and Actions execution. No local Xcode, Swift compiler or iOS Simulator is available in this Linux workspace, so this report cannot claim local builds or simulator tests.
 
 ## Baseline and guardrails
 
-Run #80 remains the previous last fully green app/test baseline: commit `dfd8678efdc354d47aac0e549850a46bae533cdd`, 34 unit + 7 UI = 41/41 on both available devices. It does not cover the later code. The user’s latest visual feedback approves the Default appearance only as a provisional direction. No screenshot is approved or overwritten as a baseline; the 16 existing themes and exact Home geometry remain unchanged. HealthKit is disabled; tests use isolated synthetic state; no production configuration or `main` branch was modified.
-
-This environment is Linux without Xcode or iOS Simulator. Actual build/test and Simulator screenshot evidence must come from the macOS Actions workflow.
+The last fully green source baseline remains run #80, commit `dfd8678efdc354d47aac0e549850a46bae533cdd`: 34 unit + 7 UI tests = 41/41 on iPhone SE and iPhone 16. Run #87 is newer but red. All 16 existing themes and approved Home geometry remain unchanged. The current visual direction is provisional only. HealthKit stays disabled; CI uses isolated synthetic data; no production configuration or `main` branch was modified.

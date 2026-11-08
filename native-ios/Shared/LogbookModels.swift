@@ -846,6 +846,15 @@ enum LogbookRoute: String, Hashable {
     case training, food, history, checkins, settings
 }
 
+enum FoodNavigationFocus: Equatable {
+    case meal(UUID)
+    case meals
+    case addFood
+    case water
+    case adherence
+    case targets
+}
+
 enum CheckInSection: String, Hashable {
     case sleep, weight, supplements
 }

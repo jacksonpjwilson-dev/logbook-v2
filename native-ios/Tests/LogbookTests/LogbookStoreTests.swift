@@ -203,7 +203,7 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertNil(decoded.targetHistory)
         XCTAssertNil(decoded.recipes)
 
-        let oldWater = try JSONDecoder.logbook.decode(WaterLog.self, from: Data(#"{"date":"2026-11-08","milliliters":250}"#.utf8))
+        let oldWater = try JSONDecoder.logbook.decode(WaterLog.self, from: Data(#"{"id":"legacy-water","date":"2026-11-08","milliliters":250}"#.utf8))
         let oldRecipe = try JSONDecoder.logbook.decode(FoodRecipe.self, from: Data(#"{"id":"legacy-recipe","name":"Legacy","ingredients":[],"yieldAmount":1,"yieldUnit":"servings"}"#.utf8))
         XCTAssertNil(oldWater.deletedAt)
         XCTAssertNil(oldRecipe.deletedAt)

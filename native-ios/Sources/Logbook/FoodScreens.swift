@@ -1,7 +1,26 @@
 import Charts
 import SwiftUI
 
-private enum FoodEntryMode { case search, recent, scan, manual }
+private enum FoodEntryMode: String { case search, recent, scan, manual }
+private enum FoodPresentedSheet: Identifiable {
+    case addFood(mode: FoodEntryMode, meal: MealSlot, date: String)
+    case targets(date: String)
+    case copyMeals(date: String)
+    case recipeBuilder
+    case editRecipe(FoodRecipe)
+    case waterGoal
+
+    var id: String {
+        switch self {
+        case .addFood(let mode, let meal, let date): "add-\(mode.rawValue)-\(meal.id)-\(date)"
+        case .targets(let date): "targets-\(date)"
+        case .copyMeals(let date): "copy-\(date)"
+        case .recipeBuilder: "recipe-builder"
+        case .editRecipe(let recipe): "edit-recipe-\(recipe.id)"
+        case .waterGoal: "water-goal"
+        }
+    }
+}
 private enum FoodTrendMetric: String, CaseIterable, Identifiable, Hashable {
     case calories, protein, carbohydrates, fat
     var id: String { rawValue }
@@ -28,17 +47,12 @@ struct FoodScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var selectedDate = Date.now
     @State private var selectedMealID: UUID?
+    @State private var expandedMealIDs = Set<UUID>()
     @State private var trendMetric: FoodTrendMetric = .calories
     @State private var addFoodMenu = false
-    @State private var entryMode: FoodEntryMode = .search
-    @State private var showAddFlow = false
-    @State private var showTargets = false
-    @State private var showCopy = false
-    @State private var showRecipeBuilder = false
-    @State private var editingRecipe: FoodRecipe?
+    @State private var presentedSheet: FoodPresentedSheet?
     @State private var renameMealID: UUID?
     @State private var mealNameDraft = ""
-    @State private var showWaterGoal = false
 
     private var dateKey: String { LocalDay.string(selectedDate) }
     private var logs: [FoodLog] { store.state.nutrition.logs.filter { $0.date == dateKey && $0.deletedAt == nil } }
@@ -48,47 +62,79 @@ struct FoodScreen: View {
     private var waterTotal: Int { waterLogs.reduce(0) { $0 + $1.milliliters } }
 
     var body: some View {
-        List {
-            nutritionSummarySection
-            mealsSection
-            hydrationSection
-            nutritionTrendsSection
-            foodToolsSection
+        ScrollViewReader { proxy in
+            List {
+                nutritionSummarySection
+                mealsSection
+                hydrationSection
+                nutritionTrendsSection
+                foodToolsSection
+            }
+            .navigationTitle("Food")
+            .onAppear { applyPendingFoodFocus(using: proxy) }
+            .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
+            .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
+                Button("Search Foods") { presentFoodEntry(.search) }
+                    .accessibilityIdentifier("food-option-search")
+                Button("Scan Barcode") { presentFoodEntry(.scan) }
+                    .accessibilityIdentifier("food-option-scan")
+                Button("Manual Entry") { presentFoodEntry(.manual) }
+                    .accessibilityIdentifier("food-option-manual")
+                Button("Recent Foods") { presentFoodEntry(.recent) }
+                    .accessibilityIdentifier("food-option-recent")
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("Search Foods, Scan Barcode, Manual Entry, or Recent Foods") }
+            .sheet(item: $presentedSheet) { sheet in
+                Group {
+                    switch sheet {
+                    case .addFood(let mode, let meal, let date):
+                        FoodAddFlowScreen(mode: mode, meal: meal, date: date).presentationDetents([.large])
+                    case .targets(let date):
+                        NutritionTargetsScreen(effectiveDate: date).presentationDetents([.medium, .large])
+                    case .copyMeals(let date):
+                        CopyMealsScreen(destinationDate: date).presentationDetents([.medium, .large])
+                    case .recipeBuilder:
+                        RecipeEditorScreen().presentationDetents([.large])
+                    case .editRecipe(let recipe):
+                        RecipeEditorScreen(recipe: recipe).presentationDetents([.large])
+                    case .waterGoal:
+                        WaterGoalScreen().presentationDetents([.medium])
+                    }
+                }
+                .presentationDragIndicator(.visible)
+            }
+            .alert("Rename meal", isPresented: Binding(get: { renameMealID != nil }, set: { if !$0 { renameMealID = nil } })) {
+                TextField("Meal name", text: $mealNameDraft)
+                Button("Save") { if let renameMealID { store.renameMeal(renameMealID, name: mealNameDraft) }; renameMealID = nil }
+                Button("Cancel", role: .cancel) { renameMealID = nil }
+            } message: { Text("Past food entries keep the meal name recorded when they were logged.") }
         }
-        .navigationTitle("Food")
-        .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
-            Button("Search Foods") { entryMode = .search; showAddFlow = true }
-                .accessibilityIdentifier("food-option-search")
-            Button("Scan Barcode") { entryMode = .scan; showAddFlow = true }
-                .accessibilityIdentifier("food-option-scan")
-            Button("Manual Entry") { entryMode = .manual; showAddFlow = true }
-                .accessibilityIdentifier("food-option-manual")
-            Button("Recent Foods") { entryMode = .recent; showAddFlow = true }
-                .accessibilityIdentifier("food-option-recent")
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Search Foods, Scan Barcode, Manual Entry, or Recent Foods") }
-        .sheet(isPresented: $showAddFlow) {
-            FoodAddFlowScreen(mode: entryMode, meal: currentMeal, date: dateKey)
-                .presentationDetents([.large]).presentationDragIndicator(.visible)
+    }
+
+    private func applyPendingFoodFocus(using proxy: ScrollViewProxy) {
+        guard let focus = store.consumeFoodNavigationFocus() else { return }
+        switch focus {
+        case .meal(let id):
+            selectedDate = .now
+            selectedMealID = id
+            expandedMealIDs.insert(id)
+            DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-meal-\(id.uuidString)", anchor: .center) } }
+        case .meals:
+            selectedDate = .now
+            DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-meals", anchor: .center) } }
+        case .addFood:
+            selectedDate = .now
+            selectedMealID = suggestedMealID
+            addFoodMenu = true
+        case .water:
+            selectedDate = .now
+            DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-hydration", anchor: .center) } }
+        case .adherence:
+            DispatchQueue.main.async { withAnimation { proxy.scrollTo("food-trends", anchor: .center) } }
+        case .targets:
+            selectedDate = .now
+            presentedSheet = .targets(date: dateKey)
         }
-        .sheet(isPresented: $showTargets) {
-            NutritionTargetsScreen(effectiveDate: dateKey).presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showCopy) {
-            CopyMealsScreen(destinationDate: dateKey).presentationDetents([.medium, .large]).presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showRecipeBuilder) {
-            RecipeEditorScreen().presentationDetents([.large]).presentationDragIndicator(.visible)
-        }
-        .sheet(item: $editingRecipe) { recipe in
-            RecipeEditorScreen(recipe: recipe).presentationDetents([.large]).presentationDragIndicator(.visible)
-        }
-        .sheet(isPresented: $showWaterGoal) { WaterGoalScreen().presentationDetents([.medium]).presentationDragIndicator(.visible) }
-        .alert("Rename meal", isPresented: Binding(get: { renameMealID != nil }, set: { if !$0 { renameMealID = nil } })) {
-            TextField("Meal name", text: $mealNameDraft)
-            Button("Save") { if let renameMealID { store.renameMeal(renameMealID, name: mealNameDraft) }; renameMealID = nil }
-            Button("Cancel", role: .cancel) { renameMealID = nil }
-        } message: { Text("Past food entries keep the meal name recorded when they were logged.") }
     }
 
     private var nutritionSummarySection: some View {
@@ -117,8 +163,10 @@ struct FoodScreen: View {
                 MacroTile(name: "Carbs", value: totals.carbohydrates ?? 0, goal: targets.carbohydrates, color: .blue)
                 MacroTile(name: "Fat", value: totals.fat ?? 0, goal: targets.fat, color: .orange)
             }
+            .accessibilityIdentifier("food-macro-swipe-area")
+            .accessibilityElement(children: .contain)
             .contentShape(Rectangle())
-            .simultaneousGesture(DragGesture(minimumDistance: 48).onEnded { value in
+            .highPriorityGesture(DragGesture(minimumDistance: 48).onEnded { value in
                 let horizontal = value.translation.width
                 let vertical = value.translation.height
                 guard abs(horizontal) > abs(vertical) * 1.5 else { return }
@@ -128,9 +176,10 @@ struct FoodScreen: View {
             HStack {
                 Text(selectedDate.formatted(date: .complete, time: .omitted))
                 Spacer()
-                Button("Targets") { showTargets = true }.accessibilityIdentifier("food-targets")
+                Button("Targets") { presentedSheet = .targets(date: dateKey) }.accessibilityIdentifier("food-targets")
             }
         }
+        .id("food-nutrition-summary")
     }
 
     private var mealsSection: some View {
@@ -143,16 +192,22 @@ struct FoodScreen: View {
             }
             Button {
                 selectedMealID = suggestedMealID
-                entryMode = .search
                 addFoodMenu = true
             } label: { Label("Add Food", systemImage: "plus.circle.fill") }
                 .accessibilityIdentifier("food-add-food")
         } header: { Text("Meals") }
+            .id("food-meals")
     }
 
     private func mealRow(_ meal: MealSlot) -> some View {
         let mealLogs = logs.filter { $0.mealID == meal.id || $0.mealName == meal.name }
-        return DisclosureGroup {
+        return DisclosureGroup(isExpanded: Binding(
+            get: { expandedMealIDs.contains(meal.id) },
+            set: { isExpanded in
+                if isExpanded { expandedMealIDs.insert(meal.id) }
+                else { expandedMealIDs.remove(meal.id) }
+            }
+        )) {
             if mealLogs.isEmpty { Text("Nothing logged yet.").font(.caption).foregroundStyle(.secondary) }
             ForEach(mealLogs) { log in
                 NavigationLink(destination: FoodLogEditorScreen(logID: log.id)) {
@@ -167,8 +222,7 @@ struct FoodScreen: View {
             }
             Button {
                 selectedMealID = meal.id
-                entryMode = .search
-                showAddFlow = true
+                presentFoodEntry(.search)
             } label: { Label("Add to Meal", systemImage: "plus") }
                 .accessibilityIdentifier("add-to-meal-\(meal.id.uuidString)")
         } label: {
@@ -179,6 +233,7 @@ struct FoodScreen: View {
                     .font(.caption).foregroundStyle(.secondary)
             }
         }
+        .id("food-meal-\(meal.id.uuidString)")
         .contextMenu {
             Button("Rename meal", systemImage: "pencil") {
                 renameMealID = meal.id
@@ -210,8 +265,9 @@ struct FoodScreen: View {
                 }
                 .accessibilityIdentifier("water-history-\(log.id.uuidString)")
             }
-            Button("Water goal…") { showWaterGoal = true }.accessibilityIdentifier("water-goal-edit")
+            Button("Water goal…") { presentedSheet = .waterGoal }.accessibilityIdentifier("water-goal-edit")
         } header: { Text("Hydration") }
+            .id("food-hydration")
     }
 
     private var nutritionTrendsSection: some View {
@@ -256,15 +312,16 @@ struct FoodScreen: View {
                 .font(.caption)
             }
         } header: { Text("Nutrition trends · 7 days") }
+            .id("food-trends")
     }
 
     private var foodToolsSection: some View {
         Section {
             NavigationLink("Food History") { FoodHistoryScreen() }.accessibilityIdentifier("food-history-link")
             NavigationLink("Recently Deleted") { RecentlyDeletedFoodScreen() }.accessibilityIdentifier("food-recently-deleted-link")
-            Button { showCopy = true } label: { Label("Copy meals or day…", systemImage: "doc.on.doc") }
+            Button { presentedSheet = .copyMeals(date: dateKey) } label: { Label("Copy meals or day…", systemImage: "doc.on.doc") }
                 .accessibilityIdentifier("food-copy-meals")
-            Button { showRecipeBuilder = true } label: { Label("Create recipe", systemImage: "book.closed") }
+            Button { presentedSheet = .recipeBuilder } label: { Label("Create recipe", systemImage: "book.closed") }
                 .accessibilityIdentifier("food-create-recipe")
             if let recipes = store.state.nutrition.recipes?.filter({ $0.deletedAt == nil }), !recipes.isEmpty {
                 ForEach(recipes) { recipe in recipeRow(recipe) }
@@ -286,13 +343,16 @@ struct FoodScreen: View {
         }
         .accessibilityIdentifier("log-recipe-\(recipe.id)")
         .contextMenu {
-            Button("Edit recipe", systemImage: "pencil") { editingRecipe = recipe }
+            Button("Edit recipe", systemImage: "pencil") { presentedSheet = .editRecipe(recipe) }
             Button("Delete recipe", systemImage: "trash", role: .destructive) { store.deleteRecipe(recipe.id) }
         }
     }
 
     private var currentMeal: MealSlot {
         store.state.nutrition.meals.first(where: { $0.id == (selectedMealID ?? suggestedMealID) }) ?? store.state.nutrition.meals.first ?? MealSlot(name: "Meal 1")
+    }
+    private func presentFoodEntry(_ mode: FoodEntryMode) {
+        presentedSheet = .addFood(mode: mode, meal: currentMeal, date: dateKey)
     }
     private var suggestedMealID: UUID? {
         guard !store.state.nutrition.meals.isEmpty else { return nil }

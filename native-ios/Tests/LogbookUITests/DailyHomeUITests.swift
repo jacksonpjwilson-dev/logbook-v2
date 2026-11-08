@@ -72,6 +72,65 @@ final class DailyHomeUITests: XCTestCase {
         dailyPage.tap()
         app.buttons["home-widget-kcal"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Calories widget should open Food")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["Food page"].waitForExistence(timeout: 5))
+        app.buttons["Food page"].tap()
+        let foodTrendWidget = app.descendants(matching: .any)["home-widget-food-kcal"]
+        let foodMealsWidget = app.descendants(matching: .any)["home-widget-food-meals"]
+        let foodStreakWidget = app.descendants(matching: .any)["home-widget-food-fibre"]
+        let easyNextWidget = app.descendants(matching: .any)["home-widget-food-easynext"]
+        XCTAssertTrue(foodTrendWidget.waitForExistence(timeout: 5))
+        XCTAssertTrue(foodMealsWidget.exists)
+        XCTAssertTrue(foodStreakWidget.exists)
+        XCTAssertTrue(easyNextWidget.exists)
+        XCTAssertEqual(foodTrendWidget.frame.width, foodTrendWidget.frame.height, accuracy: 2)
+        XCTAssertEqual(foodMealsWidget.frame.width, foodTrendWidget.frame.width, accuracy: 2)
+        XCTAssertGreaterThan(foodTrendWidget.frame.height, foodMealsWidget.frame.height)
+        XCTAssertEqual(foodStreakWidget.frame.width, easyNextWidget.frame.width, accuracy: 2)
+        XCTAssertEqual(foodStreakWidget.frame.width, foodStreakWidget.frame.height, accuracy: 2)
+        XCTAssertEqual(foodMealsWidget.frame.height, foodStreakWidget.frame.height, accuracy: 2)
+        XCTAssertLessThan(foodStreakWidget.frame.maxY, app.buttons["Training tab"].frame.minY, "Food widgets stay above the fixed dock on supported simulators")
+        XCTAssertTrue(app.segmentedControls["food-home-trend-picker"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["food-home-seven-day-chart"].exists)
+        attachScreenshot(of: app, named: "Home-Food-Widgets-Candidate")
+
+        let trendPicker = app.segmentedControls["food-home-trend-picker"]
+        for metric in ["Protein", "Carbs", "Fats", "Calories"] {
+            trendPicker.buttons[metric].tap()
+            XCTAssertTrue(app.descendants(matching: .any)["food-home-seven-day-chart"].exists)
+        }
+
+        app.buttons["food-home-water-250"].tap()
+        app.buttons["food-home-water-log"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("250 mL"), "The Home hydration action persists to today's water log")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Food page"].tap()
+
+        let homeMeal = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-home-meal-")).firstMatch
+        XCTAssertTrue(homeMeal.waitForExistence(timeout: 5))
+        let mealID = String(homeMeal.identifier.dropFirst("food-home-meal-".count))
+        homeMeal.tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["add-to-meal-\(mealID)"].waitForExistence(timeout: 5), "A Home meal row opens the corresponding meal expanded in Food")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Food page"].tap()
+        app.buttons["food-home-all-meals"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["food-add-food"].waitForExistence(timeout: 5), "The All action opens the complete meal list in Food")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Food page"].tap()
+
+        app.buttons["food-home-nutrition-streak"].tap()
+        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.segmentedControls["food-trend-metric"].waitForExistence(timeout: 5), "The streak opens the Food adherence history")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.buttons["Food page"].tap()
+
+        app.buttons["food-home-easy-next-action"].tap()
+        for option in ["food-option-search", "food-option-scan", "food-option-manual", "food-option-recent"] {
+            XCTAssertTrue(app.buttons[option].waitForExistence(timeout: 3), "Easy Next opens one of the four approved Add Food options")
+        }
     }
 
     func testDailySmallWidgetRegionsOpenTheirMatchingCheckInSections() throws {
@@ -561,6 +620,23 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Skipping advances the scheduled rotation")
         XCTAssertTrue(app.staticTexts["Completed workouts will appear here."].exists, "Skipping must not create a completed workout")
 
+        let firstWorkout = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "training-template-", "Upper Body")).firstMatch
+        XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5))
+        firstWorkout.tap()
+        app.buttons["workout-template-start"].tap()
+        let firstWeight = inputField(app, labelled: "Weight in kilograms")
+        scrollToElement(firstWeight, in: app)
+        replaceText(in: firstWeight, with: "55")
+        dismissKeyboard(in: app)
+        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
+        app.buttons["finish-workout"].tap()
+        XCTAssertTrue(app.buttons["confirm-finish-workout"].waitForExistence(timeout: 5))
+        app.buttons["confirm-finish-workout"].tap()
+        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
+        app.buttons["workout-summary-done"].tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Completing an out-of-order workout records history without advancing the scheduled workout")
+
         programB.tap()
         XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Switching programs preserves that program's rotation")
         programA.tap()
@@ -583,13 +659,15 @@ final class DailyHomeUITests: XCTestCase {
         let weight = app.textFields.matching(NSPredicate(format: "identifier BEGINSWITH %@", "workout-set-weight-")).firstMatch
         XCTAssertTrue(weight.waitForExistence(timeout: 5), "The same planned set must be observed before and after declining")
         scrollToElement(weight, in: app)
+        let stableWeightID = weight.identifier
         let before = String(describing: weight.value ?? "")
 
         scrollToElement(suggestion, in: app)
         suggestion.tap()
         XCTAssertFalse(app.buttons["accept-progression-suggestion"].exists, "Declining removes the suggestion for this active workout")
-        scrollToElement(weight, in: app, towardTop: true)
-        XCTAssertEqual(String(describing: weight.value ?? ""), before, "Declining must leave the planned set load unchanged")
+        let sameWeightField = app.textFields[stableWeightID]
+        scrollToElement(sameWeightField, in: app, towardTop: true)
+        XCTAssertEqual(String(describing: sameWeightField.value ?? ""), before, "Declining must leave that exact planned set load unchanged")
         XCTAssertFalse(before.isEmpty, "The test must capture the planned load before declining")
         attachScreenshot(of: app, named: "Training-Progression-Declined-Candidate")
     }
@@ -601,17 +679,17 @@ final class DailyHomeUITests: XCTestCase {
         let dateKey = app.staticTexts["food-date-key"]
         XCTAssertTrue(dateKey.waitForExistence(timeout: 5))
         let originalDate = dateKey.label
-        let foodList = app.collectionViews.firstMatch
-        // Swipe across the macro summary, away from the compact DatePicker so
-        // only the Food day gesture receives the horizontal drag.
-        let swipeStart = foodList.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.46))
-        let swipeEnd = foodList.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.46))
+        let swipeArea = app.descendants(matching: .any)["food-macro-swipe-area"]
+        XCTAssertTrue(swipeArea.waitForExistence(timeout: 5))
+        let swipeStart = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.84, dy: 0.5))
+        let swipeEnd = swipeArea.coordinate(withNormalizedOffset: CGVector(dx: 0.16, dy: 0.5))
         swipeStart.press(forDuration: 0.1, thenDragTo: swipeEnd)
         let advancedDate = NSPredicate(format: "label != %@", originalDate)
         expectation(for: advancedDate, evaluatedWith: dateKey)
         waitForExpectations(timeout: 4)
         app.buttons["food-day-previous"].tap()
-        XCTAssertEqual(dateKey.label, originalDate, "A right-to-left day swipe advances one day; previous-day action returns to the selected log date")
+        let previousDateRestored = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label == %@", originalDate), object: dateKey)
+        XCTAssertEqual(XCTWaiter.wait(for: [previousDateRestored], timeout: 5), .completed, "A right-to-left day swipe advances one day; previous-day action returns to the selected log date")
 
         let addFood = app.buttons["food-add-food"]
         scrollToElement(addFood, in: app)
@@ -809,6 +887,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodDate.waitForExistence(timeout: 5))
         let today = foodDate.label
         app.buttons["food-day-previous"].tap()
+        let priorDate = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", today), object: foodDate)
+        XCTAssertEqual(XCTWaiter.wait(for: [priorDate], timeout: 5), .completed, "Previous-day control selects the prior date before logging")
 
         let addMeal = app.buttons["Add meal"]
         scrollToElement(addMeal, in: app)
@@ -914,7 +994,11 @@ final class DailyHomeUITests: XCTestCase {
             }
             // Lazy List rows may not enter the accessibility tree until they are
             // scrolled into view; avoid reading a missing element's frame first.
-            if towardTop { list.swipeDown() } else { list.swipeUp() }
+            if list.exists {
+                if towardTop { list.swipeDown() } else { list.swipeUp() }
+            } else {
+                if towardTop { app.swipeDown() } else { app.swipeUp() }
+            }
         }
     }
 

@@ -1,26 +1,26 @@
 # Training system UI milestone status
 
 **Development branch:** `codex/default-theme-gate1`
-**Latest tested commit:** `10fd85f930b437f8189c048b7e3d2e598b547e8a`
-**Evidence:** [Actions run #85](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42449791762)
+**Latest executed commit:** `f04bfdd2d5184a31c99bc41f165d6348b2a7c8f6`
+**Evidence:** [Actions run #87](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42451731246)
 
-## Run #85
+## Run #87 results
 
-Build succeeded on iPhone SE (3rd generation) and iPhone 16. Each executed 42 unit tests with 40 passing and 2 failing. iPhone 16 executed 11 UI tests with 8 passing and 3 failing; iPhone SE executed 11 UI tests with 7 passing and 4 failing. The iPhone 18 Pro test step was skipped and remains **untested**. Failures are described in `REPORT.md`.
+Builds succeeded on iPhone SE (3rd generation) and iPhone 16. Both ran 43 unit tests: 42 passed, 1 failed (legacy WaterLog decode fixture lacked a required ID). iPhone 16 ran 13 UI tests: 8 passed, 5 failed. iPhone SE ran 13 UI tests: 9 passed, 4 failed. The iPhone 18 Pro test step was skipped and is **untested**. Failure details are in `REPORT.md`.
 
-The unit failures were inaccurate test setup/expectations: missing required legacy recipe identifier and an undercount of three matching destination entries soft-deleted by Replace. The UI decline check matched an ambiguous TextField and the restore assertion checked a differently sorted History row; both are corrected locally using stable identifiers. Neither correction has yet been run in CI.
+The candidate fixes the WaterLog fixture and narrows the progression assertion to the exact same set input. New direct tests and code corrections have not been run yet.
 
 ## Evidence for implemented Training paths
 
-- **Program and rotation:** UI path switches between independently rotating programs and confirms scheduled skip advances only the selected program without creating history. Passed in run #85 on both available simulators.
-- **Workout Split editor:** UI path creates and reorders templates, searches/selects a catalog exercise, creates a custom exercise, and configures prescription/tracking; passed in #85 on SE and iPhone 16.
-- **Superset and tracking:** UI path creates a superset and checks rest starts after the round; exercise mode selection and its store behavior were exercised. Passed in #85 on available devices.
-- **Timer and live session:** existing UI and store coverage exercises the blue pinned timer, default/override durations, +15, pause/resume, skip/Ready behavior and persisted recovery. Earlier green evidence is run #80; current changes are covered by #85 where cases executed.
-- **Progression:** acceptance path and completion summary/PR presentation ran in #85; the new decline check failed due to an ambiguous element, and the corrected stable-set check is pending CI.
-- **History:** store tests cover multiple same-day sessions, edits, soft delete/recovery, first-session baseline and PR recalculation. The UI path reached deletion/recovery but SE’s final assertion used the wrong history row; exact restored-ID check is pending CI. Calendar drill-in for multiple same-date sessions and UI-visible PR recalculation after historical edit/deletion remain incomplete.
+- **Programs and rotation:** run #87's switching/skip path passed on the available simulators. The candidate adds completing a non-next workout after skipping and checking that the scheduled next workout remains unchanged; that new UI assertion awaits CI.
+- **Workout Split editor:** the UI path creates/reorders templates, searches and selects a catalog exercise, adds a custom exercise, and configures prescriptions/tracking. This path passed where executed in #87.
+- **Superset and tracking:** UI/store paths exercise alternate modes and ensure the timer starts after the superset round; cases passed where executed in #87.
+- **Timer and session persistence:** store tests cover 90-second default and per-exercise override, pause/resume/+15/skip absolute-time behavior, and repository reopen recovery. The blue top-floating card and pinned footer have simulator UI coverage from prior runs; no physical device is attached here.
+- **Progression:** explicit acceptance and completion summary/PR presentation paths passed in #87. The decline UI comparison failed because the query could select a different lazy-loaded TextField; the candidate records and reacquires the same stable identifier. Re-run is pending.
+- **History/PR:** store tests cover multiple same-day sessions, historical edits/deletes/restores, baseline rules and recalculation. The UI has historical editing/deletion/recovery, but the aggregate #87 run was red. Direct UI navigation between same-date sessions and visible PR recalculation after edit/delete/restore remain incomplete.
 
 ## Current scope gaps
 
-Training implementation is broad but not yet fully accepted. Remaining direct checks include a rest-day UI path; preserving a draft's originating program when switching programs; calendar navigation among multiple sessions on one date; visible PR updates after historical corrections/deletions; and all currently pending corrected UI assertions. Run #85 aggregate failures mean no blanket Training completion claim is appropriate.
+Training is **not verified complete**. Run #87 failed on both available simulators. Remaining direct UI evidence includes rest-day non-advance, draft program association on program switch, calendar navigation among multiple same-day records, PR display recalculation after historical correction/deletion, and a saved-session relaunch recovery flow. Fixes to the #87 assertions are in the current candidate, not yet executed.
 
-The approved Home grid remains 2×4 with exact widget sizes; programs with fewer than eight workouts leave unused cells empty. Visual styling is provisionally accepted only; no final visual approval or baseline protection action has been taken. Home geometry, dock and 16 theme designs were not changed. The iPhone 18 Pro is untested. HealthKit is disabled.
+The exact approved 2×4 grid and widget geometry remain unchanged; short rotations leave empty cells. Visual styling is provisionally acceptable only. No screenshot is a final approved baseline. All current themes remain unchanged, HealthKit disabled, and iPhone 18 Pro untested.

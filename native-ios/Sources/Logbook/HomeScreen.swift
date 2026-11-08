@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 struct HomeScreen: View {
@@ -26,6 +27,10 @@ struct HomeScreen: View {
                                 openCheckIn: { section in
                                     store.focusCheckIn(section)
                                     path = [.checkins]
+                                },
+                                openFoodFocus: { destination in
+                                    store.focusFood(destination)
+                                    path = [.food]
                                 },
                                 startWorkout: { template in
                                     store.startWorkout(template)
@@ -170,6 +175,7 @@ private struct HomePageGrid: View {
     let editing: Bool
     let open: (LogbookRoute) -> Void
     let openCheckIn: (CheckInSection) -> Void
+    let openFoodFocus: (FoodNavigationFocus) -> Void
     let startWorkout: (WorkoutTemplate) -> Void
     let remove: (UUID) -> Void
     @State private var wigglePhase = false
@@ -195,6 +201,17 @@ private struct HomePageGrid: View {
             page.widgets.contains {
                 $0.kind == item.kind && $0.size == item.size && $0.row == item.row &&
                     $0.column == item.column && $0.variant == item.variant
+            }
+        }
+    }
+
+    private var usesApprovedFoodLayout: Bool {
+        guard page.name == "Food", store.state.home.theme == .defaultTheme,
+              page.widgets.count == HomeState.defaultPages[2].widgets.count else { return false }
+        return HomeState.defaultPages[2].widgets.allSatisfy { expected in
+            page.widgets.contains {
+                $0.kind == expected.kind && $0.size == expected.size && $0.row == expected.row &&
+                    $0.column == expected.column && $0.variant == expected.variant
             }
         }
     }
@@ -232,6 +249,15 @@ private struct HomePageGrid: View {
                                 palette: store.state.home.theme.palette,
                                 state: store.state,
                                 openTraining: { open(.training) }
+                            )
+                            .frame(width: width, height: height)
+                            .disabled(editing)
+                        } else if usesApprovedFoodLayout {
+                            DefaultFoodHomeWidgetView(
+                                widget: widget,
+                                palette: store.state.home.theme.palette,
+                                state: store.state,
+                                openFood: openFoodFocus
                             )
                             .frame(width: width, height: height)
                             .disabled(editing)
@@ -506,6 +532,301 @@ private struct HomeWidgetCard: View {
     }
 
     private func weightValue(_ kg: Double) -> Double { state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
+}
+
+private enum FoodHomeTrend: String, CaseIterable, Identifiable {
+    case calories, protein, carbs, fats
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .calories: "Calories"
+        case .protein: "Protein"
+        case .carbs: "Carbs"
+        case .fats: "Fats"
+        }
+    }
+    var unit: String { self == .calories ? "kcal" : "g" }
+    func value(_ totals: NutritionTargets) -> Double? {
+        switch self {
+        case .calories: totals.calories
+        case .protein: totals.protein
+        case .carbs: totals.carbohydrates
+        case .fats: totals.fat
+        }
+    }
+}
+
+private struct FoodHomeDay: Identifiable {
+    var date: Date
+    var key: String
+    var value: NutritionTargets
+    var targets: NutritionTargets
+    var id: String { key }
+}
+
+private struct DefaultFoodHomeWidgetView: View {
+    let widget: HomeWidget
+    let palette: ThemePalette
+    let state: LogbookState
+    let openFood: (FoodNavigationFocus) -> Void
+    @EnvironmentObject private var store: LogbookStore
+    @State private var trend: FoodHomeTrend = .calories
+
+    private var today: String { LocalDay.string() }
+    private var todayLogs: [FoodLog] { state.nutrition.logs.filter { $0.date == today && $0.deletedAt == nil } }
+    private var todayWater: Int { state.nutrition.water.filter { $0.date == today && $0.deletedAt == nil }.reduce(0) { $0 + $1.milliliters } }
+    private var todayTargets: NutritionTargets { state.nutritionTargets(on: today) }
+    private var todayTotals: NutritionTargets { state.nutritionTotals(on: today) }
+    private var waterGoal: Int? { state.nutrition.waterGoalMilliliters }
+    private var days: [FoodHomeDay] {
+        (0..<7).compactMap { offset in
+            guard let date = Calendar.current.date(byAdding: .day, value: offset - 6, to: .now) else { return nil }
+            let key = LocalDay.string(date)
+            let dayLogs = state.nutrition.logs.filter { $0.date == key && $0.deletedAt == nil }
+            let raw = state.nutritionTotals(on: key)
+            let totals = NutritionTargets(
+                calories: dayLogs.isEmpty ? nil : raw.calories,
+                protein: dayLogs.isEmpty ? nil : raw.protein,
+                carbohydrates: dayLogs.isEmpty ? nil : raw.carbohydrates,
+                fat: dayLogs.isEmpty ? nil : raw.fat
+            )
+            return FoodHomeDay(date: date, key: key, value: totals, targets: state.nutritionTargets(on: key))
+        }
+    }
+    private var trendDays: [FoodHomeDay] { days.filter { trend.value($0.value) != nil } }
+    private var calorieAverage: Double? { average(days.compactMap { $0.value.calories }) }
+    private var proteinAverage: Double? { average(days.compactMap { $0.value.protein }) }
+    private var nutritionStreak: Int {
+        var count = 0
+        let streakDays = state.nutritionAdherence(on: today) == .unlogged ? Array(days.dropLast()) : days
+        for day in streakDays.reversed() {
+            guard state.nutritionAdherence(on: day.key) == .onTarget else { break }
+            count += 1
+        }
+        return count
+    }
+    private var easyNext: (title: String, reason: String, focus: FoodNavigationFocus?) {
+        if todayTargets.calories == nil || todayTargets.protein == nil {
+            return ("Set nutrition goals", "Choose calorie and protein targets", .targets)
+        }
+        if todayLogs.isEmpty { return ("Log your first meal", "Nothing has been recorded today", .addFood) }
+        let proteinLeft = max(0, (todayTargets.protein ?? 0) - (todayTotals.protein ?? 0))
+        if proteinLeft > 0 {
+            return ("Add a protein source", "\(Int(proteinLeft)) g protein remaining", .addFood)
+        }
+        if let goal = todayTargets.carbohydrates, (todayTotals.carbohydrates ?? 0) < goal {
+            return ("Log a balanced meal", "\(Int(goal - (todayTotals.carbohydrates ?? 0))) g carbs remaining", .addFood)
+        }
+        if let goal = todayTargets.fat, (todayTotals.fat ?? 0) < goal {
+            return ("Log a balanced meal", "\(Int(goal - (todayTotals.fat ?? 0))) g fat remaining", .addFood)
+        }
+        if let goal = waterGoal, todayWater < goal {
+            return ("Log water", "\(goal - todayWater) mL to your daily goal", .water)
+        }
+        if waterGoal == nil, todayWater == 0, Calendar.current.component(.hour, from: .now) >= 12 {
+            return ("Log some water", "No water has been recorded today", .water)
+        }
+        if let calorieGoal = todayTargets.calories, (todayTotals.calories ?? 0) < calorieGoal * 0.95 {
+            return ("Log a meal", "\(Int(calorieGoal - (todayTotals.calories ?? 0))) kcal to your target", .addFood)
+        }
+        if let calorieGoal = todayTargets.calories, (todayTotals.calories ?? 0) > calorieGoal * 1.05 {
+            return ("Review today’s intake", "You are above the calorie target", .adherence)
+        }
+        return ("All caught up", "Your recorded goals are on track", nil)
+    }
+
+    var body: some View {
+        Group {
+            switch widget.kind {
+            case .calories: trendsCard
+            case .meals: mealsCard
+            case .fibre: streakCard
+            case .easyNext: easyNextCard
+            default: EmptyView()
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .background(state.home.theme.tokens.surfaceTint.opacity(state.home.theme.tokens.cardOpacity), in: RoundedRectangle(cornerRadius: state.home.theme.tokens.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: state.home.theme.tokens.cornerRadius, style: .continuous).stroke(palette.accentColor.opacity(state.home.theme.tokens.borderOpacity), lineWidth: 0.9))
+        .shadow(color: .black.opacity(state.home.theme.tokens.shadowOpacity), radius: state.home.theme.tokens.cardShadowRadius, x: 0, y: 7)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("home-widget-food-\(widget.kind.rawValue)")
+    }
+
+    private var trendsCard: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            header("7-DAY NUTRITION TRENDS", icon: "chart.bar.fill")
+            Picker("Food trend metric", selection: $trend) {
+                ForEach(FoodHomeTrend.allCases) { item in Text(item.title).tag(item) }
+            }
+            .pickerStyle(.segmented)
+            .controlSize(.mini)
+            .font(.system(size: 8, weight: .medium))
+            .accessibilityIdentifier("food-home-trend-picker")
+            Chart(trendDays) { day in
+                if let value = trend.value(day.value) {
+                    BarMark(x: .value("Day", day.date, unit: .day), y: .value(trend.title, value))
+                        .foregroundStyle(palette.accentColor.gradient)
+                }
+                if let goal = trend.value(day.targets) {
+                    RuleMark(y: .value("Goal", goal)).foregroundStyle(palette.mutedColor.opacity(0.35)).lineStyle(StrokeStyle(dash: [2, 2]))
+                }
+            }
+            .chartXAxis { AxisMarks(values: .stride(by: .day, count: 2)) { value in AxisValueLabel(format: .dateTime.weekday(.narrow)) } }
+            .chartYAxis(.hidden)
+            .frame(height: 67)
+            .accessibilityIdentifier("food-home-seven-day-chart")
+            HStack(spacing: 5) {
+                Text("Avg \(calorieAverage.map { String(Int($0)) } ?? "—") kcal")
+                Spacer(minLength: 1)
+                Text("Protein \(proteinAverage.map { String(Int($0)) } ?? "—") g")
+            }
+            .font(.system(size: 8, weight: .medium))
+            .foregroundStyle(palette.mutedColor)
+            Divider().overlay(palette.mutedColor.opacity(0.25))
+            HStack(spacing: 5) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("WATER · \(todayWater) / \(waterGoal.map { String($0) } ?? "—") mL")
+                        .font(.system(size: 8, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.7)
+                    if let waterGoal, waterGoal > 0 {
+                        ProgressView(value: min(1, Double(todayWater) / Double(waterGoal))).tint(palette.accentColor)
+                    }
+                }
+                Button {
+                    store.addWater(250, date: today)
+                } label: { Text("+250") }
+                    .font(.system(size: 8, weight: .semibold))
+                    .buttonStyle(.bordered).controlSize(.mini)
+                    .accessibilityIdentifier("food-home-water-250")
+                Button("Full log") { openFood(.water) }
+                    .font(.system(size: 8, weight: .medium))
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("food-home-water-log")
+            }
+        }
+        .padding(12)
+    }
+
+    private var mealsCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack {
+                header("TODAY’S MEALS", icon: "fork.knife")
+                Spacer(minLength: 2)
+                Button("All") { openFood(.meals) }
+                    .font(.system(size: 8, weight: .medium)).buttonStyle(.plain)
+                    .accessibilityIdentifier("food-home-all-meals")
+                Button { openFood(.addFood) } label: { Image(systemName: "plus.circle.fill").font(.system(size: 15)) }
+                    .buttonStyle(.plain).accessibilityLabel("Add Food").accessibilityIdentifier("food-home-add")
+            }
+            ForEach(Array(state.nutrition.meals.prefix(3).enumerated()), id: \.element.id) { index, meal in
+                let entries = todayLogs.filter { $0.mealID == meal.id || $0.mealName == meal.name }
+                Button { openFood(.meal(meal.id)) } label: {
+                    HStack(spacing: 4) {
+                        Text(meal.name.isEmpty ? "Meal \(index + 1)" : meal.name).lineLimit(1)
+                        Spacer(minLength: 2)
+                        Text("\(Int(entries.reduce(0) { $0 + $1.calories })) kcal · \(Int(entries.reduce(0) { $0 + $1.protein })) g P")
+                            .lineLimit(1).minimumScaleFactor(0.75)
+                        Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
+                    }
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(palette.textColor)
+                    .padding(.vertical, 4)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("food-home-meal-\(meal.id.uuidString)")
+                if index < min(2, state.nutrition.meals.count - 1) { Divider().overlay(palette.mutedColor.opacity(0.18)) }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+    }
+
+    private var streakCard: some View {
+        Button { openFood(.adherence) } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                header("NUTRITION STREAK", icon: "flame.fill")
+                Text("\(nutritionStreak) day\(nutritionStreak == 1 ? "" : "s")")
+                    .font(.system(size: 19, weight: .semibold, design: .rounded)).foregroundStyle(palette.textColor).lineLimit(1).minimumScaleFactor(0.7)
+                HStack(spacing: 5) {
+                    ForEach(days) { day in
+                        VStack(spacing: 2) {
+                            Circle().fill(adherenceColor(state.nutritionAdherence(on: day.key))).frame(width: 9, height: 9)
+                                .overlay(Circle().stroke(palette.mutedColor.opacity(0.2), lineWidth: 0.5))
+                            Text(day.date.formatted(.dateTime.weekday(.narrow)))
+                                .font(.system(size: 6, weight: .medium)).foregroundStyle(palette.mutedColor)
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel("\(day.date.formatted(.dateTime.weekday(.wide))), \(adherenceText(state.nutritionAdherence(on: day.key)))")
+                    }
+                }
+                Text("View adherence history")
+                    .font(.system(size: 8, weight: .medium)).foregroundStyle(palette.mutedColor).lineLimit(1).minimumScaleFactor(0.75)
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(11)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("food-home-nutrition-streak")
+    }
+
+    private var easyNextCard: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            header("EASY NEXT", icon: "sparkles")
+            Text(easyNext.title)
+                .font(.system(size: 13, weight: .semibold, design: .rounded)).foregroundStyle(palette.textColor).lineLimit(2).minimumScaleFactor(0.75)
+            Text(easyNext.reason)
+                .font(.system(size: 9, weight: .medium)).foregroundStyle(palette.mutedColor).lineLimit(2).minimumScaleFactor(0.75)
+            Spacer(minLength: 0)
+            if let destination = easyNext.focus {
+                Button {
+                    if destination == .water { store.addWater(250, date: today) }
+                    else { openFood(destination) }
+                } label: {
+                    Label(destination == .water ? "Log +250 mL" : (destination == .targets ? "Set targets" : (destination == .adherence ? "Review" : "Add Food")), systemImage: destination == .water ? "drop.fill" : "arrow.right")
+                        .font(.system(size: 8, weight: .semibold))
+                        .lineLimit(1).minimumScaleFactor(0.7)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("food-home-easy-next-action")
+            }
+        }
+        .padding(11)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func header(_ title: String, icon: String) -> some View {
+        HStack(spacing: 5) {
+            Image(systemName: icon).font(.system(size: 9, weight: .semibold)).foregroundStyle(palette.accentColor)
+            Text(title).font(.system(size: 8, weight: .semibold, design: .rounded)).tracking(0.55).foregroundStyle(palette.mutedColor).lineLimit(1).minimumScaleFactor(0.7)
+        }
+    }
+
+    private func average(_ values: [Double]) -> Double? {
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +) / Double(values.count)
+    }
+
+    private func adherenceColor(_ status: LogbookState.NutritionAdherence) -> Color {
+        switch status {
+        case .onTarget: .green
+        case .belowGoal: .orange
+        case .aboveGoal: .red
+        case .unlogged, .noTargets: palette.mutedColor.opacity(0.35)
+        }
+    }
+
+    private func adherenceText(_ status: LogbookState.NutritionAdherence) -> String {
+        switch status {
+        case .onTarget: "On target"
+        case .belowGoal: "Below target"
+        case .aboveGoal: "Above target"
+        case .unlogged: "Unlogged"
+        case .noTargets: "No targets"
+        }
+    }
 }
 
 private struct CaloriesMacroVisual: View {

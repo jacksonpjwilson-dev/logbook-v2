@@ -9,6 +9,7 @@ final class LogbookStore: ObservableObject {
     @Published private(set) var lastSavedAt: Date?
     @Published private(set) var focusedCheckInSection: CheckInSection?
     @Published private(set) var activeWorkoutPresentationRequest: UUID?
+    @Published private(set) var foodNavigationFocus: FoodNavigationFocus?
 
     private let repository: LogbookRepository
     private(set) var canEdit = true
@@ -84,6 +85,15 @@ final class LogbookStore: ObservableObject {
 
     func clearCheckInFocus() {
         focusedCheckInSection = nil
+    }
+
+    func focusFood(_ destination: FoodNavigationFocus) {
+        foodNavigationFocus = destination
+    }
+
+    func consumeFoodNavigationFocus() -> FoodNavigationFocus? {
+        defer { foodNavigationFocus = nil }
+        return foodNavigationFocus
     }
 
     #if DEBUG
