@@ -269,7 +269,7 @@ struct WorkoutTemplateScreen: View {
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityIdentifier("planned-exercise-\(exercise.id.uuidString)")
-                                .accessibilityValue(expandedExerciseIDs.contains(exercise.id) ? "Expanded" : "Collapsed")
+                                .accessibilityValue("\(expandedExerciseIDs.contains(exercise.id) ? "Expanded" : "Collapsed")\(exercise.supersetID == nil ? "" : " · Superset")")
 
                                 if expandedExerciseIDs.contains(exercise.id) {
                                     Picker("Tracking mode", selection: Binding(

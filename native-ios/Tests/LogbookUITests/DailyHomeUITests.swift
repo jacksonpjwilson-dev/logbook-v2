@@ -334,6 +334,52 @@ final class DailyHomeUITests: XCTestCase {
         else { rest.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
         XCTAssertTrue(app.staticTexts["Rest · 105s"].waitForExistence(timeout: 5), "Exercise-specific rest configuration should be retained")
 
+        let trackingMode = app.descendants(matching: .any).matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-tracking-")
+        ).firstMatch
+        XCTAssertTrue(trackingMode.waitForExistence(timeout: 5))
+        trackingMode.tap()
+        let repsOnly = app.buttons["Reps only"]
+        XCTAssertTrue(repsOnly.waitForExistence(timeout: 5), "The exercise-specific tracking picker offers the configured reps-only mode")
+        repsOnly.tap()
+
+        let cableExercise = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "planned-exercise-", "QA Cable Fly")
+        ).firstMatch
+        XCTAssertTrue(cableExercise.waitForExistence(timeout: 5))
+        cableExercise.press(forDuration: 1.1)
+        let supersetAction = app.buttons["Superset with Flat barbell bench press"]
+        XCTAssertTrue(supersetAction.waitForExistence(timeout: 5), "The adjacent exercise should offer the superset grouping action")
+        supersetAction.tap()
+        XCTAssertTrue((cableExercise.value as? String)?.contains("Superset") == true, "The saved workout plan should expose the grouped relationship")
+        attachScreenshot(of: app, named: "Training-Superset-And-Tracking-Plan-Candidate")
+
+        let startWorkout = app.buttons["workout-template-start"]
+        scrollToElement(startWorkout, in: app, towardTop: true)
+        startWorkout.tap()
+        let timer = app.descendants(matching: .any)["rest-timer-value"]
+        XCTAssertTrue(timer.waitForExistence(timeout: 5))
+        XCTAssertEqual(timer.label, "Ready")
+        let firstReps = inputField(app, labelled: "Repetitions")
+        scrollToElement(firstReps, in: app)
+        replaceText(in: firstReps, with: "8")
+        dismissKeyboard(in: app)
+        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
+        XCTAssertEqual(timer.label, "Ready", "Superset rest starts after all exercises complete the round")
+
+        let cableHeader = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "active-exercise-header-", "QA Cable Fly")
+        ).firstMatch
+        XCTAssertTrue(cableHeader.waitForExistence(timeout: 5), "Completing the first superset member advances to its partner")
+        let cableWeight = inputField(app, labelled: "Weight in kilograms")
+        scrollToElement(cableWeight, in: app)
+        replaceText(in: cableWeight, with: "40")
+        dismissKeyboard(in: app)
+        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
+        let restStarted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "Ready"), object: timer)
+        XCTAssertEqual(XCTWaiter.wait(for: [restStarted], timeout: 5), .completed, "Finishing the round starts the configured superset rest interval")
+        attachScreenshot(of: app, named: "Training-Superset-Active-Candidate")
+
         attachScreenshot(of: app, named: "Training-Split-Editor-Candidate")
     }
 
@@ -506,6 +552,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(programB.waitForExistence(timeout: 5))
         XCTAssertTrue(programA.label.contains("Upper Body"), "Program A begins with its first workout")
         XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Program B begins at its independently stored second workout")
+        attachScreenshot(of: app, named: "Training-Program-Rotations-Before-Skip-Candidate")
 
         app.buttons["skip-scheduled-workout"].tap()
         XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Skipping advances the scheduled rotation")
@@ -517,6 +564,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Returning to Program A preserves its advanced position")
         programB.tap()
         XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Switching away and back does not reset Program B")
+        attachScreenshot(of: app, named: "Training-Program-Rotations-After-Skip-Candidate")
     }
 
     func testProgressionSuggestionCanBeDeclinedWithoutChangingPlannedLoad() throws {
@@ -541,6 +589,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertFalse(app.buttons["accept-progression-suggestion"].exists, "Declining removes the suggestion for this active workout")
         scrollToElement(weight, in: app, towardTop: true)
         XCTAssertEqual(String(describing: weight.value ?? ""), before, "Declining must leave the planned set load unchanged")
+        attachScreenshot(of: app, named: "Training-Progression-Declined-Candidate")
     }
 
     func testFoodManualEntryOptionsHistoryCorrectionAndRecovery() throws {
@@ -554,6 +603,23 @@ final class DailyHomeUITests: XCTestCase {
         for option in ["food-option-search", "food-option-scan", "food-option-manual", "food-option-recent"] {
             XCTAssertTrue(app.buttons[option].waitForExistence(timeout: 3), "Add Food must retain the four approved entry options")
         }
+        app.buttons["food-option-search"].tap()
+        XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5))
+        let foodSearch = app.searchFields.firstMatch
+        XCTAssertTrue(foodSearch.waitForExistence(timeout: 5))
+        foodSearch.tap()
+        foodSearch.typeText("QA breakfast")
+        let searchResult = app.buttons["food-search-result-qa-breakfast"]
+        XCTAssertTrue(searchResult.waitForExistence(timeout: 5), "Search should show a saved local food before remote results arrive")
+        searchResult.tap()
+        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["food-confirm-log"].isEnabled, "The quantity step requires confirmation before adding a food")
+        app.buttons["food-confirm-log"].tap()
+        app.buttons["Done"].tap()
+
+        scrollToElement(addFood, in: app)
+        addFood.tap()
+        XCTAssertTrue(app.buttons["food-option-manual"].waitForExistence(timeout: 3))
         app.buttons["food-option-manual"].tap()
         XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5))
         replaceText(in: app.textFields["manual-food-name"], with: "QA Manual Oats")
@@ -568,16 +634,19 @@ final class DailyHomeUITests: XCTestCase {
 
         let foodTotal = app.staticTexts["food-calories-total"]
         XCTAssertTrue(foodTotal.waitForExistence(timeout: 5))
-        XCTAssertEqual(foodTotal.label, "640", "A 50 g entry from a 380 kcal per 100 g food must add 190 kcal to the 450 kcal fixture")
+        XCTAssertEqual(foodTotal.label, "1090", "A confirmed 450 kcal search result plus 190 kcal from a 50 g manual entry should add to the 450 kcal fixture")
+        attachScreenshot(of: app, named: "Food-Nutrition-Home-Candidate")
         let foodHistory = app.buttons["food-history-link"]
         scrollToElement(foodHistory, in: app)
         XCTAssertTrue(foodHistory.waitForExistence(timeout: 5))
         foodHistory.tap()
         XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5))
+        attachScreenshot(of: app, named: "Food-History-Candidate")
         let historyRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
         XCTAssertTrue(historyRow.waitForExistence(timeout: 5))
         historyRow.tap()
         XCTAssertTrue(app.navigationBars["Edit food entry"].waitForExistence(timeout: 5))
+        attachScreenshot(of: app, named: "Food-History-Edit-Candidate")
         let calories = app.textFields["food-log-calories"]
         XCTAssertTrue(calories.waitForExistence(timeout: 5))
         replaceText(in: calories, with: "200")
@@ -594,6 +663,7 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(recentlyDeleted, in: app)
         recentlyDeleted.tap()
         XCTAssertTrue(app.navigationBars["Recently Deleted"].waitForExistence(timeout: 5))
+        attachScreenshot(of: app, named: "Food-Recently-Deleted-Candidate")
         let restore = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-food-")).firstMatch
         XCTAssertTrue(restore.waitForExistence(timeout: 5))
         restore.tap()
@@ -603,6 +673,15 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(history, in: app)
         history.tap()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "QA Manual Oats")).firstMatch.waitForExistence(timeout: 5), "Restored food entry returns to Food History")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        let addAgain = app.buttons["food-add-food"]
+        scrollToElement(addAgain, in: app)
+        addAgain.tap()
+        app.buttons["food-option-scan"].tap()
+        XCTAssertTrue(app.navigationBars["Scan Barcode"].waitForExistence(timeout: 5))
+        app.buttons["barcode-manual-fallback"].tap()
+        XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5), "Barcode entry always offers a safe manual fallback")
+        attachScreenshot(of: app, named: "Food-Barcode-Manual-Fallback-Candidate")
     }
 
     private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {

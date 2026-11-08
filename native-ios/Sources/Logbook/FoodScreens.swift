@@ -27,165 +27,11 @@ struct FoodScreen: View {
 
     var body: some View {
         List {
-            Section {
-                HStack(spacing: 18) {
-                    Button { shiftDay(-1) } label: { Image(systemName: "chevron.left") }.accessibilityLabel("Previous food day").accessibilityIdentifier("food-day-previous")
-                    DatePicker("Choose Food Log date", selection: $selectedDate, displayedComponents: .date)
-                        .datePickerStyle(.compact).labelsHidden().accessibilityIdentifier("food-day-picker")
-                    Button { shiftDay(1) } label: { Image(systemName: "chevron.right") }.accessibilityLabel("Next food day").accessibilityIdentifier("food-day-next")
-                }
-                .frame(maxWidth: .infinity)
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Calories").font(.caption).foregroundStyle(.secondary)
-                        Text("\(Int(totals.calories ?? 0))").font(.system(size: 30, weight: .bold, design: .rounded)).accessibilityIdentifier("food-calories-total")
-                    }
-                    Spacer()
-                    VStack(alignment: .trailing, spacing: 2) {
-                        Text("\(remaining(targets.calories, totals.calories)) kcal left").font(.headline)
-                        Text(dateKey).font(.caption).foregroundStyle(.secondary)
-                    }
-                }
-                ProgressView(value: ratio(totals.calories, targets.calories)).tint(store.state.home.theme.palette.accentColor)
-                HStack(spacing: 6) {
-                    MacroTile(name: "Protein", value: totals.protein ?? 0, goal: targets.protein, color: .teal)
-                    MacroTile(name: "Carbs", value: totals.carbohydrates ?? 0, goal: targets.carbohydrates, color: .blue)
-                    MacroTile(name: "Fat", value: totals.fat ?? 0, goal: targets.fat, color: .orange)
-                }
-            } header: {
-                HStack {
-                    Text(selectedDate.formatted(date: .complete, time: .omitted))
-                    Spacer()
-                    Button("Targets") { showTargets = true }.accessibilityIdentifier("food-targets")
-                }
-            }
-
-            Section {
-                ForEach(store.state.nutrition.meals) { meal in
-                    let mealLogs = logs.filter { $0.mealID == meal.id || $0.mealName == meal.name }
-                    DisclosureGroup {
-                        if mealLogs.isEmpty { Text("Nothing logged yet.").font(.caption).foregroundStyle(.secondary) }
-                        ForEach(mealLogs) { log in
-                            NavigationLink(destination: FoodLogEditorScreen(logID: log.id)) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(log.foodName)
-                                    Text("\(format(log.quantity)) \(log.unit) · \(Int(log.calories)) kcal · \(Int(log.protein)) g protein")
-                                        .font(.caption).foregroundStyle(.secondary)
-                                }
-                            }
-                            .accessibilityIdentifier("food-log-\(log.id.uuidString)")
-                            .swipeActions {
-                                Button("Delete", role: .destructive) { store.deleteFoodLog(log.id) }
-                            }
-                        }
-                        Button {
-                            selectedMealID = meal.id
-                            entryMode = .search
-                            showAddFlow = true
-                        } label: { Label("Add to Meal", systemImage: "plus") }
-                            .accessibilityIdentifier("add-to-meal-\(meal.id.uuidString)")
-                    } label: {
-                        HStack {
-                            Text(meal.name).font(.headline)
-                            Spacer()
-                            Text("\(mealLogs.count) items · \(Int(mealLogs.reduce(0) { $0 + $1.calories })) kcal")
-                                .font(.caption).foregroundStyle(.secondary)
-                        }
-                    }
-                    .contextMenu {
-                        Button("Rename meal", systemImage: "pencil") {
-                            renameMealID = meal.id
-                            mealNameDraft = meal.name
-                        }
-                    }
-                }
-                Button { store.addMeal(name: "Meal \(store.state.nutrition.meals.count + 1)") } label: {
-                    Label("Add meal", systemImage: "rectangle.stack.badge.plus")
-                }
-                Button {
-                    selectedMealID = suggestedMealID
-                    entryMode = .search
-                    addFoodMenu = true
-                } label: { Label("Add Food", systemImage: "plus.circle.fill") }
-                    .accessibilityIdentifier("food-add-food")
-            } header: { Text("Meals") }
-
-            Section {
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Water").font(.headline)
-                        Text("\(waterTotal) mL" + (store.state.nutrition.waterGoalMilliliters.map { " of \($0) mL" } ?? " logged"))
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    ForEach([250, 500, 750], id: \.self) { amount in
-                        Button("+\(amount)") { store.addWater(amount, date: dateKey) }
-                            .buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("water-quick-\(amount)")
-                    }
-                }
-                if let goal = store.state.nutrition.waterGoalMilliliters {
-                    ProgressView(value: min(1, Double(waterTotal) / Double(max(1, goal))))
-                }
-                ForEach(waterLogs) { log in
-                    NavigationLink(destination: WaterLogEditorScreen(logID: log.id)) {
-                        LabeledContent("\(log.milliliters) mL", value: log.createdAt.formatted(date: .omitted, time: .shortened))
-                    }
-                }
-                Button("Water goal…") { showWaterGoal = true }.accessibilityIdentifier("water-goal-edit")
-            } header: { Text("Hydration") }
-
-            Section {
-                let days = lastSevenDays(endingAt: selectedDate)
-                Chart(days, id: \.key) { item in
-                    BarMark(x: .value("Day", item.key), y: .value("Calories", item.value.calories ?? 0))
-                        .foregroundStyle(.blue.gradient)
-                    if let goal = store.state.nutritionTargets(on: item.key).calories {
-                        RuleMark(y: .value("Target", goal)).foregroundStyle(.secondary.opacity(0.5)).lineStyle(StrokeStyle(dash: [3, 3]))
-                    }
-                }
-                .frame(height: 150)
-                .accessibilityIdentifier("food-seven-day-chart")
-                ForEach(days, id: \.key) { item in
-                    HStack {
-                        Text(item.date.formatted(.dateTime.weekday(.abbreviated).day()))
-                        Spacer()
-                        Text(item.value.calories.map { "\(Int($0)) kcal" } ?? "No log")
-                        Text(adherenceLabel(store.state.nutritionAdherence(on: item.key)))
-                            .foregroundStyle(adherenceColor(store.state.nutritionAdherence(on: item.key)))
-                            .frame(width: 92, alignment: .trailing)
-                    }
-                    .font(.caption)
-                }
-            } header: { Text("Nutrition trends · 7 days") }
-
-            Section {
-                NavigationLink("Food History") { FoodHistoryScreen() }.accessibilityIdentifier("food-history-link")
-                NavigationLink("Recently Deleted") { RecentlyDeletedFoodScreen() }.accessibilityIdentifier("food-recently-deleted-link")
-                Button { showCopy = true } label: { Label("Copy meals or day…", systemImage: "doc.on.doc") }
-                    .accessibilityIdentifier("food-copy-meals")
-                Button { showRecipeBuilder = true } label: { Label("Create recipe", systemImage: "book.closed") }
-                    .accessibilityIdentifier("food-create-recipe")
-                if let recipes = store.state.nutrition.recipes, !recipes.isEmpty {
-                    ForEach(recipes) { recipe in
-                        Button {
-                            selectedMealID = suggestedMealID
-                            _ = store.logFood(store.foodDefinition(for: recipe), meal: currentMeal, quantity: 1, unit: recipe.yieldUnit, confirmed: true, date: dateKey)
-                        } label: {
-                            HStack {
-                                Label("Log \(recipe.name)", systemImage: "book.closed.fill")
-                                Spacer()
-                                Text("\(Int(store.foodDefinition(for: recipe).calories)) kcal / \(recipe.yieldUnit.dropLast())")
-                                    .font(.caption).foregroundStyle(.secondary)
-                            }
-                        }
-                        .accessibilityIdentifier("log-recipe-\(recipe.id)")
-                        .contextMenu {
-                            Button("Edit recipe", systemImage: "pencil") { editingRecipe = recipe }
-                            Button("Delete recipe", systemImage: "trash", role: .destructive) { store.deleteRecipe(recipe.id) }
-                        }
-                    }
-                }
-            } header: { Text("Food tools") }
+            nutritionSummarySection
+            mealsSection
+            hydrationSection
+            nutritionTrendsSection
+            foodToolsSection
         }
         .navigationTitle("Food")
         .confirmationDialog("Add Food", isPresented: $addFoodMenu, titleVisibility: .visible) {
@@ -221,6 +67,180 @@ struct FoodScreen: View {
             Button("Save") { if let renameMealID { store.renameMeal(renameMealID, name: mealNameDraft) }; renameMealID = nil }
             Button("Cancel", role: .cancel) { renameMealID = nil }
         } message: { Text("Past food entries keep the meal name recorded when they were logged.") }
+    }
+
+    private var nutritionSummarySection: some View {
+        Section {
+            HStack(spacing: 18) {
+                Button { shiftDay(-1) } label: { Image(systemName: "chevron.left") }.accessibilityLabel("Previous food day").accessibilityIdentifier("food-day-previous")
+                DatePicker("Choose Food Log date", selection: $selectedDate, displayedComponents: .date)
+                    .datePickerStyle(.compact).labelsHidden().accessibilityIdentifier("food-day-picker")
+                Button { shiftDay(1) } label: { Image(systemName: "chevron.right") }.accessibilityLabel("Next food day").accessibilityIdentifier("food-day-next")
+            }
+            .frame(maxWidth: .infinity)
+            HStack {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Calories").font(.caption).foregroundStyle(.secondary)
+                    Text("\(Int(totals.calories ?? 0))").font(.system(size: 30, weight: .bold, design: .rounded)).accessibilityIdentifier("food-calories-total")
+                }
+                Spacer()
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("\(remaining(targets.calories, totals.calories)) kcal left").font(.headline)
+                    Text(dateKey).font(.caption).foregroundStyle(.secondary)
+                }
+            }
+            ProgressView(value: ratio(totals.calories, targets.calories)).tint(store.state.home.theme.palette.accentColor)
+            HStack(spacing: 6) {
+                MacroTile(name: "Protein", value: totals.protein ?? 0, goal: targets.protein, color: .teal)
+                MacroTile(name: "Carbs", value: totals.carbohydrates ?? 0, goal: targets.carbohydrates, color: .blue)
+                MacroTile(name: "Fat", value: totals.fat ?? 0, goal: targets.fat, color: .orange)
+            }
+        } header: {
+            HStack {
+                Text(selectedDate.formatted(date: .complete, time: .omitted))
+                Spacer()
+                Button("Targets") { showTargets = true }.accessibilityIdentifier("food-targets")
+            }
+        }
+    }
+
+    private var mealsSection: some View {
+        Section {
+            ForEach(store.state.nutrition.meals) { meal in
+                mealRow(meal)
+            }
+            Button { store.addMeal(name: "Meal \(store.state.nutrition.meals.count + 1)") } label: {
+                Label("Add meal", systemImage: "rectangle.stack.badge.plus")
+            }
+            Button {
+                selectedMealID = suggestedMealID
+                entryMode = .search
+                addFoodMenu = true
+            } label: { Label("Add Food", systemImage: "plus.circle.fill") }
+                .accessibilityIdentifier("food-add-food")
+        } header: { Text("Meals") }
+    }
+
+    private func mealRow(_ meal: MealSlot) -> some View {
+        let mealLogs = logs.filter { $0.mealID == meal.id || $0.mealName == meal.name }
+        return DisclosureGroup {
+            if mealLogs.isEmpty { Text("Nothing logged yet.").font(.caption).foregroundStyle(.secondary) }
+            ForEach(mealLogs) { log in
+                NavigationLink(destination: FoodLogEditorScreen(logID: log.id)) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(log.foodName)
+                        Text("\(format(log.quantity)) \(log.unit) · \(Int(log.calories)) kcal · \(Int(log.protein)) g protein")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityIdentifier("food-log-\(log.id.uuidString)")
+                .swipeActions { Button("Delete", role: .destructive) { store.deleteFoodLog(log.id) } }
+            }
+            Button {
+                selectedMealID = meal.id
+                entryMode = .search
+                showAddFlow = true
+            } label: { Label("Add to Meal", systemImage: "plus") }
+                .accessibilityIdentifier("add-to-meal-\(meal.id.uuidString)")
+        } label: {
+            HStack {
+                Text(meal.name).font(.headline)
+                Spacer()
+                Text("\(mealLogs.count) items · \(Int(mealLogs.reduce(0) { $0 + $1.calories })) kcal")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .contextMenu {
+            Button("Rename meal", systemImage: "pencil") {
+                renameMealID = meal.id
+                mealNameDraft = meal.name
+            }
+        }
+    }
+
+    private var hydrationSection: some View {
+        Section {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Water").font(.headline)
+                    Text("\(waterTotal) mL" + (store.state.nutrition.waterGoalMilliliters.map { " of \($0) mL" } ?? " logged"))
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                ForEach([250, 500, 750], id: \.self) { amount in
+                    Button("+\(amount)") { store.addWater(amount, date: dateKey) }
+                        .buttonStyle(.bordered).controlSize(.small).accessibilityIdentifier("water-quick-\(amount)")
+                }
+            }
+            if let goal = store.state.nutrition.waterGoalMilliliters {
+                ProgressView(value: min(1, Double(waterTotal) / Double(max(1, goal))))
+            }
+            ForEach(waterLogs) { log in
+                NavigationLink(destination: WaterLogEditorScreen(logID: log.id)) {
+                    LabeledContent("\(log.milliliters) mL", value: log.createdAt.formatted(date: .omitted, time: .shortened))
+                }
+            }
+            Button("Water goal…") { showWaterGoal = true }.accessibilityIdentifier("water-goal-edit")
+        } header: { Text("Hydration") }
+    }
+
+    private var nutritionTrendsSection: some View {
+        let days = lastSevenDays(endingAt: selectedDate)
+        return Section {
+            Chart(days, id: \.key) { item in
+                BarMark(x: .value("Day", item.key), y: .value("Calories", item.value.calories ?? 0))
+                    .foregroundStyle(.blue.gradient)
+                if let goal = store.state.nutritionTargets(on: item.key).calories {
+                    RuleMark(y: .value("Target", goal)).foregroundStyle(.secondary.opacity(0.5)).lineStyle(StrokeStyle(dash: [3, 3]))
+                }
+            }
+            .frame(height: 150)
+            .accessibilityIdentifier("food-seven-day-chart")
+            ForEach(days, id: \.key) { item in
+                HStack {
+                    Text(item.date.formatted(.dateTime.weekday(.abbreviated).day()))
+                    Spacer()
+                    Text(item.value.calories.map { "\(Int($0)) kcal" } ?? "No log")
+                    Text(adherenceLabel(store.state.nutritionAdherence(on: item.key)))
+                        .foregroundStyle(adherenceColor(store.state.nutritionAdherence(on: item.key)))
+                        .frame(width: 92, alignment: .trailing)
+                }
+                .font(.caption)
+            }
+        } header: { Text("Nutrition trends · 7 days") }
+    }
+
+    private var foodToolsSection: some View {
+        Section {
+            NavigationLink("Food History") { FoodHistoryScreen() }.accessibilityIdentifier("food-history-link")
+            NavigationLink("Recently Deleted") { RecentlyDeletedFoodScreen() }.accessibilityIdentifier("food-recently-deleted-link")
+            Button { showCopy = true } label: { Label("Copy meals or day…", systemImage: "doc.on.doc") }
+                .accessibilityIdentifier("food-copy-meals")
+            Button { showRecipeBuilder = true } label: { Label("Create recipe", systemImage: "book.closed") }
+                .accessibilityIdentifier("food-create-recipe")
+            if let recipes = store.state.nutrition.recipes, !recipes.isEmpty {
+                ForEach(recipes) { recipe in recipeRow(recipe) }
+            }
+        } header: { Text("Food tools") }
+    }
+
+    private func recipeRow(_ recipe: FoodRecipe) -> some View {
+        Button {
+            selectedMealID = suggestedMealID
+            _ = store.logFood(store.foodDefinition(for: recipe), meal: currentMeal, quantity: 1, unit: recipe.yieldUnit, confirmed: true, date: dateKey)
+        } label: {
+            HStack {
+                Label("Log \(recipe.name)", systemImage: "book.closed.fill")
+                Spacer()
+                Text("\(Int(store.foodDefinition(for: recipe).calories)) kcal / \(recipe.yieldUnit.dropLast())")
+                    .font(.caption).foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityIdentifier("log-recipe-\(recipe.id)")
+        .contextMenu {
+            Button("Edit recipe", systemImage: "pencil") { editingRecipe = recipe }
+            Button("Delete recipe", systemImage: "trash", role: .destructive) { store.deleteRecipe(recipe.id) }
+        }
     }
 
     private var currentMeal: MealSlot {

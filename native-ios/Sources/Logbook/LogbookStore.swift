@@ -156,7 +156,7 @@ final class LogbookStore: ObservableObject {
             sets: progressionSets
         )
         let progressionHistoryEnabled = ProcessInfo.processInfo.arguments.contains("--qa-progression-history")
-        fixture.training.completedSessions = [WorkoutSession(
+        fixture.training.completedSessions = programRotationFixture ? [] : [WorkoutSession(
                 templateID: templateID,
                 templateName: template.name,
                 templateVersion: template.version,
