@@ -415,6 +415,7 @@ struct HistoryScreen: View {
     @State private var showingWorkoutCalendar = false
     @State private var workoutToDeletePermanently: UUID?
     @State private var selectedHistoryDate: String?
+    @State private var selectedStrengthExerciseID = ""
     private let ranges = [7, 30, 90]
     private var cutoff: String {
         LocalDay.string(Calendar.current.date(byAdding: .day, value: -range + 1, to: .now) ?? .now)
@@ -429,6 +430,22 @@ struct HistoryScreen: View {
         NutritionHistorySeries.calories(from: store.state.nutrition.logs, since: cutoff)
     }
     private var sessions: [WorkoutSession] { store.state.training.visibleCompletedSessions.sorted { $0.startedAt > $1.startedAt } }
+    private var strengthOptions: [HistoryExerciseOption] {
+        var names: [String: String] = [:]
+        for session in sessions {
+            for exercise in session.exercises where (exercise.trackingMode ?? .weightAndReps) == .weightAndReps {
+                names[exercise.exerciseID] = exercise.name
+            }
+        }
+        return names.keys.sorted { (names[$0] ?? $0) < (names[$1] ?? $1) }
+            .map { HistoryExerciseOption(id: $0, name: names[$0] ?? $0) }
+    }
+    private var strengthByDate: [DailyHistoryPoint] {
+        StrengthHistorySeries.points(from: sessions, exerciseID: selectedStrengthExerciseID, since: cutoff)
+    }
+    private var proteinByDate: [DailyHistoryPoint] {
+        NutritionHistorySeries.protein(from: store.state.nutrition.logs, since: cutoff)
+    }
 
     private func consumeFocusedDate() {
         guard let date = store.focusedHistoryDate else { return }
@@ -486,9 +503,45 @@ struct HistoryScreen: View {
                     .frame(height: 170)
                     ForEach(caloriesByDate.suffix(7)) { point in LabeledContent(point.date, value: "\(Int(point.value)) kcal") }
                 }
+                if proteinByDate.isEmpty {
+                    Text("Protein appears on days with logged food.").font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Chart(proteinByDate) { point in
+                        BarMark(x: .value("Date", point.date), y: .value("Protein", point.value))
+                            .foregroundStyle(store.state.home.theme.palette.accentColor.gradient)
+                    }
+                    .frame(height: 150)
+                    .chartYAxisLabel("g protein")
+                    .accessibilityIdentifier("history-protein-chart")
+                }
             }
 
             Section("Training") {
+                if !strengthOptions.isEmpty {
+                    if strengthOptions.count > 1 {
+                        Picker("Strength exercise", selection: $selectedStrengthExerciseID) {
+                            ForEach(strengthOptions) { option in Text(option.name).tag(option.id) }
+                        }
+                        .accessibilityIdentifier("history-strength-exercise")
+                    }
+                    if strengthByDate.isEmpty {
+                        Text("Complete compatible weighted sets to build this exercise’s estimated 1RM trend.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        Chart(strengthByDate) { point in
+                            LineMark(x: .value("Date", point.date), y: .value("Estimated 1RM", point.value))
+                                .interpolationMethod(.catmullRom).foregroundStyle(store.state.home.theme.palette.accentColor)
+                            PointMark(x: .value("Date", point.date), y: .value("Estimated 1RM", point.value))
+                                .foregroundStyle(store.state.home.theme.palette.accentColor)
+                        }
+                        .frame(height: 150)
+                        .chartYAxisLabel("kg · estimated 1RM")
+                        .accessibilityIdentifier("history-strength-chart")
+                    }
+                } else {
+                    Text("Strength trends appear after a completed weighted exercise.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
                 if sessions.isEmpty { Text("Completed workouts appear here; unfinished sessions are not counted.").foregroundStyle(.secondary) }
                 ForEach(sessions) { session in
                     NavigationLink(destination: WorkoutHistoryDetailScreen(sessionID: session.id)) {
@@ -567,7 +620,10 @@ struct HistoryScreen: View {
                 }
             }
         }
-.onAppear(perform: consumeFocusedDate)
+.onAppear {
+            consumeFocusedDate()
+            if selectedStrengthExerciseID.isEmpty { selectedStrengthExerciseID = strengthOptions.first?.id ?? "" }
+        }
         .navigationTitle("History")
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Button { showingWorkoutCalendar = true } label: { Image(systemName: "calendar") }
@@ -944,6 +1000,30 @@ enum NutritionHistorySeries {
         Dictionary(grouping: logs.filter { $0.deletedAt == nil && $0.date >= cutoff }, by: \.date)
             .map { date, entries in DailyHistoryPoint(date: date, value: entries.reduce(0) { $0 + $1[keyPath: value] }) }
             .sorted { $0.date < $1.date }
+    }
+}
+
+private struct HistoryExerciseOption: Identifiable {
+    let id: String
+    let name: String
+}
+
+enum StrengthHistorySeries {
+    static func points(from sessions: [WorkoutSession], exerciseID: String, since cutoff: String) -> [DailyHistoryPoint] {
+        let days = Dictionary(grouping: sessions.filter { $0.finishedAt != nil && $0.localDate >= cutoff }, by: \.localDate)
+        return days.compactMap { date, records in
+            let estimates = records.flatMap(\.exercises)
+                .filter { $0.exerciseID == exerciseID && ($0.trackingMode ?? .weightAndReps) == .weightAndReps }
+                .flatMap(\.sets)
+                .filter { $0.completed && ($0.weightKg ?? 0) > 0 && $0.reps > 0 }
+                .compactMap { set -> Double? in
+                    guard let weight = set.weightKg else { return nil }
+                    return weight * (1 + Double(set.reps) / 30)
+                }
+            guard let best = estimates.max() else { return nil }
+            return DailyHistoryPoint(date: date, value: best)
+        }
+        .sorted { $0.date < $1.date }
     }
 }
 
