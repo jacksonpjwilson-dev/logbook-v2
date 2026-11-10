@@ -433,19 +433,7 @@ private struct DefaultProgressHomeWidget: View {
                 .map { DailyHistoryPoint(date: $0.date, value: state.home.preferredWeightUnit == "lb" ? $0.kilograms * 2.2046226218 : $0.kilograms) }
                 .sorted { $0.date < $1.date }
         case .strength:
-            let sessions = state.training.visibleCompletedSessions.filter { $0.localDate >= cutoff }
-            let daily = Dictionary(grouping: sessions, by: \.localDate)
-            return daily.map { date, records in
-                let best = records.flatMap(\.exercises)
-                    .filter { $0.exerciseID == selectedExerciseID && ($0.trackingMode ?? .weightAndReps) == .weightAndReps }
-                    .flatMap(\.sets)
-                    .filter { $0.completed && ($0.weightKg ?? 0) > 0 && $0.reps > 0 }
-                    .map { $0.weightKg! * (1 + Double($0.reps) / 30) }
-                    .max() ?? 0
-                return DailyHistoryPoint(date: date, value: best)
-            }
-            .filter { $0.value > 0 }
-            .sorted { $0.date < $1.date }
+            return strengthSeries()
         case .sleep:
             return Dictionary(grouping: state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate >= cutoff }, by: \.wakeDate)
                 .map { date, records in DailyHistoryPoint(date: date, value: Double(records.reduce(0) { $0 + $1.durationMinutes }) / 60) }
@@ -454,6 +442,25 @@ private struct DefaultProgressHomeWidget: View {
             return NutritionHistorySeries.calories(from: state.nutrition.logs, since: cutoff)
         case .protein:
             return NutritionHistorySeries.protein(from: state.nutrition.logs, since: cutoff)
+        }
+    }
+
+    private func strengthSeries() -> [DailyHistoryPoint] {
+        var bestByDate: [String: Double] = [:]
+        for session in state.training.visibleCompletedSessions where session.localDate >= cutoff {
+            for exercise in session.exercises {
+                guard exercise.exerciseID == selectedExerciseID,
+                      (exercise.trackingMode ?? .weightAndReps) == .weightAndReps else { continue }
+                for set in exercise.sets where set.completed && set.reps > 0 {
+                    guard let weight = set.weightKg, weight > 0 else { continue }
+                    let estimate = weight * (1 + Double(set.reps) / 30)
+                    bestByDate[session.localDate] = max(bestByDate[session.localDate] ?? 0, estimate)
+                }
+            }
+        }
+        return bestByDate.keys.sorted().compactMap { date in
+            guard let value = bestByDate[date] else { return nil }
+            return DailyHistoryPoint(date: date, value: value)
         }
     }
 
