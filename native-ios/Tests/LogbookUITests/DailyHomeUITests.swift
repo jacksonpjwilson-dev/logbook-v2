@@ -591,7 +591,9 @@ final class DailyHomeUITests: XCTestCase {
         let calendarSessionRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "calendar-workout-"))
         XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
         let editedWorkoutID = String(calendarSessionRows.firstMatch.identifier.dropFirst("calendar-workout-".count))
+        let retainedWorkoutID = String(calendarSessionRows.element(boundBy: 1).identifier.dropFirst("calendar-workout-".count))
         XCTAssertFalse(editedWorkoutID.isEmpty, "Capture the stable workout ID from the selected calendar session")
+        XCTAssertNotEqual(editedWorkoutID, retainedWorkoutID)
         calendarSessionRows.firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5), "Each calendar session opens its individual editable history record")
         attachScreenshot(of: app, named: "Training-History-Detail-Candidate")
@@ -633,9 +635,10 @@ final class DailyHomeUITests: XCTestCase {
 
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        scrollToElement(historyRows.firstMatch, in: app)
-        XCTAssertEqual(todaySessions.count, 1, "Deleting one of two same-day sessions leaves the other active session visible")
-        XCTAssertEqual(historyRows.count, 2, "The previous-day baseline record remains in the active history list")
+        let retainedWorkout = app.buttons["history-workout-\(retainedWorkoutID)"]
+        scrollToElement(retainedWorkout, in: app, towardTop: true)
+        XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Deleting one of two same-day sessions leaves the other exact session active")
+        XCTAssertEqual(historyRows.count, 2, "The remaining same-day session and previous-day baseline remain in active history")
         XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
         XCTAssertEqual(visiblePRRows.count, 1, "The earlier retained session still appears as a PR after the newest record is edited or deleted")
