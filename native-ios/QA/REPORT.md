@@ -1,7 +1,7 @@
 # Logbook QA report — Daily Tracking & Progress
 
 **Branch:** `codex/default-theme-gate1`  
-**Current source commit:** `cbe90804bd7eda542f0d9c5c6d1f02b90b1eeebf`  
+**Current source commit:** `705aec30376cbc9285c7cc4d4e1955666fab0160`  
 **Last fully green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39` ([run](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767782249)). Run #126 remains preserved as a historical baseline. Run #131 is a failed verification of earlier check-in source; later fixes have not completed a run.
 
 ## Runs
@@ -13,7 +13,7 @@
 | [#128](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767782249) | `a79ee507422e7f09d4ad56b9a5a157da17743f39` | Passed build, 50/50 unit, 13/13 UI | Passed build, 50/50 unit, 13/13 UI | App tests skipped |
 | [#129](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42769523988) | `0acf4353f6f39b6f6597669cb34cbcc56a020c7a` | Build failed; no tests | Build failed; no tests | App tests skipped |
 | [#131](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42771133119) | `aaf18f155b4b713eaa1cc6bb0cf6b93a9e25461e` | Build passed; 54/55 unit, 11/14 UI | Build passed; 54/55 unit, 11/14 UI | App tests skipped |
-| #132–#145 | Intermediate check-in, chart and test-fix commits through current source | Running/queued; no final pass yet | Running/queued; no final pass yet | App tests skipped by availability rule |
+| #132–#149 | Intermediate check-in, chart and test-fix commits through current source | Running/queued; no final pass yet | Running/queued; no final pass yet | App tests skipped by availability rule |
 
 Run #131 failures:
 - Both devices: `testLegacySleepAndWeightRecordsDecodeWithNewOptionalFields` failed because old weight JSON without an ID could not decode.
@@ -21,7 +21,7 @@ Run #131 failures:
 - iPhone 16: `testDailySmallWidgetRegionsOpenTheirMatchingCheckInSections` used obsolete visible labels instead of current stable accessibility identifiers; `testWorkoutSplitEditorSupportsReorderingExerciseSearchAndCustomExercises` checked an off-screen lazy workout row.
 - iPhone SE: `testDailySmallWidgetRegionsOpenTheirMatchingCheckInSections` used the same obsolete labels; `testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery` re-counted a lazy same-day label instead of verifying the retained session by ID.
 
-Source and UI-test corrections, legacy supplement decoding, Default Progress widgets, strength/protein history series, selected heatmap-day navigation and a deleted-food trend regression test are committed through `cbe90804bd7eda542f0d9c5c6d1f02b90b1eeebf`. These corrections are pending Actions #132–#145; do not describe them as passing until an exact current-source run finishes green.
+Source and UI-test corrections, legacy supplement decoding, Default Progress widgets, strength/protein history series, selected heatmap-day navigation and a deleted-food trend regression test are committed through `705aec30376cbc9285c7cc4d4e1955666fab0160`. These corrections are pending Actions #132–#149; do not describe them as passing until an exact current-source run finishes green.
 
 ## Food evidence
 

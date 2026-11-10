@@ -1,7 +1,7 @@
 # Current Logbook milestone — Daily Tracking & Progress
 
 **Development branch:** `codex/default-theme-gate1`  
-**Current app-source commit:** `cbe90804bd7eda542f0d9c5c6d1f02b90b1eeebf`  
+**Current app-source commit:** `705aec30376cbc9285c7cc4d4e1955666fab0160`  
 **Last fully green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39` — [run #128](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767782249). Run #126 (`074ab167f4ea6826f6d9a7c5536257ea2c1bd395`) remains preserved as the prior accepted baseline; repository evidence shows #128 is the newer complete green run.
 
 ## Verification status
@@ -9,7 +9,7 @@
 Run #131 tested source commit `aaf18f155b4b713eaa1cc6bb0cf6b93a9e25461e`. Build succeeded on iPhone SE (3rd generation) and iPhone 16, but the run failed on both: **54/55 unit tests and 11/14 UI tests passed per device**. The unit failure exposed a genuine legacy WeightLog decode issue (records without an `id`). UI failures involved Recently Deleted visibility, stale button-label assertions, a lazy same-day history row check, and a workout row that was off screen. The source and test corrections are committed after #131; they are not verified yet.
 
 - [Run #131](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42771133119) and its actual, unapproved simulator candidates: [iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42771133119/artifacts/13743096416) · [iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42771133119/artifacts/13742394589). [iPhone 18 Pro artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42771133119/artifacts/13741268275) contains availability information only; app tests were skipped.
-- Follow-up Actions #132–#145 were triggered by incremental commits. As of this report #132–#134 are running and #135–#145 are queued; none is evidence of a pass. [Actions list](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/workflows/daily-home-qa.yml?query=branch%3Acodex%2Fdefault-theme-gate1).
+- Follow-up Actions #132–#149 were triggered by incremental commits. As of this report #132–#134 are running and #135–#145 are queued; none is evidence of a pass. [Actions list](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/workflows/daily-home-qa.yml?query=branch%3Acodex%2Fdefault-theme-gate1).
 
 Run #128 passed iPhone SE and iPhone 16 builds, 50/50 unit tests and 13/13 UI tests on each. Its iPhone 18 Pro app tests were skipped. The SE and iPhone 16 screenshot artifacts are [here](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767782249).
 

@@ -2,7 +2,7 @@
 
 Row-level implementation and evidence status is maintained in [REQUIREMENTS_TRACEABILITY.csv](../native-ios/QA/REQUIREMENTS_TRACEABILITY.csv). Source presence and a successful build do not establish a verified workflow.
 
-**Current branch/source:** `codex/default-theme-gate1` / `cbe90804bd7eda542f0d9c5c6d1f02b90b1eeebf`.  
+**Current branch/source:** `codex/default-theme-gate1` / `705aec30376cbc9285c7cc4d4e1955666fab0160`.  
 **Latest complete green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39` ([run #128](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767782249)); iPhone SE and iPhone 16 each passed build, 50 unit and 13 UI tests. iPhone 18 Pro app tests were skipped. #126 is retained as an earlier baseline, not the newest green result.
 
 Run #131 built on iPhone SE and iPhone 16 but failed with 54/55 unit and 11/14 UI tests passing on each. Its old-weight decoding and accessibility/lazy-row test failures are addressed in later commits but remain unverified. As of this report, follow-up runs #132–#134 are running and #135–#145 are queued. Do not promote affected rows to VERIFIED until a complete current-source run passes.
