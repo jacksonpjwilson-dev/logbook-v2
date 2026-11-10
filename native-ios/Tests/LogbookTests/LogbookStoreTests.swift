@@ -959,7 +959,7 @@ final class LogbookStoreTests: XCTestCase {
         let legacyDose = Data(#"{"supplementID":"00000000-0000-0000-0000-000000000001","supplementName":"Vitamin D","date":"2026-11-09","taken":true}"#.utf8)
         let dose = try JSONDecoder().decode(SupplementDose.self, from: legacyDose)
         XCTAssertTrue(dose.taken)
-        XCTAssertFalse(dose.explicitlyMarked)
+        XCTAssertTrue(dose.explicitlyMarked, "A legacy taken dose remains a real recorded completion")
         XCTAssertNil(dose.deletedAt)
     }
 
