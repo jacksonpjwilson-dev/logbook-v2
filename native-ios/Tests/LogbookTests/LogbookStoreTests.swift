@@ -948,6 +948,19 @@ final class LogbookStoreTests: XCTestCase {
         let legacyWeight = Data(#"{"date":"2026-11-09","kilograms":80}"#.utf8)
         let weight = try JSONDecoder().decode(WeightLog.self, from: legacyWeight)
         XCTAssertNil(weight.deletedAt)
+        XCTAssertEqual(weight.kilograms, 80)
+
+        let legacySupplement = Data(#"{"name":"Vitamin D"}"#.utf8)
+        let supplement = try JSONDecoder().decode(Supplement.self, from: legacySupplement)
+        XCTAssertEqual(supplement.schedule, "daily")
+        XCTAssertTrue(supplement.weekdays.isEmpty)
+        XCTAssertNil(supplement.doseDescription)
+
+        let legacyDose = Data(#"{"supplementID":"00000000-0000-0000-0000-000000000001","supplementName":"Vitamin D","date":"2026-11-09","taken":true}"#.utf8)
+        let dose = try JSONDecoder().decode(SupplementDose.self, from: legacyDose)
+        XCTAssertTrue(dose.taken)
+        XCTAssertFalse(dose.explicitlyMarked)
+        XCTAssertNil(dose.deletedAt)
     }
 
     private func temporaryRepository() -> LogbookRepository {
