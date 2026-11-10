@@ -3,6 +3,32 @@ import XCTest
 
 @MainActor
 final class LogbookStoreTests: XCTestCase {
+    func testNutritionHistorySeriesExcludesDeletedEntriesAndAggregatesSameDay() throws {
+        var first = FoodLog(
+            foodID: "oats", foodName: "Oats", mealID: UUID(), mealName: "Breakfast",
+            date: "2026-11-08", quantity: 100, unit: "g", calories: 380,
+            protein: 13, carbohydrates: 68, fat: 7, confirmedAt: .now
+        )
+        let second = FoodLog(
+            foodID: "milk", foodName: "Milk", mealID: UUID(), mealName: "Breakfast",
+            date: "2026-11-08", quantity: 100, unit: "g", calories: 60,
+            protein: 3, carbohydrates: 5, fat: 3, confirmedAt: .now
+        )
+        let outsideRange = FoodLog(
+            foodID: "egg", foodName: "Egg", mealID: UUID(), mealName: "Breakfast",
+            date: "2026-11-07", quantity: 1, unit: "piece", calories: 70,
+            protein: 6, carbohydrates: 1, fat: 5, confirmedAt: .now
+        )
+        first.deletedAt = .now
+        let logs = [first, second, outsideRange]
+
+        let calories = NutritionHistorySeries.calories(from: logs, since: "2026-11-08")
+        let protein = NutritionHistorySeries.protein(from: logs, since: "2026-11-08")
+
+        XCTAssertEqual(calories, [DailyHistoryPoint(date: "2026-11-08", value: 60)])
+        XCTAssertEqual(protein, [DailyHistoryPoint(date: "2026-11-08", value: 3)])
+    }
+
     func testBundledExerciseAndFoodCatalogsLoadForAnEmptyRepository() {
         let store = LogbookStore(repository: temporaryRepository())
         XCTAssertTrue(store.state.training.exercises.contains { $0.id == "builtin-2" && $0.name == "Flat barbell bench press" })
