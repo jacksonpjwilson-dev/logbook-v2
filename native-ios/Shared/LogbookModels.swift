@@ -912,7 +912,7 @@ struct SupplementDose: Codable, Identifiable, Hashable {
         supplementName = try values.decode(String.self, forKey: .supplementName)
         date = try values.decode(String.self, forKey: .date)
         taken = try values.decodeIfPresent(Bool.self, forKey: .taken) ?? false
-        explicitlyMarked = try values.decodeIfPresent(Bool.self, forKey: .explicitlyMarked) ?? false
+        explicitlyMarked = try values.decodeIfPresent(Bool.self, forKey: .explicitlyMarked) ?? taken
         deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
     }
 }
