@@ -1234,6 +1234,25 @@ final class DailyHomeUITests: XCTestCase {
         attachScreenshot(of: app, named: "Sleep-Weight-Supplements-Candidate")
     }
 
+    func testProgressHomeMetricsAndNumberedActivityDayNavigation() throws {
+        let app = launchApp()
+        app.buttons["Progress & History page"].tap()
+
+        let metricPicker = app.segmentedControls["progress-metric-picker"]
+        XCTAssertTrue(metricPicker.waitForExistence(timeout: 5), "Progress Home exposes its five approved metrics")
+        for metric in ["Weight", "Strength", "Sleep", "Calories", "Protein"] {
+            XCTAssertTrue(metricPicker.buttons[metric].exists, "Missing \(metric) metric")
+        }
+        metricPicker.buttons["Protein"].tap()
+
+        let activityDay = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "activity-day-")).firstMatch
+        XCTAssertTrue(activityDay.waitForExistence(timeout: 5), "The numbered activity heatmap should be tappable")
+        let dateKey = String(activityDay.identifier.dropFirst("activity-day-".count))
+        activityDay.tap()
+        XCTAssertTrue(app.staticTexts["Selected Day · \(dateKey)"].waitForExistence(timeout: 5), "Heatmap selection opens that day in History")
+        attachScreenshot(of: app, named: "Progress-Home-Candidate")
+    }
+
     private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false, singleExercise: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
