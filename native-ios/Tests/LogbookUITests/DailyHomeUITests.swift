@@ -1184,6 +1184,56 @@ final class DailyHomeUITests: XCTestCase {
         field.typeText(value)
     }
 
+    func testCheckInSleepNapWeightAndSupplementWorkflow() throws {
+        let app = launchApp()
+        app.buttons["Sleep tab"].tap()
+
+        let sessionType = app.segmentedControls["sleep-session-type"]
+        XCTAssertTrue(sessionType.waitForExistence(timeout: 5))
+        sessionType.buttons["Nap"].tap()
+        let saveSleep = app.buttons["sleep-save"]
+        XCTAssertTrue(saveSleep.waitForExistence(timeout: 5))
+        saveSleep.tap()
+        XCTAssertTrue(app.staticTexts["Nap"].waitForExistence(timeout: 5), "A nap is saved as a separate check-in")
+        let sleepRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "sleep-edit-")).firstMatch
+        XCTAssertTrue(sleepRow.waitForExistence(timeout: 5))
+        let sleepID = String(sleepRow.identifier.dropFirst("sleep-edit-".count))
+        app.buttons["sleep-delete-\(sleepID)"].tap()
+        let restoreSleep = app.buttons["restore-sleep-\(sleepID)"]
+        XCTAssertTrue(restoreSleep.waitForExistence(timeout: 5), "A deleted sleep record is listed for recovery")
+        restoreSleep.tap()
+        XCTAssertTrue(app.buttons["sleep-edit-\(sleepID)"].waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
+
+        let weightField = app.textFields["checkin-weight-value"]
+        XCTAssertTrue(weightField.waitForExistence(timeout: 5))
+        weightField.tap()
+        let oldWeight = weightField.value as? String ?? ""
+        if !oldWeight.isEmpty {
+            weightField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: oldWeight.count))
+        }
+        weightField.typeText("79.5")
+        app.buttons["weight-save"].tap()
+        let replaceWeight = app.buttons["Replace weight"]
+        if replaceWeight.waitForExistence(timeout: 2) { replaceWeight.tap() }
+        let currentWeight = app.descendants(matching: .any)["weight-current-value"]
+        XCTAssertTrue(currentWeight.waitForExistence(timeout: 5), "The selected weight is saved and displayed")
+        XCTAssertTrue(currentWeight.label.contains("79.5"), "Historical weight editing stores the entered measurement")
+
+        app.buttons["supplement-add"].tap()
+        let supplementName = app.textFields["supplement-name"]
+        XCTAssertTrue(supplementName.waitForExistence(timeout: 5))
+        supplementName.tap()
+        supplementName.typeText("QA Vitamin D")
+        app.buttons["supplement-editor-save"].tap()
+        XCTAssertTrue(app.staticTexts["QA Vitamin D"].waitForExistence(timeout: 5))
+
+        let creatineDose = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mark Creatine taken")).firstMatch
+        XCTAssertTrue(creatineDose.waitForExistence(timeout: 5), "A due supplement has a direct Taken action")
+        creatineDose.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Undo Creatine")).firstMatch.waitForExistence(timeout: 5))
+        attachScreenshot(of: app, named: "Sleep-Weight-Supplements-Candidate")
+    }
+
     private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false, singleExercise: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]

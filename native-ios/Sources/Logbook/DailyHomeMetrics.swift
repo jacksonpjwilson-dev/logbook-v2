@@ -23,19 +23,19 @@ struct DailyHomeMetrics {
     init(state: LogbookState, date: Date = .now, calendar: Calendar = .current) {
         self.date = calendar.startOfDay(for: date)
         let dayKey = LocalDay.string(date)
-        let daySleep = state.checkins.sleep.first { $0.wakeDate == dayKey && $0.durationMinutes > 0 }
-        let dayWeight = state.checkins.weights.first { $0.date == dayKey && $0.kilograms > 0 }
+        let daySleep = state.checkins.sleep.first { $0.deletedAt == nil && !$0.isNap && $0.wakeDate == dayKey && $0.durationMinutes > 0 }
+        let dayWeight = state.checkins.weights.first { $0.deletedAt == nil && $0.date == dayKey && $0.kilograms > 0 }
         sleep = daySleep
         weight = dayWeight
         let dayDueSupplements = state.checkins.supplements.filter { supplement in
-            if supplement.schedule.lowercased() == "daily" { return true }
+            if supplement.deletedAt == nil && supplement.schedule.lowercased() == "daily" { return true }
             let weekday = calendar.component(.weekday, from: date)
-            return supplement.weekdays.contains(weekday)
+            return supplement.deletedAt == nil && supplement.weekdays.contains(weekday)
         }
         dueSupplements = dayDueSupplements
         let dueIDs = Set(dayDueSupplements.map(\.id))
         let dayDoses = state.checkins.doses.filter {
-            $0.date == dayKey && dueIDs.contains($0.supplementID) && $0.explicitlyMarked && $0.taken
+            $0.deletedAt == nil && $0.date == dayKey && dueIDs.contains($0.supplementID) && $0.explicitlyMarked && $0.taken
         }
         let takenIDs = Set(dayDoses.map(\.supplementID))
         takenSupplementCount = takenIDs.count
@@ -46,15 +46,15 @@ struct DailyHomeMetrics {
 
         func perfect(on day: Date) -> Bool {
             let key = LocalDay.string(day)
-            let hasSleep = state.checkins.sleep.contains { $0.wakeDate == key && $0.durationMinutes > 0 }
-            let hasWeight = state.checkins.weights.contains { $0.date == key && $0.kilograms > 0 }
+            let hasSleep = state.checkins.sleep.contains { $0.deletedAt == nil && !$0.isNap && $0.wakeDate == key && $0.durationMinutes > 0 }
+            let hasWeight = state.checkins.weights.contains { $0.deletedAt == nil && $0.date == key && $0.kilograms > 0 }
             let weekday = calendar.component(.weekday, from: day)
             let due = state.checkins.supplements.filter {
-                $0.schedule.lowercased() == "daily" || $0.weekdays.contains(weekday)
+                $0.deletedAt == nil && ($0.schedule.lowercased() == "daily" || $0.weekdays.contains(weekday))
             }
             let dueIDs = Set(due.map(\.id))
             let takenIDs = Set(state.checkins.doses.filter {
-                $0.date == key && dueIDs.contains($0.supplementID) && $0.explicitlyMarked && $0.taken
+                $0.deletedAt == nil && $0.date == key && dueIDs.contains($0.supplementID) && $0.explicitlyMarked && $0.taken
             }.map(\.supplementID))
             return hasSleep && hasWeight && dueIDs.isSubset(of: takenIDs)
         }

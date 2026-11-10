@@ -825,6 +825,105 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(metrics.perfectDayStreak, 3, "An incomplete current day keeps the preceding consecutive perfect-day streak visible")
     }
 
+    func testSleepMainWakeDateNapOverrideQualityAndRecoveryPersist() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        var calendar = Calendar.current
+        calendar.timeZone = .current
+        let wake = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 6, minute: 30))!
+        let bedtime = calendar.date(byAdding: .hour, value: -8, to: wake)!
+        XCTAssertTrue(store.addSleep(bedtime: bedtime, wakeTime: wake, manualMinutes: 465, qualityRating: 4))
+        XCTAssertFalse(store.addSleep(bedtime: bedtime, wakeTime: wake.addingTimeInterval(60), qualityRating: 6), "Quality must be within 1–5 and a day has one main sleep")
+
+        let napStart = calendar.date(from: DateComponents(year: 2026, month: 11, day: 10, hour: 13))!
+        let napEnd = napStart.addingTimeInterval(45 * 60)
+        XCTAssertTrue(store.addSleep(bedtime: napStart, wakeTime: napEnd, isNap: true, qualityRating: 3), "Naps are separate records and may share a wake date")
+        let key = LocalDay.string(wake)
+        XCTAssertEqual(store.state.checkins.sleep.filter { $0.wakeDate == key && !$0.isNap }.first?.durationMinutes, 465)
+        XCTAssertEqual(store.state.checkins.sleep.filter { $0.wakeDate == key && $0.isNap }.count, 1)
+
+        var state = store.state
+        let metrics = DailyHomeMetrics(state: state, date: wake)
+        XCTAssertNotNil(metrics.sleep, "A valid main overnight session satisfies the Sleep check-in")
+        XCTAssertEqual(state.checkins.sleep.filter { $0.wakeDate == key }.reduce(0) { $0 + $1.durationMinutes }, 510, "Naps add to daily sleep totals separately")
+
+        let main = try XCTUnwrap(state.checkins.sleep.first { $0.wakeDate == key && !$0.isNap })
+        store.deleteSleep(main.id)
+        XCTAssertNil(DailyHomeMetrics(state: store.state, date: wake).sleep, "Deleted sleep no longer completes Habits")
+        XCTAssertTrue(store.restoreDeletedSleep(main.id))
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertEqual(reopened.state.checkins.sleep.filter { $0.wakeDate == key }.count, 2)
+        XCTAssertEqual(reopened.state.checkins.sleep.first { $0.id == main.id }?.qualityRating, 4)
+    }
+
+    func testWeightHistoricalUnitsComparisonAndThirtyDayRecovery() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let day = Calendar.current.date(byAdding: .day, value: -2, to: .now)!
+        XCTAssertTrue(store.addWeight(220, unit: "lb", date: day))
+        XCTAssertFalse(store.addWeight(100, unit: "kg", date: day), "A date allows one official measurement")
+        var record = try XCTUnwrap(store.state.checkins.weights.first)
+        XCTAssertEqual(record.kilograms, 220 / 2.2046226218, accuracy: 0.0001)
+        XCTAssertTrue(store.updateWeight(record.id, value: 100, unit: "kg", date: day))
+        record = try XCTUnwrap(store.state.checkins.weights.first)
+        XCTAssertEqual(record.kilograms, 100, accuracy: 0.0001)
+        store.deleteWeight(record.id)
+        XCTAssertTrue(store.recentlyDeletedCheckIns().weights.contains { $0.id == record.id })
+        XCTAssertTrue(store.restoreDeletedWeight(record.id))
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertEqual(try XCTUnwrap(reopened.state.checkins.weights.first).kilograms, 100, accuracy: 0.0001)
+        store.deleteWeight(record.id, at: .now.addingTimeInterval(-31 * 24 * 60 * 60))
+        XCTAssertFalse(store.restoreDeletedWeight(record.id), "Expired check-ins cannot be restored")
+        store.purgeExpiredCheckIns()
+        XCTAssertFalse(store.state.checkins.weights.contains { $0.id == record.id })
+    }
+
+    func testSupplementWeekdayEligibilityHistoricalDoseUndoAndNoDueNeutral() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let day = Calendar.current.startOfDay(for: .now)
+        let weekday = Calendar.current.component(.weekday, from: day)
+        let otherWeekday = weekday == 7 ? 1 : weekday + 1
+        store.addSupplement(name: "Weekday", doseDescription: "1 capsule", schedule: "weekdays", weekdays: [weekday])
+        store.addSupplement(name: "Other day", doseDescription: nil, schedule: "weekdays", weekdays: [otherWeekday])
+        let eligible = try XCTUnwrap(store.state.checkins.supplements.first { $0.name == "Weekday" })
+        let notDue = try XCTUnwrap(store.state.checkins.supplements.first { $0.name == "Other day" })
+        XCTAssertEqual(eligible.doseDescription, "1 capsule")
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).dueSupplements.map(\.id), [eligible.id])
+        store.markSupplement(notDue, taken: true, on: day)
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).takenSupplementCount, 0, "A dose cannot be marked on a non-scheduled day")
+        store.markSupplement(eligible, taken: true, on: day)
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).takenSupplementCount, 1)
+        store.markSupplement(eligible, taken: false, on: day)
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).takenSupplementCount, 0)
+        store.updateSupplement(Supplement(id: notDue.id, name: notDue.name, schedule: "weekdays", weekdays: [weekday], doseDescription: "2 tablets"))
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).dueSupplements.count, 2)
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertEqual(reopened.state.checkins.supplements.first { $0.id == notDue.id }?.doseDescription, "2 tablets")
+    }
+
+    func testExpiredCheckInsArePurgedOnRepositoryReopen() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        XCTAssertTrue(store.addWeight(80, unit: "kg"))
+        let weight = try XCTUnwrap(store.state.checkins.weights.first)
+        store.deleteWeight(weight.id, at: .now.addingTimeInterval(-31 * 24 * 60 * 60))
+
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertFalse(reopened.state.checkins.weights.contains { $0.id == weight.id }, "Expired deleted check-ins are purged during launch migration")
+    }
+
+    func testLegacySleepAndWeightRecordsDecodeWithNewOptionalFields() throws {
+        let legacySleep = Data(#"{"wakeDate":"2026-11-09","bedtime":0,"wakeTime":28800,"manualMinutes":null}"#.utf8)
+        let sleep = try JSONDecoder().decode(SleepLog.self, from: legacySleep)
+        XCTAssertFalse(sleep.isNap)
+        XCTAssertNil(sleep.qualityRating)
+        XCTAssertNil(sleep.deletedAt)
+        let legacyWeight = Data(#"{"date":"2026-11-09","kilograms":80}"#.utf8)
+        let weight = try JSONDecoder().decode(WeightLog.self, from: legacyWeight)
+        XCTAssertNil(weight.deletedAt)
+    }
+
     private func temporaryRepository() -> LogbookRepository {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("LogbookTests-\(UUID().uuidString)", isDirectory: true)
         return LogbookRepository(url: directory.appendingPathComponent("state.json"))

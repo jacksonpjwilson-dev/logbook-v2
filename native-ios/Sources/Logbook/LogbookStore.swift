@@ -46,9 +46,10 @@ final class LogbookStore: ObservableObject {
             let migratedTrainingPrograms = Self.migrateLegacyPrograms(&loaded.training)
             let purgedWorkoutRecords = Self.purgeExpiredWorkoutRecords(&loaded.training, asOf: .now)
             let purgedFoodRecords = Self.purgeExpiredFoodRecords(&loaded.nutrition, asOf: .now)
+            let purgedCheckInRecords = Self.purgeExpiredCheckInRecords(&loaded.checkins, asOf: .now)
             state = loaded
             lastSavedAt = FileManager.default.fileExists(atPath: repository.url.path) ? Date() : nil
-            if migratedDailyLayout || migratedTrainingPrograms || purgedWorkoutRecords || purgedFoodRecords {
+            if migratedDailyLayout || migratedTrainingPrograms || purgedWorkoutRecords || purgedFoodRecords || purgedCheckInRecords {
                 do {
                     try repository.save(loaded)
                     lastSavedAt = .now
@@ -1065,48 +1066,207 @@ final class LogbookStore: ObservableObject {
     }
 
     @discardableResult
-    func addSleep(bedtime: Date, wakeTime: Date, manualMinutes: Int? = nil, confirmedReplace: Bool = false) -> Bool {
-        guard wakeTime > bedtime else { return false }
-        let log = SleepLog(wakeDate: LocalDay.string(wakeTime), bedtime: bedtime, wakeTime: wakeTime, manualMinutes: manualMinutes)
-        guard confirmedReplace || !state.checkins.sleep.contains(where: { $0.wakeDate == log.wakeDate }) else { return false }
+    func addSleep(
+        bedtime: Date,
+        wakeTime: Date,
+        manualMinutes: Int? = nil,
+        isNap: Bool = false,
+        qualityRating: Int? = nil,
+        confirmedReplace: Bool = false
+    ) -> Bool {
+        guard wakeTime > bedtime,
+              manualMinutes == nil || manualMinutes! > 0,
+              qualityRating == nil || (1...5).contains(qualityRating!) else { return false }
+        let key = LocalDay.string(wakeTime)
+        let log = SleepLog(wakeDate: key, bedtime: bedtime, wakeTime: wakeTime, manualMinutes: manualMinutes, isNap: isNap, qualityRating: qualityRating)
+        let existingMain = state.checkins.sleep.first { $0.deletedAt == nil && !$0.isNap && $0.wakeDate == key }
+        guard isNap || confirmedReplace || existingMain == nil else { return false }
         transact { state in
-            state.checkins.sleep.removeAll { $0.wakeDate == log.wakeDate }
+            if !isNap, confirmedReplace {
+                for index in state.checkins.sleep.indices where state.checkins.sleep[index].deletedAt == nil && !state.checkins.sleep[index].isNap && state.checkins.sleep[index].wakeDate == key {
+                    state.checkins.sleep[index].deletedAt = .now
+                }
+            }
             state.checkins.sleep.append(log)
         }
         return state.checkins.sleep.contains(where: { $0.id == log.id })
     }
 
     @discardableResult
-    func addWeight(_ value: Double, unit: String = "kg", confirmedReplace: Bool = false) -> Bool {
-        guard value > 0 else { return false }
-        let kg = unit == "lb" ? value / 2.2046226218 : value
-        let log = WeightLog(date: LocalDay.string(), kilograms: kg)
-        guard confirmedReplace || !state.checkins.weights.contains(where: { $0.date == log.date }) else { return false }
+    func updateSleep(
+        _ id: UUID,
+        bedtime: Date,
+        wakeTime: Date,
+        manualMinutes: Int? = nil,
+        isNap: Bool = false,
+        qualityRating: Int? = nil
+    ) -> Bool {
+        guard wakeTime > bedtime,
+              manualMinutes == nil || manualMinutes! > 0,
+              qualityRating == nil || (1...5).contains(qualityRating!),
+              let original = state.checkins.sleep.first(where: { $0.id == id && $0.deletedAt == nil }) else { return false }
+        let wakeDate = LocalDay.string(wakeTime)
+        if !isNap, state.checkins.sleep.contains(where: { $0.id != id && $0.deletedAt == nil && !$0.isNap && $0.wakeDate == wakeDate }) { return false }
         transact { state in
-            state.checkins.weights.removeAll { $0.date == log.date }
+            guard let index = state.checkins.sleep.firstIndex(where: { $0.id == id }) else { return }
+            state.checkins.sleep[index] = SleepLog(id: original.id, wakeDate: wakeDate, bedtime: bedtime, wakeTime: wakeTime, manualMinutes: manualMinutes, isNap: isNap, qualityRating: qualityRating)
+        }
+        return state.checkins.sleep.contains(where: { $0.id == id && $0.deletedAt == nil })
+    }
+
+    func deleteSleep(_ id: UUID, at date: Date = .now) {
+        transact { state in
+            guard let index = state.checkins.sleep.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.checkins.sleep[index].deletedAt = date
+        }
+    }
+
+    @discardableResult
+    func restoreDeletedSleep(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let record = state.checkins.sleep.first(where: { $0.id == id }),
+              let deletedAt = record.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0,
+              date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
+        if !record.isNap && state.checkins.sleep.contains(where: { $0.id != id && $0.deletedAt == nil && !$0.isNap && $0.wakeDate == record.wakeDate }) { return false }
+        transact { state in
+            guard let index = state.checkins.sleep.firstIndex(where: { $0.id == id }) else { return }
+            state.checkins.sleep[index].deletedAt = nil
+        }
+        return state.checkins.sleep.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    @discardableResult
+    func addWeight(_ value: Double, unit: String = "kg", date: Date = .now, confirmedReplace: Bool = false) -> Bool {
+        guard value.isFinite, value > 0, unit == "kg" || unit == "lb" else { return false }
+        let key = LocalDay.string(date)
+        let kg = unit == "lb" ? value / 2.2046226218 : value
+        let log = WeightLog(date: key, kilograms: kg)
+        let existing = state.checkins.weights.first { $0.deletedAt == nil && $0.date == key }
+        guard confirmedReplace || existing == nil else { return false }
+        transact { state in
+            if confirmedReplace {
+                for index in state.checkins.weights.indices where state.checkins.weights[index].deletedAt == nil && state.checkins.weights[index].date == key {
+                    state.checkins.weights[index].deletedAt = .now
+                }
+            }
             state.checkins.weights.append(log)
         }
         return state.checkins.weights.contains(where: { $0.id == log.id })
     }
 
-    func addSupplement(name: String) {
-        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !clean.isEmpty else { return }
-        transact { $0.checkins.supplements.append(Supplement(name: clean)) }
+    @discardableResult
+    func updateWeight(_ id: UUID, value: Double, unit: String = "kg", date: Date) -> Bool {
+        guard value.isFinite, value > 0, unit == "kg" || unit == "lb",
+              let existing = state.checkins.weights.first(where: { $0.id == id && $0.deletedAt == nil }) else { return false }
+        let key = LocalDay.string(date)
+        if state.checkins.weights.contains(where: { $0.id != id && $0.deletedAt == nil && $0.date == key }) { return false }
+        let kg = unit == "lb" ? value / 2.2046226218 : value
+        transact { state in
+            guard let index = state.checkins.weights.firstIndex(where: { $0.id == id }) else { return }
+            state.checkins.weights[index] = WeightLog(id: existing.id, date: key, kilograms: kg)
+        }
+        return state.checkins.weights.contains(where: { $0.id == id && $0.deletedAt == nil })
     }
 
-    func markSupplement(_ supplement: Supplement, taken: Bool) {
-        let date = LocalDay.string()
+    func deleteWeight(_ id: UUID, at date: Date = .now) {
         transact { state in
-            if let index = state.checkins.doses.firstIndex(where: { $0.supplementID == supplement.id && $0.date == date }) {
+            guard let index = state.checkins.weights.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.checkins.weights[index].deletedAt = date
+        }
+    }
+
+    @discardableResult
+    func restoreDeletedWeight(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let record = state.checkins.weights.first(where: { $0.id == id }),
+              let deletedAt = record.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0,
+              date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60,
+              !state.checkins.weights.contains(where: { $0.id != id && $0.deletedAt == nil && $0.date == record.date }) else { return false }
+        transact { state in
+            guard let index = state.checkins.weights.firstIndex(where: { $0.id == id }) else { return }
+            state.checkins.weights[index].deletedAt = nil
+        }
+        return state.checkins.weights.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func addSupplement(name: String) {
+        addSupplement(name: name, doseDescription: nil, schedule: "daily", weekdays: [])
+    }
+
+    func addSupplement(name: String, doseDescription: String?, schedule: String, weekdays: [Int]) {
+        let clean = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dose = doseDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let validWeekdays = Array(Set(weekdays.filter { (1...7).contains($0) })).sorted()
+        guard !clean.isEmpty, schedule == "daily" || !validWeekdays.isEmpty else { return }
+        transact { $0.checkins.supplements.append(Supplement(name: clean, schedule: schedule == "daily" ? "daily" : "weekdays", weekdays: schedule == "daily" ? [] : validWeekdays, doseDescription: dose?.isEmpty == true ? nil : dose)) }
+    }
+
+    func updateSupplement(_ supplement: Supplement) {
+        let name = supplement.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dose = supplement.doseDescription?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let weekdays = Array(Set(supplement.weekdays.filter { (1...7).contains($0) })).sorted()
+        guard !name.isEmpty, supplement.schedule == "daily" || !weekdays.isEmpty else { return }
+        transact { state in
+            guard let index = state.checkins.supplements.firstIndex(where: { $0.id == supplement.id && $0.deletedAt == nil }) else { return }
+            state.checkins.supplements[index].name = name
+            state.checkins.supplements[index].doseDescription = dose?.isEmpty == true ? nil : dose
+            state.checkins.supplements[index].schedule = supplement.schedule == "daily" ? "daily" : "weekdays"
+            state.checkins.supplements[index].weekdays = supplement.schedule == "daily" ? [] : weekdays
+        }
+    }
+
+    func deleteSupplement(_ id: UUID, at date: Date = .now) {
+        transact { state in
+            guard let index = state.checkins.supplements.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.checkins.supplements[index].deletedAt = date
+        }
+    }
+
+    func markSupplement(_ supplement: Supplement, taken: Bool, on date: Date = .now) {
+        guard let activeSupplement = state.checkins.supplements.first(where: { $0.id == supplement.id && $0.deletedAt == nil }) else { return }
+        let weekday = Calendar.current.component(.weekday, from: date)
+        let isScheduled = activeSupplement.schedule.lowercased() == "daily" || activeSupplement.weekdays.contains(weekday)
+        guard isScheduled else { return }
+        let key = LocalDay.string(date)
+        transact { state in
+            if let index = state.checkins.doses.firstIndex(where: { $0.supplementID == supplement.id && $0.date == key && $0.deletedAt == nil }) {
                 state.checkins.doses[index].taken = taken
                 state.checkins.doses[index].explicitlyMarked = true
             } else {
-                state.checkins.doses.append(SupplementDose(supplementID: supplement.id, supplementName: supplement.name, date: date, taken: taken, explicitlyMarked: true))
+                state.checkins.doses.append(SupplementDose(supplementID: supplement.id, supplementName: supplement.name, date: key, taken: taken, explicitlyMarked: true))
             }
         }
     }
 
+    func recentlyDeletedCheckIns(asOf date: Date = .now) -> (sleep: [SleepLog], weights: [WeightLog], supplements: [Supplement]) {
+        func unexpired(_ deletedAt: Date?) -> Bool {
+            guard let deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= 0 && date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60
+        }
+        return (
+            state.checkins.sleep.filter { unexpired($0.deletedAt) },
+            state.checkins.weights.filter { unexpired($0.deletedAt) },
+            state.checkins.supplements.filter { unexpired($0.deletedAt) }
+        )
+    }
+
+    func restoreDeletedSupplement(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let supplement = state.checkins.supplements.first(where: { $0.id == id }),
+              let deletedAt = supplement.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0,
+              date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60 else { return false }
+        transact { state in
+            guard let index = state.checkins.supplements.firstIndex(where: { $0.id == id }) else { return }
+            state.checkins.supplements[index].deletedAt = nil
+        }
+        return state.checkins.supplements.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func purgeExpiredCheckIns(asOf date: Date = .now) {
+        var preview = state.checkins
+        guard Self.purgeExpiredCheckInRecords(&preview, asOf: date) else { return }
+        transact { $0.checkins = preview }
+    }
     func setHomePages(_ pages: [HomePage]) {
         transact { $0.home.pages = pages }
     }
@@ -1306,6 +1466,29 @@ final class LogbookStore: ObservableObject {
             return date.timeIntervalSince(deletedAt) >= 30 * 24 * 60 * 60
         }
         return nutrition.logs.count + nutrition.water.count + (nutrition.recipes?.count ?? 0) != originalCount
+    }
+
+    private static func purgeExpiredCheckInRecords(_ checkins: inout CheckInState, asOf date: Date) -> Bool {
+        let originalCount = checkins.sleep.count + checkins.weights.count + checkins.supplements.count + checkins.doses.count
+        let expiration: TimeInterval = 30 * 24 * 60 * 60
+        checkins.sleep.removeAll { record in
+            guard let deletedAt = record.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= expiration
+        }
+        checkins.weights.removeAll { record in
+            guard let deletedAt = record.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= expiration
+        }
+        checkins.supplements.removeAll { record in
+            guard let deletedAt = record.deletedAt else { return false }
+            return date.timeIntervalSince(deletedAt) >= expiration
+        }
+        let knownSupplementIDs = Set(checkins.supplements.map(\.id))
+        checkins.doses.removeAll { dose in
+            guard !knownSupplementIDs.contains(dose.supplementID) else { return false }
+            return true
+        }
+        return checkins.sleep.count + checkins.weights.count + checkins.supplements.count + checkins.doses.count != originalCount
     }
 
     private static func isValid(_ state: LogbookState) -> Bool {

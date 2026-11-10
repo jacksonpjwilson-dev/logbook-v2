@@ -4,99 +4,255 @@ import UniformTypeIdentifiers
 
 struct CheckInScreen: View {
     @EnvironmentObject private var store: LogbookStore
+    @State private var selectedDate = Calendar.current.startOfDay(for: .now)
     @State private var bedtime = Calendar.current.date(bySettingHour: 22, minute: 30, second: 0, of: .now) ?? .now
     @State private var wakeTime = Calendar.current.date(bySettingHour: 6, minute: 30, second: 0, of: .now) ?? .now
+    @State private var sleepIsNap = false
+    @State private var manualDuration = ""
+    @State private var qualityRating = 0
+    @State private var editingSleepID: UUID?
     @State private var weight = ""
     @State private var showWeightSaved = false
     @State private var showSleepReplace = false
     @State private var showWeightReplace = false
-    @State private var supplementName = ""
-    @State private var showSupplementForm = false
+    @State private var showSupplementEditor = false
+    @State private var editingSupplement: Supplement?
+    @State private var showDeleteConfirmation: UUID?
 
     private var unit: String { store.state.home.preferredWeightUnit }
-    private var weightToday: WeightLog? { store.state.checkins.weights.first { $0.date == LocalDay.string() } }
+    private var dateKey: String { LocalDay.string(selectedDate) }
+    private var weightForDate: WeightLog? { store.state.checkins.weights.first { $0.deletedAt == nil && $0.date == dateKey } }
+    private var activeSleep: [SleepLog] {
+        store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == dateKey }.sorted { $0.wakeTime > $1.wakeTime }
+    }
+    private var activeSupplements: [Supplement] { store.state.checkins.supplements.filter { $0.deletedAt == nil }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending } }
+    private var previousWeight: WeightLog? {
+        store.state.checkins.weights.filter { $0.deletedAt == nil && $0.date < dateKey }.max { $0.date < $1.date }
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
-        List {
-            Section("Sleep") {
-                DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
-                DatePicker("Wake time", selection: $wakeTime, displayedComponents: .hourAndMinute)
-                Button { saveSleep() } label: { Label("Save sleep", systemImage: "moon.zzz.fill") }
-                    .disabled(wakeTime <= sleepBedtime)
-                if let last = store.state.checkins.sleep.max(by: { $0.wakeDate < $1.wakeDate }) {
-                    LabeledContent("Last recorded", value: "\(String(format: "%.1f", Double(last.durationMinutes) / 60)) hours · \(last.wakeDate)")
-                } else { Text("No sleep record yet.").font(.caption).foregroundStyle(.secondary) }
-                Text("Sleep is entered manually. This app has no Apple Health access.").font(.footnote).foregroundStyle(.secondary)
-            }
-            .id(CheckInSection.sleep)
-
-            Section("Weight") {
-                HStack { TextField("Weight", text: $weight).keyboardType(.decimalPad); Text(unit).foregroundStyle(.secondary) }
-                Button { saveWeight() } label: { Label("Save today’s weight", systemImage: "scalemass.fill") }
-                    .disabled((Double(weight) ?? 0) <= 0)
-                if let last = store.state.checkins.weights.max(by: { $0.date < $1.date }) {
-                    Text("Last entry: \(displayWeight(last.kilograms)) \(unit) · \(last.date)").font(.caption).foregroundStyle(.secondary)
+            List {
+                Section {
+                    DatePicker("Check-in date", selection: $selectedDate, displayedComponents: .date)
+                        .accessibilityIdentifier("checkin-date-picker")
+                    Text("Sleep, weight and supplement records are saved to the selected local date.")
+                        .font(.footnote).foregroundStyle(.secondary)
                 }
-            }
-            .id(CheckInSection.weight)
 
-            Section {
-                if store.state.checkins.supplements.isEmpty {
-                    Text("Add supplements you want to track. A dose is counted only after you mark it.").font(.footnote).foregroundStyle(.secondary)
+                Section("Sleep") {
+                    Picker("Session type", selection: $sleepIsNap) {
+                        Text("Overnight").tag(false)
+                        Text("Nap").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("sleep-session-type")
+                    DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
+                    DatePicker("Wake time", selection: $wakeTime, displayedComponents: .hourAndMinute)
+                    TextField("Optional duration override (minutes)", text: $manualDuration)
+                        .keyboardType(.numberPad)
+                        .accessibilityIdentifier("sleep-duration-override")
+                    Picker("Sleep quality", selection: $qualityRating) {
+                        Text("Not rated").tag(0)
+                        ForEach(1...5, id: \.self) { value in
+                            Text(String(repeating: "★", count: value)).tag(value)
+                        }
+                    }
+                    .accessibilityIdentifier("sleep-quality-rating")
+                    Button { saveSleep() } label: {
+                        Label(editingSleepID == nil ? (sleepIsNap ? "Save nap" : "Save overnight sleep") : "Update sleep", systemImage: "moon.zzz.fill")
+                    }
+                    .accessibilityIdentifier("sleep-save")
+                    .disabled(sleepWakeTime <= sleepBedtime || (!manualDuration.isEmpty && Int(manualDuration).map { $0 > 0 } != true))
+
+                    if activeSleep.isEmpty {
+                        Text("No sleep logged for this date. Naps add to sleep-hour totals but do not satisfy the overnight Sleep check-in.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(activeSleep) { record in
+                            HStack(spacing: 8) {
+                                Button { editSleep(record) } label: {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(record.isNap ? "Nap" : "Overnight sleep").font(.headline)
+                                        Text("\(sleepDuration(record.durationMinutes)) · \(record.qualityRating.map { "\($0) of 5 stars" } ?? "not rated") · wakes \(record.wakeTime.formatted(date: .omitted, time: .shortened))")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("sleep-edit-\(record.id.uuidString)")
+                                Button(role: .destructive) { store.deleteSleep(record.id) } label: {
+                                    Image(systemName: "trash").frame(width: 38, height: 42)
+                                }
+                                .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
+                                .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
+                            }
+                        }
+                    }
+                    Text("Sleep is entered manually. Apple Health access remains disabled.").font(.footnote).foregroundStyle(.secondary)
                 }
-                ForEach(store.state.checkins.supplements) { supplement in
-                    let dose = store.state.checkins.doses.first { $0.supplementID == supplement.id && $0.date == LocalDay.string() }
+                .id(CheckInSection.sleep)
+
+                Section("Weight") {
                     HStack {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(supplement.name).font(.headline)
-                            Text(dose?.explicitlyMarked == true ? (dose?.taken == true ? "Taken today" : "Marked not taken") : "Not marked today")
-                                .font(.caption).foregroundStyle(.secondary)
+                        TextField("Weight", text: $weight).keyboardType(.decimalPad).accessibilityIdentifier("checkin-weight-value")
+                        Text(unit).foregroundStyle(.secondary)
+                    }
+                    Button { saveWeight() } label: {
+                        Label(weightForDate == nil ? "Save weight for this date" : "Replace weight for this date", systemImage: "scalemass.fill")
+                    }
+                    .accessibilityIdentifier("weight-save")
+                    .disabled((Double(weight) ?? 0) <= 0)
+                    if let saved = weightForDate {
+                        LabeledContent("Saved measurement", value: "\(displayWeight(saved.kilograms)) \(unit)")
+                            .accessibilityIdentifier("weight-current-value")
+                        if let previousWeight {
+                            let difference = displayWeight(saved.kilograms - previousWeight.kilograms)
+                            LabeledContent("Change from \(previousWeight.date)", value: "\(difference) \(unit)")
                         }
-                        Spacer()
-                        Button { store.markSupplement(supplement, taken: dose?.taken != true) } label: {
-                            Image(systemName: dose?.taken == true ? "checkmark.circle.fill" : "circle")
-                                .font(.system(size: 25)).foregroundStyle(dose?.taken == true ? Color.green : Color.secondary)
+                        Button(role: .destructive) { store.deleteWeight(saved.id) } label: {
+                            Label("Delete this weight entry", systemImage: "trash")
                         }
-                        .buttonStyle(.plain).accessibilityLabel(dose?.taken == true ? "Mark \(supplement.name) not taken" : "Mark \(supplement.name) taken")
+                        .accessibilityIdentifier("weight-delete-current")
+                    } else if let previousWeight {
+                        Text("Previous entry: \(displayWeight(previousWeight.kilograms)) \(unit) · \(previousWeight.date)")
+                            .font(.caption).foregroundStyle(.secondary)
                     }
                 }
-                Button { showSupplementForm = true } label: { Label("Add supplement", systemImage: "plus") }
-            } header: { Text("Supplements") }
-            .id(CheckInSection.supplements)
+                .id(CheckInSection.weight)
 
-            Section {
-                NavigationLink("Reminder settings", destination: ReminderSettingsScreen())
-                    .font(.footnote)
-                Text("Reminder times are optional and use local notifications. They are not guaranteed during Focus or when iOS limits delivery.")
-                    .font(.footnote).foregroundStyle(.secondary)
+                Section {
+                    if activeSupplements.isEmpty {
+                        Text("Add supplements you want to track. Only scheduled doses count toward today’s Habits check-in.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    ForEach(activeSupplements) { supplement in
+                        let dose = store.state.checkins.doses.first { $0.supplementID == supplement.id && $0.date == dateKey && $0.deletedAt == nil }
+                        let due = isScheduled(supplement, on: selectedDate)
+                        HStack(spacing: 8) {
+                            Button {
+                                editingSupplement = supplement
+                                showSupplementEditor = true
+                            } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(supplement.name).font(.headline)
+                                    Text([supplement.doseDescription, scheduleDescription(supplement), due ? (dose?.taken == true ? "Taken" : "Not taken") : "Not scheduled"].compactMap { $0 }.joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("supplement-edit-\(supplement.id.uuidString)")
+                            Button {
+                                store.markSupplement(supplement, taken: dose?.taken != true, on: selectedDate)
+                            } label: {
+                                Image(systemName: dose?.taken == true ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 25)).foregroundStyle(dose?.taken == true ? Color.green : Color.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!due)
+                            .accessibilityLabel(dose?.taken == true ? "Undo \(supplement.name)" : "Mark \(supplement.name) taken")
+                            .accessibilityIdentifier("supplement-taken-\(supplement.id.uuidString)")
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) { store.deleteSupplement(supplement.id) } label: { Label("Delete", systemImage: "trash") }
+                        }
+                    }
+                    Button {
+                        editingSupplement = nil
+                        showSupplementEditor = true
+                    } label: { Label("Add supplement", systemImage: "plus") }
+                    .accessibilityIdentifier("supplement-add")
+                } header: { Text("Supplements") }
+                .id(CheckInSection.supplements)
+
+                let deleted = store.recentlyDeletedCheckIns()
+                Section("Recently Deleted · 30 days") {
+                    if deleted.sleep.isEmpty && deleted.weights.isEmpty && deleted.supplements.isEmpty {
+                        Text("Deleted sleep, weight and supplement records can be restored here for 30 days.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    ForEach(deleted.sleep) { record in
+                        HStack {
+                            Text("\(record.isNap ? "Nap" : "Sleep") · \(record.wakeDate)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedSleep(record.id) }
+                                .accessibilityIdentifier("restore-sleep-\(record.id.uuidString)")
+                        }
+                    }
+                    ForEach(deleted.weights) { record in
+                        HStack {
+                            Text("Weight · \(record.date)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedWeight(record.id) }
+                                .accessibilityIdentifier("restore-weight-\(record.id.uuidString)")
+                        }
+                    }
+                    ForEach(deleted.supplements) { record in
+                        HStack {
+                            Text("Supplement · \(record.name)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedSupplement(record.id) }
+                                .accessibilityIdentifier("restore-supplement-\(record.id.uuidString)")
+                        }
+                    }
+                }
+
+                Section {
+                    NavigationLink("Reminder settings", destination: ReminderSettingsScreen())
+                        .font(.footnote)
+                    Text("Reminder times are optional and use local notifications. They are not guaranteed during Focus or when iOS limits delivery.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             }
-        }
-        .onAppear { scrollToRequestedSection(using: proxy) }
-        .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
+            .onAppear {
+                loadWeightForSelectedDate()
+                scrollToRequestedSection(using: proxy)
+            }
+            .onChange(of: selectedDate) { _, _ in loadWeightForSelectedDate() }
+            .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
         }
         .navigationTitle("Sleep & Check-ins")
         .alert("Weight saved", isPresented: $showWeightSaved) { Button("OK", role: .cancel) { } }
-        .alert("Add supplement", isPresented: $showSupplementForm) {
-            TextField("Supplement name", text: $supplementName)
-            Button("Save") { store.addSupplement(name: supplementName); supplementName = "" }
-            Button("Cancel", role: .cancel) { supplementName = "" }
-        }
-        .confirmationDialog("Replace today’s sleep record?", isPresented: $showSleepReplace, titleVisibility: .visible) {
-            Button("Replace sleep record", role: .destructive) { _ = store.addSleep(bedtime: sleepBedtime, wakeTime: wakeTime, confirmedReplace: true) }
-            Button("Keep existing record", role: .cancel) { }
-        } message: { Text("The earlier sleep entry for this wake date will be replaced.") }
-        .confirmationDialog("Replace today’s weight?", isPresented: $showWeightReplace, titleVisibility: .visible) {
-            Button("Replace weight", role: .destructive) {
-                if store.addWeight(Double(weight) ?? 0, unit: unit, confirmedReplace: true) { weight = ""; showWeightSaved = true }
+        .sheet(isPresented: $showSupplementEditor) {
+            SupplementEditorScreen(supplement: editingSupplement) { value in
+                if editingSupplement == nil {
+                    store.addSupplement(name: value.name, doseDescription: value.doseDescription, schedule: value.schedule, weekdays: value.weekdays)
+                } else {
+                    store.updateSupplement(value)
+                }
             }
-            Button("Keep existing weight", role: .cancel) { }
-        } message: { Text("There is already one official weight entry for today.") }
+            .environmentObject(store)
+        }
+        .confirmationDialog("Replace the overnight sleep record for \(dateKey)?", isPresented: $showSleepReplace, titleVisibility: .visible) {
+            Button("Replace overnight sleep", role: .destructive) { _ = persistSleep(confirmedReplace: true) }
+            Button("Keep existing record", role: .cancel) { }
+        } message: { Text("The prior main sleep entry is moved to Recently Deleted; naps remain separate.") }
+        .confirmationDialog("Replace the weight record for \(dateKey)?", isPresented: $showWeightReplace, titleVisibility: .visible) {
+            Button("Replace weight", role: .destructive) {
+                if store.addWeight(Double(weight) ?? 0, unit: unit, date: selectedDate, confirmedReplace: true) {
+                    weight = ""
+                    showWeightSaved = true
+                }
+            }
+            Button("Keep existing record", role: .cancel) { }
+        } message: { Text("The previous daily measurement is moved to Recently Deleted.") }
+    }
+
+    private var sleepWakeTime: Date {
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: selectedDate)
+        return calendar.date(
+            bySettingHour: calendar.component(.hour, from: wakeTime),
+            minute: calendar.component(.minute, from: wakeTime),
+            second: 0,
+            of: day
+        ) ?? wakeTime
     }
 
     private var sleepBedtime: Date {
         let calendar = Calendar.current
-        let day = calendar.startOfDay(for: .now)
+        let day = calendar.startOfDay(for: selectedDate)
         let bedHour = calendar.component(.hour, from: bedtime)
         let bedMinute = calendar.component(.minute, from: bedtime)
         let wakeHour = calendar.component(.hour, from: wakeTime)
@@ -104,6 +260,58 @@ struct CheckInScreen: View {
         let crossesMidnight = bedHour * 60 + bedMinute >= wakeHour * 60 + wakeMinute
         let bedDay = crossesMidnight ? (calendar.date(byAdding: .day, value: -1, to: day) ?? day) : day
         return calendar.date(bySettingHour: bedHour, minute: bedMinute, second: 0, of: bedDay) ?? bedtime
+    }
+
+    private func editSleep(_ record: SleepLog) {
+        editingSleepID = record.id
+        selectedDate = LocalDay.formatter.date(from: record.wakeDate) ?? selectedDate
+        bedtime = record.bedtime
+        wakeTime = record.wakeTime
+        sleepIsNap = record.isNap
+        manualDuration = record.manualMinutes.map(String.init) ?? ""
+        qualityRating = record.qualityRating ?? 0
+    }
+
+    private func persistSleep(confirmedReplace: Bool = false) -> Bool {
+        let manual = manualDuration.isEmpty ? nil : Int(manualDuration)
+        let quality = qualityRating == 0 ? nil : qualityRating
+        if let editingSleepID {
+            let updated = store.updateSleep(editingSleepID, bedtime: sleepBedtime, wakeTime: sleepWakeTime, manualMinutes: manual, isNap: sleepIsNap, qualityRating: quality)
+            if updated { self.editingSleepID = nil }
+            return updated
+        }
+        return store.addSleep(bedtime: sleepBedtime, wakeTime: sleepWakeTime, manualMinutes: manual, isNap: sleepIsNap, qualityRating: quality, confirmedReplace: confirmedReplace)
+    }
+
+    private func saveSleep() {
+        if editingSleepID != nil {
+            _ = persistSleep()
+            manualDuration = ""
+            qualityRating = 0
+        } else if !sleepIsNap && activeSleep.contains(where: { !$0.isNap }) {
+            showSleepReplace = true
+        } else if persistSleep() {
+            manualDuration = ""
+            qualityRating = 0
+        }
+    }
+
+    private func loadWeightForSelectedDate() {
+        weight = weightForDate.map { displayWeight($0.kilograms) } ?? ""
+    }
+
+    private func saveWeight() {
+        guard let value = Double(weight), value.isFinite, value > 0 else { return }
+        if weightForDate != nil { showWeightReplace = true }
+        else if store.addWeight(value, unit: unit, date: selectedDate) { weight = ""; showWeightSaved = true }
+    }
+
+    private func isScheduled(_ supplement: Supplement, on date: Date) -> Bool {
+        supplement.schedule.lowercased() == "daily" || supplement.weekdays.contains(Calendar.current.component(.weekday, from: date))
+    }
+
+    private func scheduleDescription(_ supplement: Supplement) -> String {
+        supplement.schedule.lowercased() == "daily" ? "Daily" : supplement.weekdays.sorted().map { Calendar.current.shortWeekdaySymbols[$0 - 1] }.joined(separator: ", ")
     }
 
     private func scrollToRequestedSection(using proxy: ScrollViewProxy) {
@@ -118,16 +326,71 @@ struct CheckInScreen: View {
         let value = unit == "lb" ? kg * 2.2046226218 : kg
         return value.formatted(.number.precision(.fractionLength(1)))
     }
+}
 
-    private func saveSleep() {
-        if store.state.checkins.sleep.contains(where: { $0.wakeDate == LocalDay.string(wakeTime) }) { showSleepReplace = true }
-        else { _ = store.addSleep(bedtime: sleepBedtime, wakeTime: wakeTime) }
+private struct SupplementEditorScreen: View {
+    @Environment(\.dismiss) private var dismiss
+    let initial: Supplement?
+    let onSave: (Supplement) -> Void
+    @State private var name: String
+    @State private var dose: String
+    @State private var daily: Bool
+    @State private var weekdays: Set<Int>
+
+    init(supplement: Supplement?, onSave: @escaping (Supplement) -> Void) {
+        initial = supplement
+        self.onSave = onSave
+        _name = State(initialValue: supplement?.name ?? "")
+        _dose = State(initialValue: supplement?.doseDescription ?? "")
+        _daily = State(initialValue: supplement?.schedule.lowercased() != "weekdays")
+        _weekdays = State(initialValue: Set(supplement?.weekdays ?? []))
     }
 
-    private func saveWeight() {
-        guard let value = Double(weight), value > 0 else { return }
-        if weightToday != nil { showWeightReplace = true }
-        else if store.addWeight(value, unit: unit) { weight = ""; showWeightSaved = true }
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Supplement") {
+                    TextField("Name", text: $name).accessibilityIdentifier("supplement-name")
+                    TextField("Optional dose", text: $dose).accessibilityIdentifier("supplement-dose")
+                }
+                Section("Schedule") {
+                    Picker("Repeat", selection: $daily) {
+                        Text("Every day").tag(true)
+                        Text("Selected days").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("supplement-schedule-mode")
+                    if !daily {
+                        ForEach(1...7, id: \.self) { day in
+                            Toggle(Calendar.current.shortWeekdaySymbols[day - 1], isOn: Binding(
+                                get: { weekdays.contains(day) },
+                                set: { selected in
+                                    if selected { weekdays.insert(day) } else { weekdays.remove(day) }
+                                }
+                            ))
+                        }
+                    }
+                }
+            }
+            .navigationTitle(initial == nil ? "Add supplement" : "Edit supplement")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        var value = initial ?? Supplement(name: name)
+                        value.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        value.doseDescription = dose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : dose
+                        value.schedule = daily ? "daily" : "weekdays"
+                        value.weekdays = daily ? [] : weekdays.sorted()
+                        onSave(value)
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!daily && weekdays.isEmpty))
+                    .accessibilityIdentifier("supplement-editor-save")
+                }
+            }
+        }
     }
 }
 
@@ -140,7 +403,12 @@ struct HistoryScreen: View {
     private var cutoff: String {
         LocalDay.string(Calendar.current.date(byAdding: .day, value: -range + 1, to: .now) ?? .now)
     }
-    private var weights: [WeightLog] { store.state.checkins.weights.filter { $0.date >= cutoff }.sorted { $0.date < $1.date } }
+    private var weights: [WeightLog] { store.state.checkins.weights.filter { $0.deletedAt == nil && $0.date >= cutoff }.sorted { $0.date < $1.date } }
+    private var sleepByDate: [DailyHistoryPoint] {
+        Dictionary(grouping: store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate >= cutoff }, by: \.wakeDate)
+            .map { date, logs in DailyHistoryPoint(date: date, value: Double(logs.reduce(0) { $0 + $1.durationMinutes }) / 60) }
+            .sorted { $0.date < $1.date }
+    }
     private var caloriesByDate: [DailyHistoryPoint] {
         Dictionary(grouping: store.state.nutrition.logs.filter { $0.date >= cutoff }, by: \.date)
             .map { DailyHistoryPoint(date: $0.key, value: $0.value.reduce(0) { $0 + $1.calories }) }
@@ -239,10 +507,21 @@ struct HistoryScreen: View {
             }
 
             Section("Sleep") {
-                let sleep = store.state.checkins.sleep.filter { $0.wakeDate >= cutoff }.sorted { $0.wakeDate > $1.wakeDate }
-                if sleep.isEmpty { Text("Sleep charts use recorded check-ins only.").foregroundStyle(.secondary) }
-                ForEach(sleep.prefix(14)) { item in
-                    LabeledContent(item.wakeDate, value: "\(String(format: "%.1f", Double(item.durationMinutes) / 60)) hours")
+                if sleepByDate.isEmpty {
+                    Text("Sleep charts use recorded check-ins only.").foregroundStyle(.secondary)
+                } else {
+                    Chart(sleepByDate) { point in
+                        LineMark(x: .value("Date", point.date), y: .value("Hours", point.value))
+                            .interpolationMethod(.catmullRom)
+                            .foregroundStyle(store.state.home.theme.palette.accentColor)
+                        PointMark(x: .value("Date", point.date), y: .value("Hours", point.value))
+                            .foregroundStyle(store.state.home.theme.palette.accentColor)
+                    }
+                    .frame(height: 170)
+                    .chartYAxisLabel("hours · includes naps")
+                    ForEach(sleepByDate.suffix(7)) { point in
+                        LabeledContent(point.date, value: "\(point.value.formatted(.number.precision(.fractionLength(1)))) hours")
+                    }
                 }
             }
         }

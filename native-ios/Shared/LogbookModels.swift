@@ -799,13 +799,42 @@ struct SleepLog: Codable, Identifiable, Hashable {
     var bedtime: Date
     var wakeTime: Date
     var manualMinutes: Int?
+    var isNap: Bool
+    var qualityRating: Int?
+    var deletedAt: Date?
     var durationMinutes: Int { manualMinutes ?? max(0, Int(wakeTime.timeIntervalSince(bedtime) / 60)) }
+
+    private enum CodingKeys: String, CodingKey { case id, wakeDate, bedtime, wakeTime, manualMinutes, isNap, qualityRating, deletedAt }
+
+    init(id: UUID = UUID(), wakeDate: String, bedtime: Date, wakeTime: Date, manualMinutes: Int? = nil, isNap: Bool = false, qualityRating: Int? = nil, deletedAt: Date? = nil) {
+        self.id = id
+        self.wakeDate = wakeDate
+        self.bedtime = bedtime
+        self.wakeTime = wakeTime
+        self.manualMinutes = manualMinutes
+        self.isNap = isNap
+        self.qualityRating = qualityRating
+        self.deletedAt = deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        wakeDate = try values.decode(String.self, forKey: .wakeDate)
+        bedtime = try values.decode(Date.self, forKey: .bedtime)
+        wakeTime = try values.decode(Date.self, forKey: .wakeTime)
+        manualMinutes = try values.decodeIfPresent(Int.self, forKey: .manualMinutes)
+        isNap = try values.decodeIfPresent(Bool.self, forKey: .isNap) ?? false
+        qualityRating = try values.decodeIfPresent(Int.self, forKey: .qualityRating)
+        deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
+    }
 }
 
 struct WeightLog: Codable, Identifiable, Hashable {
     var id: UUID = UUID()
     var date: String
     var kilograms: Double
+    var deletedAt: Date? = nil
 }
 
 struct Supplement: Codable, Identifiable, Hashable {
@@ -813,6 +842,8 @@ struct Supplement: Codable, Identifiable, Hashable {
     var name: String
     var schedule: String = "daily"
     var weekdays: [Int] = []
+    var doseDescription: String? = nil
+    var deletedAt: Date? = nil
 }
 
 struct SupplementDose: Codable, Identifiable, Hashable {
@@ -822,6 +853,7 @@ struct SupplementDose: Codable, Identifiable, Hashable {
     var date: String
     var taken = false
     var explicitlyMarked = false
+    var deletedAt: Date? = nil
 }
 
 struct CheckInState: Codable {
