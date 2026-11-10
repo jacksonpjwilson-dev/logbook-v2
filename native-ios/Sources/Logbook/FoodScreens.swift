@@ -571,6 +571,18 @@ private struct FoodSearchScreen: View {
             }
             if isSearching { ProgressView("Searching Canadian Nutrient File and Open Food Facts…") }
             if let searchError { Text(searchError).font(.footnote).foregroundStyle(.secondary) }
+            if !recentOnly && query.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
+                Section {
+                    Button {
+                        Task { await runSearch(query) }
+                    } label: {
+                        Label("Search online providers", systemImage: "magnifyingglass")
+                    }
+                    .accessibilityIdentifier("food-search-online")
+                } footer: {
+                    Text("Search the Canadian Nutrient File and Open Food Facts. Requests run only when you submit, to respect provider limits.")
+                }
+            }
             Section(recentOnly ? "Recently logged" : (favoriteOnly ? "Favorites" : "Foods")) {
                 ForEach(visibleFoods) { food in
                     HStack(spacing: 10) {
@@ -604,20 +616,17 @@ private struct FoodSearchScreen: View {
             }
         }
         .searchable(text: $query, prompt: "Food or product name")
-        .task(id: query) { await runSearch(query) }
+        .onSubmit(of: .search) { Task { await runSearch(query) } }
     }
 
     @MainActor private func runSearch(_ value: String) async {
         remoteFoods = []
         searchError = nil
         guard !recentOnly, value.trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 else { return }
-        try? await Task.sleep(for: .milliseconds(350))
-        guard !Task.isCancelled else { return }
         isSearching = true
         defer { isSearching = false }
         do {
             let found = try await FoodCatalogService.shared.search(value)
-            guard !Task.isCancelled else { return }
             remoteFoods = found
             store.cacheFoodDefinitions(found)
         } catch {

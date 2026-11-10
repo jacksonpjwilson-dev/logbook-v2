@@ -780,6 +780,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(foodSearch.waitForExistence(timeout: 5))
         foodSearch.tap()
         foodSearch.typeText("QA breakfast")
+        XCTAssertTrue(app.buttons["food-search-online"].waitForExistence(timeout: 3), "Remote search is explicit so typing does not exceed provider request limits")
         let searchResult = app.buttons["food-search-result-qa-breakfast"]
         XCTAssertTrue(searchResult.waitForExistence(timeout: 5), "Search should show a saved local food before remote results arrive")
         searchResult.tap()
