@@ -861,6 +861,27 @@ struct Supplement: Codable, Identifiable, Hashable {
     var weekdays: [Int] = []
     var doseDescription: String? = nil
     var deletedAt: Date? = nil
+
+    private enum CodingKeys: String, CodingKey { case id, name, schedule, weekdays, doseDescription, deletedAt }
+
+    init(id: UUID = UUID(), name: String, schedule: String = "daily", weekdays: [Int] = [], doseDescription: String? = nil, deletedAt: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.schedule = schedule
+        self.weekdays = weekdays
+        self.doseDescription = doseDescription
+        self.deletedAt = deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        name = try values.decode(String.self, forKey: .name)
+        schedule = try values.decodeIfPresent(String.self, forKey: .schedule) ?? "daily"
+        weekdays = try values.decodeIfPresent([Int].self, forKey: .weekdays) ?? []
+        doseDescription = try values.decodeIfPresent(String.self, forKey: .doseDescription)
+        deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
+    }
 }
 
 struct SupplementDose: Codable, Identifiable, Hashable {
@@ -871,6 +892,29 @@ struct SupplementDose: Codable, Identifiable, Hashable {
     var taken = false
     var explicitlyMarked = false
     var deletedAt: Date? = nil
+
+    private enum CodingKeys: String, CodingKey { case id, supplementID, supplementName, date, taken, explicitlyMarked, deletedAt }
+
+    init(id: UUID = UUID(), supplementID: UUID, supplementName: String, date: String, taken: Bool = false, explicitlyMarked: Bool = false, deletedAt: Date? = nil) {
+        self.id = id
+        self.supplementID = supplementID
+        self.supplementName = supplementName
+        self.date = date
+        self.taken = taken
+        self.explicitlyMarked = explicitlyMarked
+        self.deletedAt = deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        supplementID = try values.decode(UUID.self, forKey: .supplementID)
+        supplementName = try values.decode(String.self, forKey: .supplementName)
+        date = try values.decode(String.self, forKey: .date)
+        taken = try values.decodeIfPresent(Bool.self, forKey: .taken) ?? false
+        explicitlyMarked = try values.decodeIfPresent(Bool.self, forKey: .explicitlyMarked) ?? false
+        deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
+    }
 }
 
 struct CheckInState: Codable {
