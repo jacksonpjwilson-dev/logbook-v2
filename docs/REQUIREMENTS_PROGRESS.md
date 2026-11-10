@@ -1,67 +1,20 @@
 # Logbook requirements progress
 
-Canonical row-level evidence is maintained in [REQUIREMENTS_TRACEABILITY.csv](../native-ios/QA/REQUIREMENTS_TRACEABILITY.csv). Statuses reflect verified evidence, not source presence alone. Last reconciled against Actions #126 on `074ab167f4ea6826f6d9a7c5536257ea2c1bd395`.
+The canonical row-level evidence lives in [REQUIREMENTS_TRACEABILITY.csv](../native-ios/QA/REQUIREMENTS_TRACEABILITY.csv). Statuses are evidence-gated; a source implementation or a passing build alone does not count as verified functionality.
 
-## Overall
+**Current source:** `codex/default-theme-gate1` at `0acf4353f6f39b6f6597669cb34cbcc56a020c7a`.  
+**Last complete verified source baseline:** run #127, `a56a882c30bbf9fb684244349a5b1daf71533905`; see [run #127](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767506189). It passed on iPhone SE and iPhone 16 (50 unit + 13 UI per device). Run #129, which contains new Sleep/Weight/Supplement code, is pending.
 
-- Requirements: 61
-- IN PROGRESS: 17
-- IMPLEMENTED — UNVERIFIED: 7
-- VERIFIED: 17
-- NOT STARTED: 18
-- BLOCKED: 2
+| Status | Requirement rows |
+|---|---:|
+| VERIFIED | 18 |
+| IMPLEMENTED — UNVERIFIED | 11 |
+| IN PROGRESS | 16 |
+| NOT STARTED | 17 |
+| BLOCKED | 2 |
 
-## By category
+Food date-picker navigation is verified in #127 on iPhone SE and iPhone 16. Open Food Facts search throttling is being tested in #128 (SE passed, iPhone 16 pending). Live provider use through Logbook, provider licensing/attribution and physical camera scanning remain unverified.
 
-### Home / Visuals
+Sleep, Weight, Supplements and Habit behavior are implemented in the current source commit and have store/UI tests pending in #129. Do not move those rows to VERIFIED until the run succeeds on the available simulators.
 
-- IN PROGRESS: 4
-- IMPLEMENTED — UNVERIFIED: 5
-
-### Training
-
-- VERIFIED: 13
-
-### Food / Nutrition
-
-- VERIFIED: 4
-- IN PROGRESS: 1
-- IMPLEMENTED — UNVERIFIED: 2
-
-### Sleep / Weight / Supplements / Habits
-
-- IN PROGRESS: 4
-- NOT STARTED: 1
-
-### Native Apple integrations
-
-- BLOCKED: 1
-- IN PROGRESS: 3
-- NOT STARTED: 1
-
-### Data safety / persistence
-
-- IN PROGRESS: 2
-- NOT STARTED: 3
-
-### Settings / UX
-
-- IN PROGRESS: 2
-- NOT STARTED: 1
-
-### Accounts / Authentication
-
-- NOT STARTED: 3
-
-### Coaching
-
-- NOT STARTED: 9
-
-### Quality / Release
-
-- IN PROGRESS: 1
-- BLOCKED: 1
-
-## Verification boundary
-
-Run #126 passed 50 unit and 13 UI tests on iPhone SE (3rd generation) and iPhone 16. iPhone 18 Pro app tests were skipped and remain untested. Food provider tests used controlled responses; live service terms/availability and physical camera behavior remain unverified. Screenshots are review candidates only, not approved baselines. See `native-ios/QA/REPORT.md` and `docs/CURRENT_MILESTONE.md`.
+Progress requirements remain open: the full five-tab chart contract, exercise-specific strength trends, balanced monthly heatmap, Nutrition Adherence details/widget and category-specific History completion. iPhone 18 Pro app tests remain skipped/unverified.

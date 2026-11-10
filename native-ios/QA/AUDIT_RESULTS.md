@@ -107,3 +107,14 @@ The UI test asserts these equations and checks the bottom small widgets remain a
 Open the downloadable review gallery and inspect the four PNG candidates before approving the Default appearance. The visible default screen follows the required large/medium/two-small structure and has no clipped widgets; the full-screen style is close to the supplied pale-blue blurred reference, which remains a concept/style image and does not define exact final colors. Do not use automated success as visual approval.
 
 After review, rerun `./native-ios/QA/Scripts/run-daily-home-qa.sh "iPhone 18 Pro"` on the user's Mac and choose an installed smaller iPhone for a second run. Review the output for Dynamic Type, content clipping and sizing. Do not accept a screenshot baseline or implement other v2 themes until the user approves Default.
+
+
+## Daily Tracking & Food provider audit — 2026-11-10
+
+**Repository evidence:** source commit `0acf4353f6f39b6f6597669cb34cbcc56a020c7a` adds persistent Sleep, Weight and Supplement records/workflows, updates `DailyHomeMetrics` to ignore naps and deleted records for overnight completion, and adds sleep history aggregation including naps. It is not yet runtime-verified; Actions #129 is pending. The prior fully verified source remains run #126 / `074ab167f4ea6826f6d9a7c5536257ea2c1bd395`.
+
+**Food date navigation:** direct compact date-picker UI coverage is in runs #127/#128. Run #128's iPhone SE matrix job passed 50 unit and 13 UI tests; iPhone 16 remained in progress at audit time. iPhone 18 Pro application tests were skipped.
+
+**Direct live-service probe (outside Logbook):** the Health Canada 2015 CNF API returned food and nutrient payloads; Open Food Facts product lookup returned barcode nutrition; OFF v2 full-text search returned 503, while `/cgi/search.pl` returned results. These are direct endpoint observations, not in-app network/parser/cache/retry verification. OFF API requirements include a meaningful User-Agent/contact, API usage declaration and request limits; its database content is ODbL. The current application has no configured user contact email. Health Canada 2026 CNF data is available as an Open Government Licence – Canada dataset; migration and source/licence presentation have not been implemented or approved.
+
+**Still incomplete:** Progress & History lacks the complete five-tab chart contract, exercise-specific strength trends, balanced activity heatmap and Nutrition Adherence Home/history flow. Category-specific Sleep/Weight/Supplement history and recent-delete UI were added but await #129. Physical camera testing is unavailable without iPhone hardware. No themes, production data or `main` were changed.
