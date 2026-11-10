@@ -98,25 +98,52 @@ actor FoodCatalogService {
     }
 
     private func searchOpenFoodFacts(_ term: String) async throws -> [FoodDefinition] {
-        var components = URLComponents(string: "https://world.openfoodfacts.org/api/v2/search")!
+        // OFF's v2 search endpoint is deprecated and its current v2 server
+        // does not provide full-text search. The documented legacy CGI search
+        // route remains the full-text endpoint while Search-a-licious is being
+        // rolled out.
+        var components = URLComponents(string: "https://world.openfoodfacts.org/cgi/search.pl")!
         components.queryItems = [
             URLQueryItem(name: "search_terms", value: term),
-            URLQueryItem(name: "fields", value: "code,product_name,brands,nutriments,serving_size,serving_quantity"),
-            URLQueryItem(name: "page_size", value: "20")
+            URLQueryItem(name: "search_simple", value: "1"),
+            URLQueryItem(name: "action", value: "process"),
+            URLQueryItem(name: "json", value: "1"),
+            URLQueryItem(name: "page_size", value: "20"),
+            URLQueryItem(name: "fields", value: "code,product_name,brands,nutriments,serving_size,serving_quantity")
         ]
         let data = try await get(components.url!)
         return try Self.parseSearchResponse(data)
     }
 
     private func get(_ url: URL) async throws -> Data {
-        var request = URLRequest(url: url, timeoutInterval: 12)
-        request.setValue("Logbook iOS/0.1 (food search)", forHTTPHeaderField: "User-Agent")
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
-        let (data, response) = try await session.data(for: request)
-        guard let response = response as? HTTPURLResponse, (200..<300).contains(response.statusCode) else {
-            throw FoodCatalogError.unavailable
+        for attempt in 0...2 {
+            var request = URLRequest(url: url, timeoutInterval: 12)
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
+            let contact = Bundle.main.infoDictionary?["LogbookFoodProviderContactEmail"] as? String
+            let trimmedContact = contact?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            let agent = trimmedContact.isEmpty ? "Logbook/\(version)" : "Logbook/\(version) (\(trimmedContact))"
+            request.setValue(agent, forHTTPHeaderField: "User-Agent")
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+
+            do {
+                let (data, response) = try await session.data(for: request)
+                guard let http = response as? HTTPURLResponse else { throw FoodCatalogError.invalidResponse }
+                if (200..<300).contains(http.statusCode) { return data }
+                let retryable = http.statusCode == 429 || (500...599).contains(http.statusCode)
+                guard retryable, attempt < 2 else { throw FoodCatalogError.unavailable }
+                let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init)
+                let delay = retryAfter.map { min(max($0, 0.25), 8) } ?? (0.5 * pow(2, Double(attempt)))
+                try await Task.sleep(for: .seconds(delay))
+            } catch is CancellationError {
+                throw CancellationError()
+            } catch let error as FoodCatalogError {
+                throw error
+            } catch {
+                guard attempt < 2 else { throw FoodCatalogError.unavailable }
+                try await Task.sleep(for: .seconds(0.5 * pow(2, Double(attempt))))
+            }
         }
-        return data
+        throw FoodCatalogError.unavailable
     }
 }
 

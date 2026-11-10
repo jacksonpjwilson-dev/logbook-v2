@@ -24,7 +24,11 @@ final class FoodCatalogServiceTests: XCTestCase {
             if path.contains("/food") {
                 return Self.response(request, status: 200, body: #"[{"food_code":1,"food_description":"Banana, raw"}]"#)
             }
-            if path.contains("/api/v2/search") {
+            if path == "/cgi/search.pl" {
+                let queryItems = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems ?? []
+                XCTAssertEqual(queryItems.first(where: { $0.name == "search_terms" })?.value, "banana")
+                XCTAssertEqual(queryItems.first(where: { $0.name == "action" })?.value, "process")
+                XCTAssertEqual(queryItems.first(where: { $0.name == "json" })?.value, "1")
                 return Self.response(request, status: 200, body: #"""
                 {"products":[
                     {"code":"0123456789012","product_name":"Banana chips","brands":"QA Foods",

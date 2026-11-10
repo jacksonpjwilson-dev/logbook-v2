@@ -730,6 +730,30 @@ final class DailyHomeUITests: XCTestCase {
         let dateKey = app.staticTexts["food-date-key"]
         XCTAssertTrue(dateKey.waitForExistence(timeout: 5))
         let originalDate = dateKey.label
+
+        // Exercise the compact system date picker itself, not only swipe and arrow navigation.
+        let foodDatePicker = app.descendants(matching: .any)["food-day-picker"].firstMatch
+        XCTAssertTrue(foodDatePicker.waitForExistence(timeout: 5), "Food must expose its calendar date picker")
+        let pickerTarget = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
+        let monthDay = pickerTarget.formatted(.dateTime.month(.wide).day())
+        foodDatePicker.tap()
+        let calendarDay = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", monthDay)).firstMatch
+        XCTAssertTrue(calendarDay.waitForExistence(timeout: 5), "The compact date picker should expose the selected month’s day buttons")
+        calendarDay.tap()
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = Locale(identifier: "en_CA_POSIX")
+        dateFormatter.timeZone = .current
+        dateFormatter.dateFormat = "yyyy-MM-dd"
+        let pickerSelectedKey = dateFormatter.string(from: pickerTarget)
+        let pickerSelectedDate = app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label == %@", "food-date-key", pickerSelectedKey
+        )).firstMatch
+        XCTAssertTrue(pickerSelectedDate.waitForExistence(timeout: 5), "Selecting a date in the compact picker changes the food log date")
+        app.buttons["food-day-next"].tap()
+        XCTAssertTrue(app.staticTexts.matching(NSPredicate(
+            format: "identifier == %@ AND label == %@", "food-date-key", originalDate
+        )).firstMatch.waitForExistence(timeout: 5), "The date picker’s selection remains navigable with the day arrows")
+
         let swipeArea = app.descendants(matching: .any)["food-macro-swipe-area"].firstMatch
         XCTAssertTrue(swipeArea.waitForExistence(timeout: 5))
         swipeArea.swipeLeft()
