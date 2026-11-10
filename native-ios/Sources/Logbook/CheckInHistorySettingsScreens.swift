@@ -425,9 +425,7 @@ struct HistoryScreen: View {
             .sorted { $0.date < $1.date }
     }
     private var caloriesByDate: [DailyHistoryPoint] {
-        Dictionary(grouping: store.state.nutrition.logs.filter { $0.date >= cutoff }, by: \.date)
-            .map { DailyHistoryPoint(date: $0.key, value: $0.value.reduce(0) { $0 + $1.calories }) }
-            .sorted { $0.date < $1.date }
+        NutritionHistorySeries.calories(from: store.state.nutrition.logs, since: cutoff)
     }
     private var sessions: [WorkoutSession] { store.state.training.visibleCompletedSessions.sorted { $0.startedAt > $1.startedAt } }
 
@@ -897,10 +895,26 @@ private struct WorkoutDaySessionSummary: View {
     }
 }
 
-private struct DailyHistoryPoint: Identifiable {
+struct DailyHistoryPoint: Identifiable, Equatable {
     var id: String { date }
     let date: String
     let value: Double
+}
+
+enum NutritionHistorySeries {
+    static func calories(from logs: [FoodLog], since cutoff: String) -> [DailyHistoryPoint] {
+        aggregate(logs, since: cutoff, value: \.calories)
+    }
+
+    static func protein(from logs: [FoodLog], since cutoff: String) -> [DailyHistoryPoint] {
+        aggregate(logs, since: cutoff, value: \.protein)
+    }
+
+    private static func aggregate(_ logs: [FoodLog], since cutoff: String, value: KeyPath<FoodLog, Double>) -> [DailyHistoryPoint] {
+        Dictionary(grouping: logs.filter { $0.deletedAt == nil && $0.date >= cutoff }, by: \.date)
+            .map { date, entries in DailyHistoryPoint(date: date, value: entries.reduce(0) { $0 + $1[keyPath: value] }) }
+            .sorted { $0.date < $1.date }
+    }
 }
 
 struct SettingsScreen: View {
