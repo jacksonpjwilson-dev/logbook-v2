@@ -1,6 +1,17 @@
 # Logbook v2 handoff audit and Default gate
 
-## Current milestone snapshot — 2026-11-08 (run #126)
+## Current milestone audit — 2026-11-10
+
+Current app-source branch head before this report update: `codex/default-theme-gate1` at `cbe90804bd7eda542f0d9c5c6d1f02b90b1eeebf`. The newest complete green source run is #128 (`a79ee507422e7f09d4ad56b9a5a157da17743f39`). #131 passed build but failed 1/55 unit and 3/14 UI tests per available simulator. Its old-weight decoding failure and UI test findings are fixed in follow-up source/tests; #132–#145 are still running or queued. No later source has a passing verification result yet. iPhone 18 Pro app tests remain skipped.
+
+- **Food:** date-picker interaction passed #127; Food History edit/recovery and barcode manual fallback passed #126. Live CNF/OFF HTTP probes verified endpoint responses outside the app, but no live provider/parser/cache run through Logbook exists. OFF contact-bearing User-Agent/usage declaration and ODbL obligations are open; CNF source should be reviewed against the 2026 dataset. Physical camera scan is device-only.
+- **Sleep/Weight/Supplements/Habits:** source and synthetic tests exist. #131 failures identified a weight-ID migration issue and brittle/off-screen UI assertions. Current source includes backwards-compatible WeightLog/Supplement/SupplementDose decoding, preserves legacy taken doses, and uses stable test IDs and explicit list scrolling. Run #145 pending; not verified.
+- **Progress:** current source adds the five-metric Home chart, weighted exercise selection, a numbered 30-day heatmap with day selection, PR and adherence widgets, strength/protein History series, and deletion-aware nutrition aggregation. Unit/UI evidence and screenshots for this source are pending. Full category-specific History editing/recovery and trend mutation-recalculation acceptance remain open.
+- **Data correctness:** a regression test was added for deleted-food calorie/protein aggregation. The heatmap implementation treats Training/Food/Sleep/Weight as four equal daily categories and adds Supplements only on scheduled days; this algorithm still needs targeted unit verification.
+- **Design/safety:** four Home pages, 2×2 × 4 grid, five-icon dock and existing themes remain unchanged. Screenshots are candidates, not baselines. HealthKit is disabled; test data is synthetic; no production configuration or `main` changes.
+
+
+## Historical baseline snapshot — 2026-11-08 (run #126)
 
 Tested app source is `074ab167f4ea6826f6d9a7c5536257ea2c1bd395` on `codex/default-theme-gate1`. [Actions #126](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42496892834) succeeded on iPhone SE (3rd generation) and iPhone 16. Each device built successfully and passed 50/50 unit and 13/13 UI tests. The iPhone 18 Pro availability check passed, but its app-test step was skipped; it remains untested.
 
