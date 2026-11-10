@@ -807,6 +807,37 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertEqual(daily.widgets.map(\.id), legacy.home.pages[0].widgets.map(\.id))
     }
 
+    func testActivityHeatmapBalancesCategoriesAndExcludesUnscheduledSupplements() throws {
+        let day = "2026-11-09"
+        let date = try XCTUnwrap(LocalDay.formatter.date(from: day))
+        var state = LogbookState.empty
+        let supplement = Supplement(name: "Vitamin D")
+        state.checkins.supplements = [supplement]
+        XCTAssertEqual(ActivityHeatmapMetrics.score(state: state, on: day), 0, accuracy: 0.0001)
+
+        let session = completedSession(at: date.addingTimeInterval(12 * 60 * 60), exerciseID: "bench", name: "Bench", sets: [(80, 8)])
+        state.training.completedSessions = [session]
+        state.nutrition.logs = [
+            FoodLog(foodID: "oats", foodName: "Oats", mealID: UUID(), mealName: "Breakfast",
+                    date: day, quantity: 100, unit: "g", calories: 380, protein: 13,
+                    carbohydrates: 68, fat: 7, confirmedAt: date)
+        ]
+        state.checkins.sleep = [SleepLog(wakeDate: day, bedtime: date.addingTimeInterval(-8 * 3600), wakeTime: date)]
+        state.checkins.weights = [WeightLog(date: day, kilograms: 80)]
+        XCTAssertEqual(ActivityHeatmapMetrics.score(state: state, on: day), 0.8, accuracy: 0.0001)
+
+        state.checkins.doses = [SupplementDose(supplementID: supplement.id, supplementName: supplement.name, date: day, taken: true, explicitlyMarked: true)]
+        XCTAssertEqual(ActivityHeatmapMetrics.score(state: state, on: day), 1, accuracy: 0.0001)
+        state.checkins.doses[0].deletedAt = .now
+        XCTAssertEqual(ActivityHeatmapMetrics.score(state: state, on: day), 0.8, accuracy: 0.0001)
+
+        let weekday = Calendar.current.component(.weekday, from: date)
+        state.checkins.supplements[0].schedule = "selected weekdays"
+        state.checkins.supplements[0].weekdays = [weekday == 1 ? 2 : 1]
+        XCTAssertEqual(ActivityHeatmapMetrics.score(state: state, on: day), 1, accuracy: 0.0001,
+                       "A day without a scheduled supplement uses four eligible categories, not a five-category denominator")
+    }
+
     func testDailyHabitDenominatorTreatsNoDueSupplementsAsNeutral() {
         var state = LogbookState.empty
         let today = Calendar.current.startOfDay(for: .now)

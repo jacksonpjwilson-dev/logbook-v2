@@ -384,6 +384,38 @@ private struct HomePageGrid: View {
 
 
 
+enum ActivityHeatmapMetrics {
+    /// Equal-weight daily activity signal. Training, Food, Sleep and Weight are
+    /// always eligible; Supplements counts only on a day with at least one due item.
+    static func score(state: LogbookState, on date: String) -> Double {
+        guard let dateValue = LocalDay.formatter.date(from: date) else { return 0 }
+        let active = [
+            state.training.visibleCompletedSessions.contains { $0.localDate == date },
+            state.nutrition.logs.contains { $0.date == date && $0.deletedAt == nil },
+            state.checkins.sleep.contains { $0.wakeDate == date && $0.deletedAt == nil },
+            state.checkins.weights.contains { $0.date == date && $0.deletedAt == nil }
+        ]
+        var completed = active.filter { $0 }.count
+        var eligible = active.count
+        let weekday = Calendar.current.component(.weekday, from: dateValue)
+        let due = state.checkins.supplements.filter { supplement in
+            guard supplement.deletedAt == nil else { return false }
+            return supplement.schedule.lowercased() == "daily" || supplement.weekdays.contains(weekday)
+        }
+        if !due.isEmpty {
+            eligible += 1
+            let allTaken = due.allSatisfy { supplement in
+                state.checkins.doses.contains {
+                    $0.deletedAt == nil && $0.supplementID == supplement.id && $0.date == date &&
+                        $0.taken && $0.explicitlyMarked
+                }
+            }
+            if allTaken { completed += 1 }
+        }
+        return eligible == 0 ? 0 : Double(completed) / Double(eligible)
+    }
+}
+
 private struct ProgressExerciseOption: Identifiable {
     let id: String
     let name: String
@@ -589,26 +621,7 @@ private struct DefaultProgressHomeWidget: View {
     }
 
     private func activityScore(on date: String) -> Double {
-        let training = state.training.visibleCompletedSessions.contains { $0.localDate == date }
-        let food = state.nutrition.logs.contains { $0.date == date && $0.deletedAt == nil }
-        let sleep = state.checkins.sleep.contains { $0.wakeDate == date && $0.deletedAt == nil }
-        let weight = state.checkins.weights.contains { $0.date == date && $0.deletedAt == nil }
-        var completed = [training, food, sleep, weight].filter { $0 }.count
-        let parts = date.split(separator: "-").compactMap { Int($0) }
-        let dateValue = Calendar.current.date(from: DateComponents(year: parts.first, month: parts.dropFirst().first, day: parts.dropFirst(2).first)) ?? .now
-        let due = state.checkins.supplements.filter { supplement in
-            guard supplement.deletedAt == nil else { return false }
-            return supplement.schedule.lowercased() == "daily" || supplement.weekdays.contains(Calendar.current.component(.weekday, from: dateValue))
-        }
-        var eligible = 4
-        if !due.isEmpty {
-            eligible += 1
-            let taken = due.allSatisfy { supplement in
-                state.checkins.doses.contains { $0.supplementID == supplement.id && $0.date == date && $0.taken && $0.explicitlyMarked }
-            }
-            if taken { completed += 1 }
-        }
-        return Double(completed) / Double(eligible)
+        ActivityHeatmapMetrics.score(state: state, on: date)
     }
 
     private var recordsWidget: some View {
