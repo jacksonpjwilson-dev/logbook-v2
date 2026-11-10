@@ -155,31 +155,31 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(habitSleep.waitForExistence(timeout: 10))
         XCTAssertGreaterThanOrEqual(habitSleep.frame.height, 20, "Habit rows need a reliable touch target")
         habitSleep.tap()
-        XCTAssertTrue(app.buttons["Save sleep"].waitForExistence(timeout: 5), "Habits Sleep region must open Sleep controls")
+        XCTAssertTrue(app.buttons["sleep-save"].waitForExistence(timeout: 5), "Habits Sleep region must open Sleep controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["habit-weight"].tap()
-        XCTAssertTrue(app.buttons["Save today’s weight"].waitForExistence(timeout: 5), "Habits Weight region must open Weight controls")
+        XCTAssertTrue(app.buttons["weight-save"].waitForExistence(timeout: 5), "Habits Weight region must open Weight controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["habit-supplements"].tap()
-        XCTAssertTrue(app.buttons["Add supplement"].waitForExistence(timeout: 5), "Habits Supplements region must open supplement controls")
+        XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Habits Supplements region must open supplement controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["checkin-sleep"].tap()
-        XCTAssertTrue(app.buttons["Save sleep"].waitForExistence(timeout: 5), "Daily Check-in Sleep value must open Sleep controls")
+        XCTAssertTrue(app.buttons["sleep-save"].waitForExistence(timeout: 5), "Daily Check-in Sleep value must open Sleep controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["checkin-weight"].tap()
-        XCTAssertTrue(app.buttons["Save today’s weight"].waitForExistence(timeout: 5), "Daily Check-in Weight value must open Weight controls")
+        XCTAssertTrue(app.buttons["weight-save"].waitForExistence(timeout: 5), "Daily Check-in Weight value must open Weight controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["checkin-supplements"].tap()
-        XCTAssertTrue(app.buttons["Add supplement"].waitForExistence(timeout: 5), "Daily Check-in Supplements must open supplement controls")
+        XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Daily Check-in Supplements must open supplement controls")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
         app.buttons["checkin-checklist"].tap()
-        XCTAssertTrue(app.buttons["Add supplement"].waitForExistence(timeout: 5), "Checklist icon must open the supplement checklist")
+        XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Checklist icon must open the supplement checklist")
     }
 
     func testNextWorkoutStartActionCreatesAnActiveWorkout() throws {
@@ -322,7 +322,8 @@ final class DailyHomeUITests: XCTestCase {
         let createdWorkout = rows.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Lower Body")).firstMatch
         scrollToElement(createdWorkout, in: app)
         XCTAssertTrue(createdWorkout.waitForExistence(timeout: 5), "The newly created workout should be saved into the active program")
-        XCTAssertTrue(originalWorkout.exists, "Creating a workout must preserve the existing program workout")
+        scrollToElement(originalWorkout, in: app, towardTop: true)
+        XCTAssertTrue(originalWorkout.waitForExistence(timeout: 5), "Creating a workout must preserve the existing program workout")
         let firstID = originalWorkout.identifier
         let secondID = createdWorkout.identifier
         app.buttons["Edit"].tap()
@@ -1200,7 +1201,12 @@ final class DailyHomeUITests: XCTestCase {
         let sleepID = String(sleepRow.identifier.dropFirst("sleep-edit-".count))
         app.buttons["sleep-delete-\(sleepID)"].tap()
         let restoreSleep = app.buttons["restore-sleep-\(sleepID)"]
+        for _ in 0..<8 {
+            if restoreSleep.isHittable { break }
+            app.swipeUp()
+        }
         XCTAssertTrue(restoreSleep.waitForExistence(timeout: 5), "A deleted sleep record is listed for recovery")
+        XCTAssertTrue(restoreSleep.isHittable, "The restore action should be reachable in the Recently Deleted section")
         restoreSleep.tap()
         XCTAssertTrue(app.buttons["sleep-edit-\(sleepID)"].waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
 
