@@ -63,7 +63,7 @@ struct CheckInScreen: View {
                         Label(editingSleepID == nil ? (sleepIsNap ? "Save nap" : "Save overnight sleep") : "Update sleep", systemImage: "moon.zzz.fill")
                     }
                     .accessibilityIdentifier("sleep-save")
-                    .disabled(sleepWakeTime <= sleepBedtime || (!manualDuration.isEmpty && Int(manualDuration).map { $0 > 0 } != true))
+                    .disabled(!sleepInputIsValid)
 
                     if activeSleep.isEmpty {
                         Text("No sleep logged for this date. Naps add to sleep-hour totals but do not satisfy the overnight Sleep check-in.")
@@ -239,6 +239,13 @@ struct CheckInScreen: View {
         } message: { Text("The previous daily measurement is moved to Recently Deleted.") }
     }
 
+    private var sleepInputIsValid: Bool {
+        guard sleepWakeTime > sleepBedtime else { return false }
+        guard !manualDuration.isEmpty else { return true }
+        guard let minutes = Int(manualDuration), minutes > 0 else { return false }
+        return true
+    }
+
     private var sleepWakeTime: Date {
         let calendar = Calendar.current
         let day = calendar.startOfDay(for: selectedDate)
@@ -320,6 +327,14 @@ struct CheckInScreen: View {
             withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(section, anchor: .top) }
             store.clearCheckInFocus()
         }
+    }
+
+    private func sleepDuration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours == 0 { return "\(remainder) min" }
+        if remainder == 0 { return "\(hours) hr" }
+        return "\(hours) hr \(remainder) min"
     }
 
     private func displayWeight(_ kg: Double) -> String {
