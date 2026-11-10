@@ -216,6 +216,17 @@ private struct HomePageGrid: View {
         }
     }
 
+    private var usesApprovedProgressLayout: Bool {
+        guard page.name == "Progress & History", store.state.home.theme == .defaultTheme,
+              page.widgets.count == HomeState.defaultPages[3].widgets.count else { return false }
+        return HomeState.defaultPages[3].widgets.allSatisfy { expected in
+            page.widgets.contains {
+                $0.kind == expected.kind && $0.size == expected.size && $0.row == expected.row &&
+                    $0.column == expected.column && $0.variant == expected.variant
+            }
+        }
+    }
+
     var body: some View {
         GeometryReader { proxy in
             gridBody(size: proxy.size)
@@ -343,6 +354,19 @@ private struct HomePageGrid: View {
             .accessibilityIdentifier("home-widget-food-\(widget.kind.rawValue)")
             .accessibilityValue("\(width)|\(height)")
             .disabled(editing)
+        } else if usesApprovedProgressLayout {
+            DefaultProgressHomeWidget(
+                widget: widget,
+                palette: store.state.home.theme.palette,
+                state: store.state,
+                openHistory: { open(.history) },
+                openHistoryDate: { date in
+                    store.focusHistoryDate(date)
+                    open(.history)
+                }
+            )
+            .frame(width: width, height: height)
+            .disabled(editing)
         } else {
             Button {
                 guard !editing else { return }
@@ -355,6 +379,281 @@ private struct HomePageGrid: View {
             .buttonStyle(WidgetPressStyle())
             .disabled(editing)
         }
+    }
+}
+
+
+
+private struct ProgressExerciseOption: Identifiable {
+    let id: String
+    let name: String
+}
+
+private enum ProgressMetric: String, CaseIterable, Identifiable {
+    case weight, strength, sleep, calories, protein
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .weight: "Weight"
+        case .strength: "Strength"
+        case .sleep: "Sleep"
+        case .calories: "Calories"
+        case .protein: "Protein"
+        }
+    }
+}
+
+private struct DefaultProgressHomeWidget: View {
+    let widget: HomeWidget
+    let palette: ThemePalette
+    let state: LogbookState
+    let openHistory: () -> Void
+    let openHistoryDate: (String) -> Void
+    @State private var selectedMetric: ProgressMetric = .weight
+    @State private var selectedExerciseID = ""
+
+    private var cutoff: String {
+        LocalDay.string(Calendar.current.date(byAdding: .day, value: -29, to: .now) ?? .now)
+    }
+
+    private var exerciseOptions: [ProgressExerciseOption] {
+        var names: [String: String] = [:]
+        for session in state.training.visibleCompletedSessions {
+            for exercise in session.exercises { names[exercise.exerciseID] = exercise.name }
+        }
+        return names.keys.sorted { (names[$0] ?? $0) < (names[$1] ?? $1) }
+            .map { ProgressExerciseOption(id: $0, name: names[$0] ?? $0) }
+    }
+
+    private var series: [DailyHistoryPoint] {
+        switch selectedMetric {
+        case .weight:
+            return state.checkins.weights
+                .filter { $0.deletedAt == nil && $0.date >= cutoff }
+                .map { DailyHistoryPoint(date: $0.date, value: state.home.preferredWeightUnit == "lb" ? $0.kilograms * 2.2046226218 : $0.kilograms) }
+                .sorted { $0.date < $1.date }
+        case .strength:
+            let sessions = state.training.visibleCompletedSessions.filter { $0.localDate >= cutoff }
+            let daily = Dictionary(grouping: sessions, by: \.localDate)
+            return daily.map { date, records in
+                let best = records.flatMap(\.exercises)
+                    .filter { $0.exerciseID == selectedExerciseID && ($0.trackingMode ?? .weightAndReps) == .weightAndReps }
+                    .flatMap(\.sets)
+                    .filter { $0.completed && ($0.weightKg ?? 0) > 0 && $0.reps > 0 }
+                    .map { $0.weightKg! * (1 + Double($0.reps) / 30) }
+                    .max() ?? 0
+                return DailyHistoryPoint(date: date, value: best)
+            }
+            .filter { $0.value > 0 }
+            .sorted { $0.date < $1.date }
+        case .sleep:
+            return Dictionary(grouping: state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate >= cutoff }, by: \.wakeDate)
+                .map { date, records in DailyHistoryPoint(date: date, value: Double(records.reduce(0) { $0 + $1.durationMinutes }) / 60) }
+                .sorted { $0.date < $1.date }
+        case .calories:
+            return NutritionHistorySeries.calories(from: state.nutrition.logs, since: cutoff)
+        case .protein:
+            return NutritionHistorySeries.protein(from: state.nutrition.logs, since: cutoff)
+        }
+    }
+
+    private var unit: String {
+        switch selectedMetric {
+        case .weight: state.home.preferredWeightUnit
+        case .strength: "kg e1RM"
+        case .sleep: "hours"
+        case .calories: "kcal"
+        case .protein: "g"
+        }
+    }
+
+    private var latestValue: String {
+        guard let value = series.last?.value else { return "No data yet" }
+        switch selectedMetric {
+        case .weight: return "\(value.formatted(.number.precision(.fractionLength(1)))) \(unit)"
+        case .strength: return "\(value.formatted(.number.precision(.fractionLength(1)))) kg"
+        case .sleep: return "\(value.formatted(.number.precision(.fractionLength(1)))) h"
+        case .calories: return "\(Int(value)) kcal"
+        case .protein: return "\(Int(value)) g"
+        }
+    }
+
+    var body: some View {
+        Group {
+            switch widget.kind {
+            case .graph: chartWidget
+            case .calendarHeatmap: heatmapWidget
+            case .personalRecords: recordsWidget
+            case .mealTiming where widget.variant == "Nutrition Adherence": adherenceWidget
+            default: HomeWidgetCard(widget: widget, palette: palette, state: state)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(state.home.theme.tokens.surfaceTint.opacity(state.home.theme.tokens.cardOpacity), in: RoundedRectangle(cornerRadius: state.home.theme.tokens.cornerRadius, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: state.home.theme.tokens.cornerRadius, style: .continuous).stroke(palette.accentColor.opacity(state.home.theme.tokens.borderOpacity), lineWidth: 0.9))
+        .shadow(color: .black.opacity(state.home.theme.tokens.shadowOpacity), radius: state.home.theme.tokens.cardShadowRadius, x: 0, y: 7)
+        .accessibilityElement(children: .contain)
+        .onAppear {
+            if selectedExerciseID.isEmpty { selectedExerciseID = exerciseOptions.first?.id ?? "" }
+        }
+    }
+
+    private var chartWidget: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Label("30-DAY PROGRESS", systemImage: "chart.xyaxis.line")
+                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                    .foregroundStyle(palette.mutedColor)
+                Spacer()
+                Text(latestValue)
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .foregroundStyle(palette.textColor)
+                    .lineLimit(1).minimumScaleFactor(0.7)
+            }
+            Picker("Progress metric", selection: $selectedMetric) {
+                ForEach(ProgressMetric.allCases) { metric in Text(metric.title).tag(metric) }
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .accessibilityIdentifier("progress-metric-picker")
+            if selectedMetric == .strength && exerciseOptions.count > 1 {
+                Picker("Exercise", selection: $selectedExerciseID) {
+                    ForEach(exerciseOptions) { option in Text(option.name).tag(option.id) }
+                }
+                .pickerStyle(.menu)
+                .accessibilityIdentifier("progress-strength-exercise")
+            }
+            if series.isEmpty {
+                ContentUnavailableView("No \(selectedMetric.title.lowercased()) data", systemImage: "chart.xyaxis.line", description: Text("Log a check-in or complete a workout to start this 30-day trend."))
+                    .frame(maxHeight: .infinity)
+            } else {
+                Chart(series) { point in
+                    LineMark(x: .value("Date", point.date), y: .value(unit, point.value))
+                        .interpolationMethod(.catmullRom).foregroundStyle(palette.accentColor)
+                    PointMark(x: .value("Date", point.date), y: .value(unit, point.value))
+                        .foregroundStyle(palette.accentColor)
+                }
+                .chartYAxisLabel(unit)
+                .frame(maxHeight: .infinity)
+                .accessibilityIdentifier("progress-metric-chart")
+            }
+            Button("View History", action: openHistory)
+                .font(.system(size: 10, weight: .semibold))
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .accessibilityIdentifier("progress-view-history")
+        }
+        .padding(10)
+    }
+
+    private var heatmapWidget: some View {
+        let dates = (0..<30).compactMap { offset in Calendar.current.date(byAdding: .day, value: offset - 29, to: Calendar.current.startOfDay(for: .now)) }
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 10)
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack {
+                Label(widget.variant ?? "MONTHLY ACTIVITY", systemImage: "calendar")
+                    .font(.system(size: 9, weight: .bold, design: .rounded)).lineLimit(1)
+                Spacer()
+                Text("30 DAYS").font(.system(size: 8, weight: .semibold))
+            }
+            LazyVGrid(columns: columns, spacing: 3) {
+                ForEach(dates, id: \.self) { date in
+                    let key = LocalDay.string(date)
+                    Button { openHistoryDate(key) } label: {
+                        Text(String(Calendar.current.component(.day, from: date)))
+                            .font(.system(size: 7, weight: .semibold, design: .rounded))
+                            .frame(maxWidth: .infinity).frame(height: 13)
+                            .foregroundStyle(palette.textColor)
+                            .background(palette.accentColor.opacity(activityScore(on: key)), in: RoundedRectangle(cornerRadius: 3))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(key), activity score \(Int(activityScore(on: key) * 100)) percent")
+                    .accessibilityIdentifier("activity-day-\(key)")
+                }
+            }
+            HStack {
+                Text("Activity across training, food, sleep, weight and due supplements")
+                    .font(.system(size: 8, weight: .medium)).lineLimit(2)
+                Spacer()
+                Button("History", action: openHistory).font(.system(size: 9, weight: .semibold))
+            }
+        }
+        .foregroundStyle(palette.textColor)
+        .padding(9)
+    }
+
+    private func activityScore(on date: String) -> Double {
+        let training = state.training.visibleCompletedSessions.contains { $0.localDate == date }
+        let food = state.nutrition.logs.contains { $0.date == date && $0.deletedAt == nil }
+        let sleep = state.checkins.sleep.contains { $0.wakeDate == date && $0.deletedAt == nil }
+        let weight = state.checkins.weights.contains { $0.date == date && $0.deletedAt == nil }
+        var completed = [training, food, sleep, weight].filter { $0 }.count
+        let parts = date.split(separator: "-").compactMap { Int($0) }
+        let dateValue = Calendar.current.date(from: DateComponents(year: parts.first, month: parts.dropFirst().first, day: parts.dropFirst(2).first)) ?? .now
+        let due = state.checkins.supplements.filter { supplement in
+            guard supplement.deletedAt == nil else { return false }
+            return supplement.schedule.lowercased() == "daily" || supplement.weekdays.contains(Calendar.current.component(.weekday, from: dateValue))
+        }
+        var eligible = 4
+        if !due.isEmpty {
+            eligible += 1
+            let taken = due.allSatisfy { supplement in
+                state.checkins.doses.contains { $0.supplementID == supplement.id && $0.date == date && $0.taken && $0.explicitlyMarked }
+            }
+            if taken { completed += 1 }
+        }
+        return Double(completed) / Double(eligible)
+    }
+
+    private var recordsWidget: some View {
+        let monthRecords = state.training.personalRecordEvents.filter { Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month) }.sorted { $0.date > $1.date }
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label("PRs THIS MONTH", systemImage: "trophy.fill").font(.system(size: 9, weight: .bold, design: .rounded))
+                Spacer()
+                Text("\(monthRecords.count)").font(.system(size: 17, weight: .bold, design: .rounded))
+            }
+            if let featured = monthRecords.first {
+                Text(featured.exerciseName).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                Text("e1RM \(featured.estimatedOneRepMaxKg.formatted(.number.precision(.fractionLength(1)))) kg").font(.system(size: 10))
+            } else {
+                Text("Your first completed workout establishes an exercise baseline.")
+                    .font(.system(size: 9)).lineLimit(3)
+            }
+            Button("View PR history", action: openHistory).font(.system(size: 9, weight: .semibold))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(palette.textColor)
+        .padding(10)
+    }
+
+    private var adherenceWidget: some View {
+        let dates = (0..<30).compactMap { Calendar.current.date(byAdding: .day, value: -$0, to: Calendar.current.startOfDay(for: .now)) }
+        let states = dates.map { state.nutritionAdherence(on: LocalDay.string($0)) }
+        let eligible = states.filter { $0 != .unlogged && $0 != .noTargets }
+        let onTarget = eligible.filter { $0 == .onTarget }.count
+        let percentage = eligible.isEmpty ? 0 : Double(onTarget) / Double(eligible.count)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack {
+                Label("NUTRITION ADHERENCE", systemImage: "target").font(.system(size: 8, weight: .bold, design: .rounded)).lineLimit(1)
+                Spacer(minLength: 0)
+                Text("±\(Int((state.nutrition.calorieTolerance ?? 0.05) * 100))%").font(.system(size: 8, weight: .medium))
+            }
+            HStack(spacing: 7) {
+                ZStack {
+                    Circle().stroke(palette.accentColor.opacity(0.18), lineWidth: 5)
+                    Circle().trim(from: 0, to: percentage).stroke(palette.accentColor, style: StrokeStyle(lineWidth: 5, lineCap: .round)).rotationEffect(.degrees(-90))
+                    Text("\(Int(percentage * 100))%").font(.system(size: 12, weight: .bold, design: .rounded)).minimumScaleFactor(0.7)
+                }.frame(width: 42, height: 42)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(eligible.isEmpty ? "No target days yet" : "\(onTarget) of \(eligible.count) logged days")
+                        .font(.system(size: 9, weight: .semibold)).lineLimit(2)
+                    Text("calories in range + protein goal").font(.system(size: 7, weight: .medium)).lineLimit(2)
+                }
+            }
+            Button("View adherence", action: openHistory).font(.system(size: 9, weight: .semibold))
+        }
+        .foregroundStyle(palette.textColor)
+        .padding(8)
     }
 }
 
