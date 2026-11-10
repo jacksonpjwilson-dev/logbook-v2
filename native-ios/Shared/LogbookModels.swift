@@ -835,6 +835,23 @@ struct WeightLog: Codable, Identifiable, Hashable {
     var date: String
     var kilograms: Double
     var deletedAt: Date? = nil
+
+    private enum CodingKeys: String, CodingKey { case id, date, kilograms, deletedAt }
+
+    init(id: UUID = UUID(), date: String, kilograms: Double, deletedAt: Date? = nil) {
+        self.id = id
+        self.date = date
+        self.kilograms = kilograms
+        self.deletedAt = deletedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decodeIfPresent(UUID.self, forKey: .id) ?? UUID()
+        date = try values.decode(String.self, forKey: .date)
+        kilograms = try values.decode(Double.self, forKey: .kilograms)
+        deletedAt = try values.decodeIfPresent(Date.self, forKey: .deletedAt)
+    }
 }
 
 struct Supplement: Codable, Identifiable, Hashable {
