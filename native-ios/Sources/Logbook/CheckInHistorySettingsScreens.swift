@@ -414,6 +414,7 @@ struct HistoryScreen: View {
     @State private var range = 30
     @State private var showingWorkoutCalendar = false
     @State private var workoutToDeletePermanently: UUID?
+    @State private var selectedHistoryDate: String?
     private let ranges = [7, 30, 90]
     private var cutoff: String {
         LocalDay.string(Calendar.current.date(byAdding: .day, value: -range + 1, to: .now) ?? .now)
@@ -429,8 +430,36 @@ struct HistoryScreen: View {
     }
     private var sessions: [WorkoutSession] { store.state.training.visibleCompletedSessions.sorted { $0.startedAt > $1.startedAt } }
 
+    private func consumeFocusedDate() {
+        guard let date = store.focusedHistoryDate else { return }
+        selectedHistoryDate = date
+        store.consumeHistoryDateFocus()
+    }
+
     var body: some View {
         List {
+            if let date = selectedHistoryDate {
+                Section("Selected Day · \(date)") {
+                    let nutrition = store.state.nutritionTotals(on: date)
+                    let sleepMinutes = store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == date }.reduce(0) { $0 + $1.durationMinutes }
+                    let activeSessions = sessions.filter { $0.localDate == date }
+                    LabeledContent("Food entries", value: "\(store.state.nutrition.logs.filter { $0.deletedAt == nil && $0.date == date }.count)")
+                    LabeledContent("Nutrition", value: "\(Int(nutrition.calories ?? 0)) kcal · \(Int(nutrition.protein ?? 0)) g protein")
+                    LabeledContent("Sleep", value: sleepMinutes == 0 ? "No record" : "\((Double(sleepMinutes) / 60).formatted(.number.precision(.fractionLength(1)))) h")
+                    LabeledContent("Workouts", value: "\(activeSessions.count)")
+                    if let weight = store.state.checkins.weights.first(where: { $0.deletedAt == nil && $0.date == date }) {
+                        LabeledContent("Weight", value: "\(displayedWeight(weight.kilograms).formatted(.number.precision(.fractionLength(1)))) \(store.state.home.preferredWeightUnit)")
+                    } else {
+                        LabeledContent("Weight", value: "No record")
+                    }
+                    ForEach(activeSessions) { session in
+                        NavigationLink(session.templateName, destination: WorkoutHistoryDetailScreen(sessionID: session.id))
+                    }
+                    Button("Close selected day") { selectedHistoryDate = nil }
+                        .accessibilityIdentifier("history-close-selected-day")
+                }
+                .accessibilityIdentifier("history-selected-day")
+            }
             Section {
                 Picker("Range", selection: $range) { ForEach(ranges, id: \.self) { Text("\($0) days").tag($0) } }
                     .pickerStyle(.segmented)
@@ -538,6 +567,7 @@ struct HistoryScreen: View {
                 }
             }
         }
+.onAppear(perform: consumeFocusedDate)
         .navigationTitle("History")
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
             Button { showingWorkoutCalendar = true } label: { Image(systemName: "calendar") }
