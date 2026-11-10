@@ -1010,20 +1010,22 @@ private struct HistoryExerciseOption: Identifiable {
 
 enum StrengthHistorySeries {
     static func points(from sessions: [WorkoutSession], exerciseID: String, since cutoff: String) -> [DailyHistoryPoint] {
-        let days = Dictionary(grouping: sessions.filter { $0.finishedAt != nil && $0.localDate >= cutoff }, by: \.localDate)
-        return days.compactMap { date, records in
-            let estimates = records.flatMap(\.exercises)
-                .filter { $0.exerciseID == exerciseID && ($0.trackingMode ?? .weightAndReps) == .weightAndReps }
-                .flatMap(\.sets)
-                .filter { $0.completed && ($0.weightKg ?? 0) > 0 && $0.reps > 0 }
-                .compactMap { set -> Double? in
-                    guard let weight = set.weightKg else { return nil }
-                    return weight * (1 + Double(set.reps) / 30)
+        var bestByDate: [String: Double] = [:]
+        for session in sessions where session.finishedAt != nil && session.localDate >= cutoff {
+            for exercise in session.exercises {
+                guard exercise.exerciseID == exerciseID,
+                      (exercise.trackingMode ?? .weightAndReps) == .weightAndReps else { continue }
+                for set in exercise.sets where set.completed && set.reps > 0 {
+                    guard let weight = set.weightKg, weight > 0 else { continue }
+                    let estimate = weight * (1 + Double(set.reps) / 30)
+                    bestByDate[session.localDate] = max(bestByDate[session.localDate] ?? 0, estimate)
                 }
-            guard let best = estimates.max() else { return nil }
-            return DailyHistoryPoint(date: date, value: best)
+            }
         }
-        .sorted { $0.date < $1.date }
+        return bestByDate.keys.sorted().compactMap { date in
+            guard let value = bestByDate[date] else { return nil }
+            return DailyHistoryPoint(date: date, value: value)
+        }
     }
 }
 
