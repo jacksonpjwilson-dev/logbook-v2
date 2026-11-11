@@ -970,6 +970,45 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertFalse(reopened.state.checkins.weights.contains { $0.id == weight.id }, "Expired deleted check-ins are purged during launch migration")
     }
 
+    func testPermanentCheckInDeletionOnlyRemovesDeletedRecordsAndTheirSupplementDoses() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let wake = Date.now
+        let bedtime = wake.addingTimeInterval(-8 * 60 * 60)
+        XCTAssertTrue(store.addSleep(bedtime: bedtime, wakeTime: wake))
+        XCTAssertTrue(store.addWeight(80, unit: "kg"))
+        store.addSupplement(name: "QA Permanent Delete")
+        let sleep = try XCTUnwrap(store.state.checkins.sleep.first)
+        let weight = try XCTUnwrap(store.state.checkins.weights.first)
+        let supplement = try XCTUnwrap(store.state.checkins.supplements.first { $0.name == "QA Permanent Delete" })
+        store.markSupplement(supplement, taken: true, on: wake)
+        XCTAssertTrue(store.state.checkins.doses.contains { $0.supplementID == supplement.id && $0.taken })
+
+        store.permanentlyDeleteSleep(sleep.id)
+        store.permanentlyDeleteWeight(weight.id)
+        store.permanentlyDeleteSupplement(supplement.id)
+        XCTAssertTrue(store.state.checkins.sleep.contains { $0.id == sleep.id }, "Permanent deletion cannot bypass the Recently Deleted step")
+        XCTAssertTrue(store.state.checkins.weights.contains { $0.id == weight.id })
+        XCTAssertTrue(store.state.checkins.supplements.contains { $0.id == supplement.id })
+
+        store.deleteSleep(sleep.id)
+        store.deleteWeight(weight.id)
+        store.deleteSupplement(supplement.id)
+        store.permanentlyDeleteSleep(sleep.id)
+        store.permanentlyDeleteWeight(weight.id)
+        store.permanentlyDeleteSupplement(supplement.id)
+
+        XCTAssertFalse(store.state.checkins.sleep.contains { $0.id == sleep.id })
+        XCTAssertFalse(store.state.checkins.weights.contains { $0.id == weight.id })
+        XCTAssertFalse(store.state.checkins.supplements.contains { $0.id == supplement.id })
+        XCTAssertFalse(store.state.checkins.doses.contains { $0.supplementID == supplement.id }, "Permanently deleting a supplement also removes its dependent dose history")
+
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertFalse(reopened.state.checkins.sleep.contains { $0.id == sleep.id })
+        XCTAssertFalse(reopened.state.checkins.weights.contains { $0.id == weight.id })
+        XCTAssertFalse(reopened.state.checkins.supplements.contains { $0.id == supplement.id })
+    }
+
     func testLegacySleepAndWeightRecordsDecodeWithNewOptionalFields() throws {
         let legacySleep = Data(#"{"wakeDate":"2026-11-09","bedtime":0,"wakeTime":28800,"manualMinutes":null}"#.utf8)
         let sleep = try JSONDecoder().decode(SleepLog.self, from: legacySleep)

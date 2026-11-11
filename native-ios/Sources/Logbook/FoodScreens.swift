@@ -846,6 +846,7 @@ private struct FoodHistoryScreen: View {
                 .swipeActions { Button("Delete", role: .destructive) { store.deleteFoodLog(log.id) } }
             }
         }
+        .accessibilityIdentifier("food-history-screen")
         .navigationTitle("Food History")
     }
 }

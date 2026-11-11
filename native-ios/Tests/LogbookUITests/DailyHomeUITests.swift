@@ -641,6 +641,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertEqual(historyRows.count, 2, "The remaining same-day session and previous-day baseline remain in active history")
         XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
+        scrollToElement(visiblePRRows.firstMatch, in: app)
+        XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR must be discoverable in the lazy History list")
         XCTAssertEqual(visiblePRRows.count, 1, "The earlier retained session still appears as a PR after the newest record is edited or deleted")
         let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))
         // Recently Deleted is below the charts and Training history sections.
@@ -826,7 +828,7 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(foodHistory, in: app)
         XCTAssertTrue(foodHistory.waitForExistence(timeout: 5))
         foodHistory.tap()
-        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.descendants(matching: .any)["food-history-screen"].waitForExistence(timeout: 5), "Food History navigation reaches the persistent record list")
         attachScreenshot(of: app, named: "Food-History-Candidate")
         let historyRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
         XCTAssertTrue(historyRow.waitForExistence(timeout: 5))
@@ -1152,20 +1154,20 @@ final class DailyHomeUITests: XCTestCase {
     }
 
     private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
-        // A presented active-workout sheet sits above the Training screen's
-        // collection view. Scrolling firstMatch moves the obscured page behind
-        // the sheet; the last collection view is the visible modal's List.
-        let lists = app.collectionViews
-        let list = lists.element(boundBy: max(0, lists.count - 1))
+        // Reacquire the visible list on each pass: navigation, sheets, and
+        // List virtualization can replace its accessibility element while a
+        // workflow is running.
         let pinnedFooter = app.buttons["finish-workout"]
         for _ in 0..<10 {
             if element.exists {
                 let aboveFooter = !pinnedFooter.exists || element.frame.maxY < pinnedFooter.frame.minY - 8
                 if element.isHittable && aboveFooter { return }
             }
+            let lists = app.collectionViews
+            let list = lists.element(boundBy: max(0, lists.count - 1))
             // Lazy List rows may not enter the accessibility tree until they are
             // scrolled into view; avoid reading a missing element's frame first.
-            if list.exists {
+            if lists.count > 0 && list.exists {
                 if towardTop { list.swipeDown() } else { list.swipeUp() }
             } else {
                 if towardTop { app.swipeDown() } else { app.swipeUp() }
@@ -1211,7 +1213,18 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreSleep.waitForExistence(timeout: 5), "A deleted sleep record is listed for recovery")
         XCTAssertTrue(restoreSleep.isHittable, "The restore action should be reachable in the Recently Deleted section")
         restoreSleep.tap()
-        XCTAssertTrue(app.buttons["sleep-edit-\(sleepID)"].waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
+        let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
+        scrollToElement(restoredSleep, in: app, towardTop: true)
+        XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
+        app.buttons["sleep-delete-\(sleepID)"].tap()
+        let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
+        scrollToElement(permanentlyDeleteSleep, in: app)
+        XCTAssertTrue(permanentlyDeleteSleep.waitForExistence(timeout: 5), "Recently Deleted offers explicit permanent removal")
+        permanentlyDeleteSleep.tap()
+        app.buttons["Delete Permanently"].tap()
+        XCTAssertFalse(app.buttons["restore-sleep-\(sleepID)"].exists, "Permanent deletion removes the record from recovery")
+        scrollToElement(restoredSleep, in: app, towardTop: true)
+        XCTAssertFalse(restoredSleep.exists, "Permanent deletion removes the record from active history too")
 
         let weightField = app.textFields["checkin-weight-value"]
         XCTAssertTrue(weightField.waitForExistence(timeout: 5))
@@ -1236,10 +1249,10 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["supplement-editor-save"].tap()
         XCTAssertTrue(app.staticTexts["QA Vitamin D"].waitForExistence(timeout: 5))
 
-        let creatineDose = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mark Creatine taken")).firstMatch
-        XCTAssertTrue(creatineDose.waitForExistence(timeout: 5), "A due supplement has a direct Taken action")
-        creatineDose.tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Undo Creatine")).firstMatch.waitForExistence(timeout: 5))
+        let dueVitaminD = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mark QA Vitamin D taken")).firstMatch
+        XCTAssertTrue(dueVitaminD.waitForExistence(timeout: 5), "A newly added daily supplement has a direct Taken action")
+        dueVitaminD.tap()
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Undo QA Vitamin D")).firstMatch.waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Sleep-Weight-Supplements-Candidate")
     }
 
@@ -1258,7 +1271,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(activityDay.waitForExistence(timeout: 5), "The numbered activity heatmap should be tappable")
         let dateKey = String(activityDay.identifier.dropFirst("activity-day-".count))
         activityDay.tap()
-        XCTAssertTrue(app.staticTexts["Selected Day · \(dateKey)"].waitForExistence(timeout: 5), "Heatmap selection opens that day in History")
+        let selectedHistoryDate = app.staticTexts["history-selected-day-date"]
+        XCTAssertTrue(selectedHistoryDate.waitForExistence(timeout: 5), "Heatmap selection opens and scrolls to that day in History")
+        XCTAssertEqual(selectedHistoryDate.label, dateKey)
         attachScreenshot(of: app, named: "Progress-Home-Candidate")
     }
 

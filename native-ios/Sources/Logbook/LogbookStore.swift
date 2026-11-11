@@ -1271,6 +1271,22 @@ final class LogbookStore: ObservableObject {
         return state.checkins.supplements.first(where: { $0.id == id })?.deletedAt == nil
     }
 
+    func permanentlyDeleteSleep(_ id: UUID) {
+        transact { state in state.checkins.sleep.removeAll { $0.id == id && $0.deletedAt != nil } }
+    }
+
+    func permanentlyDeleteWeight(_ id: UUID) {
+        transact { state in state.checkins.weights.removeAll { $0.id == id && $0.deletedAt != nil } }
+    }
+
+    func permanentlyDeleteSupplement(_ id: UUID) {
+        transact { state in
+            guard state.checkins.supplements.contains(where: { $0.id == id && $0.deletedAt != nil }) else { return }
+            state.checkins.supplements.removeAll { $0.id == id && $0.deletedAt != nil }
+            state.checkins.doses.removeAll { $0.supplementID == id }
+        }
+    }
+
     func purgeExpiredCheckIns(asOf date: Date = .now) {
         var preview = state.checkins
         guard Self.purgeExpiredCheckInRecords(&preview, asOf: date) else { return }

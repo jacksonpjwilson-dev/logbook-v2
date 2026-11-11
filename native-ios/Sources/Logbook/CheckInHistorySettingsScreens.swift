@@ -2,6 +2,12 @@ import Charts
 import SwiftUI
 import UniformTypeIdentifiers
 
+private enum CheckInPermanentDeleteKind { case sleep, weight, supplement }
+private struct CheckInPermanentDelete: Identifiable {
+    let kind: CheckInPermanentDeleteKind
+    let id: UUID
+}
+
 struct CheckInScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var selectedDate = Calendar.current.startOfDay(for: .now)
@@ -17,7 +23,7 @@ struct CheckInScreen: View {
     @State private var showWeightReplace = false
     @State private var showSupplementEditor = false
     @State private var editingSupplement: Supplement?
-    @State private var showDeleteConfirmation: UUID?
+    @State private var permanentDelete: CheckInPermanentDelete?
 
     private var unit: String { store.state.home.preferredWeightUnit }
     private var dateKey: String { LocalDay.string(selectedDate) }
@@ -176,24 +182,36 @@ struct CheckInScreen: View {
                         HStack {
                             Text("\(record.isNap ? "Nap" : "Sleep") · \(record.wakeDate)")
                             Spacer()
-                            Button("Restore") { _ = store.restoreDeletedSleep(record.id) }
+                            Button("Restore") { restoreSleep(record, using: proxy) }
                                 .accessibilityIdentifier("restore-sleep-\(record.id.uuidString)")
+                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .sleep, id: record.id) } label: {
+                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            }
+                            .accessibilityIdentifier("permanently-delete-sleep-\(record.id.uuidString)")
                         }
                     }
                     ForEach(deleted.weights) { record in
                         HStack {
                             Text("Weight · \(record.date)")
                             Spacer()
-                            Button("Restore") { _ = store.restoreDeletedWeight(record.id) }
+                            Button("Restore") { restoreWeight(record, using: proxy) }
                                 .accessibilityIdentifier("restore-weight-\(record.id.uuidString)")
+                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .weight, id: record.id) } label: {
+                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            }
+                            .accessibilityIdentifier("permanently-delete-weight-\(record.id.uuidString)")
                         }
                     }
                     ForEach(deleted.supplements) { record in
                         HStack {
                             Text("Supplement · \(record.name)")
                             Spacer()
-                            Button("Restore") { _ = store.restoreDeletedSupplement(record.id) }
+                            Button("Restore") { restoreSupplement(record, using: proxy) }
                                 .accessibilityIdentifier("restore-supplement-\(record.id.uuidString)")
+                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .supplement, id: record.id) } label: {
+                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            }
+                            .accessibilityIdentifier("permanently-delete-supplement-\(record.id.uuidString)")
                         }
                     }
                 }
@@ -237,6 +255,21 @@ struct CheckInScreen: View {
             }
             Button("Keep existing record", role: .cancel) { }
         } message: { Text("The previous daily measurement is moved to Recently Deleted.") }
+        .confirmationDialog("Permanently delete this check-in?", isPresented: Binding(
+            get: { permanentDelete != nil },
+            set: { if !$0 { permanentDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete Permanently", role: .destructive) {
+                guard let selection = permanentDelete else { return }
+                switch selection.kind {
+                case .sleep: store.permanentlyDeleteSleep(selection.id)
+                case .weight: store.permanentlyDeleteWeight(selection.id)
+                case .supplement: store.permanentlyDeleteSupplement(selection.id)
+                }
+                permanentDelete = nil
+            }
+            Button("Cancel", role: .cancel) { permanentDelete = nil }
+        } message: { Text("This cannot be undone.") }
     }
 
     private var sleepInputIsValid: Bool {
@@ -319,6 +352,35 @@ struct CheckInScreen: View {
 
     private func scheduleDescription(_ supplement: Supplement) -> String {
         supplement.schedule.lowercased() == "daily" ? "Daily" : supplement.weekdays.sorted().map { Calendar.current.shortWeekdaySymbols[$0 - 1] }.joined(separator: ", ")
+    }
+
+    private func restoreSleep(_ record: SleepLog, using proxy: ScrollViewProxy) {
+        guard store.restoreDeletedSleep(record.id) else { return }
+        if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.sleep, anchor: .top) }
+        }
+    }
+
+    private func restoreWeight(_ record: WeightLog, using proxy: ScrollViewProxy) {
+        guard store.restoreDeletedWeight(record.id) else { return }
+        if let restoredDate = date(from: record.date) { selectedDate = restoredDate }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.weight, anchor: .top) }
+        }
+    }
+
+    private func restoreSupplement(_ record: Supplement, using proxy: ScrollViewProxy) {
+        guard store.restoreDeletedSupplement(record.id) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.supplements, anchor: .top) }
+        }
+    }
+
+    private func date(from key: String) -> Date? {
+        let values = key.split(separator: "-").compactMap { Int($0) }
+        guard values.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: values[0], month: values[1], day: values[2]))
     }
 
     private func scrollToRequestedSection(using proxy: ScrollViewProxy) {
@@ -447,16 +509,22 @@ struct HistoryScreen: View {
         NutritionHistorySeries.protein(from: store.state.nutrition.logs, since: cutoff)
     }
 
-    private func consumeFocusedDate() {
+    private func consumeFocusedDate(using proxy: ScrollViewProxy) {
         guard let date = store.focusedHistoryDate else { return }
         selectedHistoryDate = date
         store.consumeHistoryDateFocus()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day", anchor: .top) }
+        }
     }
 
     var body: some View {
+        ScrollViewReader { proxy in
         List {
             if let date = selectedHistoryDate {
-                Section("Selected Day · \(date)") {
+                Section {
+                    Text(date).font(.caption).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("history-selected-day-date")
                     let nutrition = store.state.nutritionTotals(on: date)
                     let sleepMinutes = store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == date }.reduce(0) { $0 + $1.durationMinutes }
                     let activeSessions = sessions.filter { $0.localDate == date }
@@ -476,6 +544,7 @@ struct HistoryScreen: View {
                         .accessibilityIdentifier("history-close-selected-day")
                 }
                 .accessibilityIdentifier("history-selected-day")
+                .id("history-selected-day")
             }
             Section {
                 Picker("Range", selection: $range) { ForEach(ranges, id: \.self) { Text("\($0) days").tag($0) } }
@@ -620,9 +689,17 @@ struct HistoryScreen: View {
                 }
             }
         }
-.onAppear {
-            consumeFocusedDate()
+        .onAppear {
+            consumeFocusedDate(using: proxy)
             if selectedStrengthExerciseID.isEmpty { selectedStrengthExerciseID = strengthOptions.first?.id ?? "" }
+        }
+        .onChange(of: store.focusedHistoryDate) { _, _ in consumeFocusedDate(using: proxy) }
+        .onChange(of: selectedHistoryDate) { _, date in
+            guard date != nil else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day", anchor: .top) }
+            }
+        }
         }
         .navigationTitle("History")
         .toolbar { ToolbarItem(placement: .topBarTrailing) {
