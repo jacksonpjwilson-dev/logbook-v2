@@ -568,6 +568,7 @@ struct HistoryScreen: View {
                 Section {
                     Text(date).font(.caption).foregroundStyle(.secondary)
                         .accessibilityIdentifier("history-selected-day-date")
+                        .id("history-selected-day")
                     let nutrition = store.state.nutritionTotals(on: date)
                     let sleepMinutes = store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == date }.reduce(0) { $0 + $1.durationMinutes }
                     let activeSessions = sessions.filter { $0.localDate == date }
@@ -587,7 +588,6 @@ struct HistoryScreen: View {
                         .accessibilityIdentifier("history-close-selected-day")
                 }
                 .accessibilityIdentifier("history-selected-day")
-                .id("history-selected-day")
             }
             Section {
                 Picker("Range", selection: $range) { ForEach(ranges, id: \.self) { Text("\($0) days").tag($0) } }
