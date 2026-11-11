@@ -1256,16 +1256,117 @@ final class DailyHomeUITests: XCTestCase {
         attachScreenshot(of: app, named: "Sleep-Weight-Supplements-Candidate")
     }
 
-    func testProgressHomeMetricsAndNumberedActivityDayNavigation() throws {
+    func testCategoryHistoryNavigationAndEditableCheckInRecords() throws {
         let app = launchApp()
+        app.buttons["Sleep tab"].tap()
+
+        let sessionType = app.segmentedControls["sleep-session-type"]
+        XCTAssertTrue(sessionType.waitForExistence(timeout: 5))
+        sessionType.buttons["Nap"].tap()
+        app.buttons["sleep-save"].tap()
+        let sleepRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "sleep-edit-")).firstMatch
+        XCTAssertTrue(sleepRow.waitForExistence(timeout: 5))
+        let sleepID = String(sleepRow.identifier.dropFirst("sleep-edit-".count))
+
+        let weightField = app.textFields["checkin-weight-value"]
+        XCTAssertTrue(weightField.waitForExistence(timeout: 5))
+        replaceText(in: weightField, with: "78")
+        dismissKeyboard(in: app)
+        app.buttons["weight-save"].tap()
+        let replaceWeight = app.buttons["Replace weight"]
+        if replaceWeight.waitForExistence(timeout: 2) { replaceWeight.tap() }
+        let savedWeight = app.descendants(matching: .any)["weight-current-value"]
+        XCTAssertTrue(savedWeight.waitForExistence(timeout: 5))
+        XCTAssertTrue(savedWeight.label.contains("78"), "The daily check-in fixture weight is corrected before history inspection")
+
+        let addSupplement = app.buttons["supplement-add"]
+        scrollToElement(addSupplement, in: app)
+        addSupplement.tap()
+        let name = app.textFields["supplement-name"]
+        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        name.tap()
+        name.typeText("QA History Supplement")
+        app.buttons["supplement-editor-save"].tap()
+        let takeSupplement = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mark QA History Supplement taken")).firstMatch
+        XCTAssertTrue(takeSupplement.waitForExistence(timeout: 5))
+        takeSupplement.tap()
+
+        app.buttons["History tab"].tap()
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
+        let categoryIDs = [
+            "history-category-training", "history-category-nutrition", "history-category-weight",
+            "history-category-sleep", "history-category-supplements", "history-category-habits"
+        ]
+        for identifier in categoryIDs {
+            scrollToElement(app.buttons[identifier], in: app)
+            XCTAssertTrue(app.buttons[identifier].waitForExistence(timeout: 5), "Missing History category \(identifier)")
+        }
+        attachScreenshot(of: app, named: "History-Categories-Candidate")
+
+        app.buttons["history-category-sleep"].tap()
+        XCTAssertTrue(app.navigationBars["Sleep History"].waitForExistence(timeout: 5))
+        let sleepHistoryRow = app.buttons["history-sleep-\(sleepID)"]
+        XCTAssertTrue(sleepHistoryRow.waitForExistence(timeout: 5), "Sleep History keeps individual nap records")
+        attachScreenshot(of: app, named: "Sleep-History-Candidate")
+        sleepHistoryRow.tap()
+        XCTAssertTrue(app.buttons["sleep-edit-\(sleepID)"].waitForExistence(timeout: 5), "A history row opens its exact editable check-in record")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["history-category-weight"].tap()
+        XCTAssertTrue(app.navigationBars["Weight History"].waitForExistence(timeout: 5))
+        let weightHistoryRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-weight-")).firstMatch
+        XCTAssertTrue(weightHistoryRow.waitForExistence(timeout: 5), "Weight History lists the saved daily measurement")
+        attachScreenshot(of: app, named: "Weight-History-Candidate")
+        weightHistoryRow.tap()
+        let currentWeight = app.descendants(matching: .any)["weight-current-value"]
+        XCTAssertTrue(currentWeight.waitForExistence(timeout: 5))
+        XCTAssertTrue(currentWeight.label.contains("78"), "Weight history navigates to the selected date's editable value")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["history-category-supplements"].tap()
+        XCTAssertTrue(app.navigationBars["Supplements History"].waitForExistence(timeout: 5))
+        let supplementHistoryRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-supplement-")).firstMatch
+        XCTAssertTrue(supplementHistoryRow.waitForExistence(timeout: 5), "Supplement History lists dated dose records")
+        attachScreenshot(of: app, named: "Supplement-History-Candidate")
+        let doseID = String(supplementHistoryRow.identifier.dropFirst("history-supplement-".count))
+        supplementHistoryRow.swipeLeft()
+        app.buttons["Delete"].tap()
+        let restoreDose = app.buttons["restore-history-supplement-dose-\(doseID)"]
+        scrollToElement(restoreDose, in: app)
+        XCTAssertTrue(restoreDose.waitForExistence(timeout: 5), "Deleted supplement doses are retained for recovery")
+        restoreDose.tap()
+        XCTAssertTrue(app.buttons["history-supplement-\(doseID)"].waitForExistence(timeout: 5), "Restoring a dose returns it to dated supplement history")
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
+        app.buttons["history-category-habits"].tap()
+        XCTAssertTrue(app.navigationBars["Habits History"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-habit-day-")).firstMatch.waitForExistence(timeout: 5), "Habits History derives dated completion records")
+        attachScreenshot(of: app, named: "Habits-History-Candidate")
+    }
+
+    func testProgressHomeMetricsAndNumberedActivityDayNavigation() throws {
+        let app = launchApp(strengthHistory: true)
         app.buttons["Progress & History page"].tap()
 
         let metricPicker = app.segmentedControls["progress-metric-picker"]
         XCTAssertTrue(metricPicker.waitForExistence(timeout: 5), "Progress Home exposes its five approved metrics")
         for metric in ["Weight", "Strength", "Sleep", "Calories", "Protein"] {
-            XCTAssertTrue(metricPicker.buttons[metric].exists, "Missing \(metric) metric")
+            let button = metricPicker.buttons[metric]
+            XCTAssertTrue(button.exists, "Missing \(metric) metric")
+            button.tap()
+            XCTAssertTrue(button.isSelected, "Selecting \(metric) updates the chart tab")
+            if metric == "Strength" {
+                let exercisePicker = app.descendants(matching: .any)["progress-strength-exercise"].firstMatch
+                XCTAssertTrue(exercisePicker.waitForExistence(timeout: 5), "Multiple completed exercises expose a selection control")
+                exercisePicker.tap()
+                let rowOption = app.buttons["Seated Row"]
+                XCTAssertTrue(rowOption.waitForExistence(timeout: 5), "The exercise menu includes each completed exercise")
+                rowOption.tap()
+                XCTAssertTrue(exercisePicker.label.contains("Seated Row") || (exercisePicker.value as? String ?? "").contains("Seated Row"), "The selected exercise controls the strength series")
+            }
         }
-        metricPicker.buttons["Protein"].tap()
 
         let activityDay = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "activity-day-")).firstMatch
         XCTAssertTrue(activityDay.waitForExistence(timeout: 5), "The numbered activity heatmap should be tappable")
@@ -1277,13 +1378,14 @@ final class DailyHomeUITests: XCTestCase {
         attachScreenshot(of: app, named: "Progress-Home-Candidate")
     }
 
-    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false, singleExercise: Bool = false) -> XCUIApplication {
+    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false, singleExercise: Bool = false, strengthHistory: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing"]
         if progressionHistory { app.launchArguments.append("--qa-progression-history") }
         if trainingSplitCount == 8 { app.launchArguments.append("--qa-training-split-eight") }
         if trainingPrograms { app.launchArguments.append("--qa-training-programs") }
         if singleExercise { app.launchArguments.append("--qa-single-exercise") }
+        if strengthHistory { app.launchArguments.append("--qa-strength-history") }
         app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
         app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
         app.launch()

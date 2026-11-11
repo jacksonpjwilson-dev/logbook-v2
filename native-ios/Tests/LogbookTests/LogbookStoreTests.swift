@@ -970,6 +970,26 @@ final class LogbookStoreTests: XCTestCase {
         XCTAssertFalse(reopened.state.checkins.weights.contains { $0.id == weight.id }, "Expired deleted check-ins are purged during launch migration")
     }
 
+    func testSupplementDoseHistorySoftDeleteRestoreAndExpiryPersist() throws {
+        let repository = temporaryRepository()
+        let store = LogbookStore(repository: repository)
+        let day = Calendar.current.startOfDay(for: .now)
+        store.addSupplement(name: "QA Dose History", doseDescription: nil, schedule: "daily", weekdays: [])
+        let supplement = try XCTUnwrap(store.state.checkins.supplements.first)
+        store.markSupplement(supplement, taken: true, on: day)
+        let dose = try XCTUnwrap(store.state.checkins.doses.first { $0.supplementID == supplement.id })
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).takenSupplementCount, 1)
+
+        store.deleteSupplementDose(dose.id)
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).takenSupplementCount, 0, "Deleted doses immediately stop counting toward completion")
+        XCTAssertEqual(store.recentlyDeletedCheckIns().doses.map(\.id), [dose.id])
+        XCTAssertTrue(store.restoreDeletedSupplementDose(dose.id, at: .now.addingTimeInterval(29 * 24 * 60 * 60)))
+        XCTAssertEqual(DailyHomeMetrics(state: store.state, date: day).takenSupplementCount, 1, "Restoration recalculates the completion metrics")
+        store.deleteSupplementDose(dose.id, at: .now.addingTimeInterval(-31 * 24 * 60 * 60))
+        let reopened = LogbookStore(repository: repository)
+        XCTAssertFalse(reopened.state.checkins.doses.contains { $0.id == dose.id }, "Expired deleted doses are purged on repository reopen")
+    }
+
     func testPermanentCheckInDeletionOnlyRemovesDeletedRecordsAndTheirSupplementDoses() throws {
         let repository = temporaryRepository()
         let store = LogbookStore(repository: repository)

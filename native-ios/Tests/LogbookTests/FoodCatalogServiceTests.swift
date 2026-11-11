@@ -10,6 +10,9 @@ final class FoodCatalogServiceTests: XCTestCase {
 
     func testSearchMergesCanadianNutrientFileAndOpenFoodFactsResults() async throws {
         FoodURLProtocolStub.handler = { request in
+            let userAgent = request.value(forHTTPHeaderField: "User-Agent") ?? ""
+            XCTAssertTrue(userAgent.hasPrefix("Logbook/"), "Provider requests identify the app and version")
+            XCTAssertTrue(userAgent.contains("github.com/jacksonpjwilson-dev/logbook-v2"), "Provider requests contain a contact URL")
             let path = request.url?.path.lowercased() ?? ""
             if path.contains("/nutrientamount") {
                 return Self.response(request, status: 200, body: #"""

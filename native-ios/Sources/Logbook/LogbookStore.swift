@@ -182,6 +182,7 @@ final class LogbookStore: ObservableObject {
             sets: progressionSets
         )
         let progressionHistoryEnabled = ProcessInfo.processInfo.arguments.contains("--qa-progression-history")
+        let strengthHistoryEnabled = ProcessInfo.processInfo.arguments.contains("--qa-strength-history")
         fixture.training.completedSessions = programRotationFixture ? [] : [WorkoutSession(
                 templateID: templateID,
                 templateName: template.name,
@@ -189,8 +190,23 @@ final class LogbookStore: ObservableObject {
                 localDate: LocalDay.string(yesterday),
                 startedAt: finished.addingTimeInterval(-2_700),
                 finishedAt: finished,
-                exercises: progressionHistoryEnabled ? [progressionExercise] : []
+                exercises: (progressionHistoryEnabled || strengthHistoryEnabled) ? [progressionExercise] : []
             )]
+        if strengthHistoryEnabled {
+            let row = WorkoutExercise(
+                exerciseID: "qa-row", name: "Seated Row", muscle: "Back", equipment: "Cable",
+                sets: [WorkoutSet(weightKg: 45, reps: 10, completed: true)]
+            )
+            fixture.training.completedSessions.append(WorkoutSession(
+                templateID: templateID,
+                templateName: "QA Seated Row",
+                templateVersion: template.version,
+                localDate: LocalDay.string(yesterday),
+                startedAt: finished.addingTimeInterval(-5_400),
+                finishedAt: finished.addingTimeInterval(-3_600),
+                exercises: [row]
+            ))
+        }
         fixture.checkins.sleep = sleepLogs
         fixture.checkins.weights = weightLogs
         fixture.checkins.supplements = [supplement]
@@ -1130,6 +1146,10 @@ final class LogbookStore: ObservableObject {
         }
     }
 
+    func permanentlyDeleteSleep(_ id: UUID) {
+        transact { state in state.checkins.sleep.removeAll { $0.id == id && $0.deletedAt != nil } }
+    }
+
     @discardableResult
     func restoreDeletedSleep(_ id: UUID, at date: Date = .now) -> Bool {
         guard let record = state.checkins.sleep.first(where: { $0.id == id }),
@@ -1184,6 +1204,10 @@ final class LogbookStore: ObservableObject {
         }
     }
 
+    func permanentlyDeleteWeight(_ id: UUID) {
+        transact { state in state.checkins.weights.removeAll { $0.id == id && $0.deletedAt != nil } }
+    }
+
     @discardableResult
     func restoreDeletedWeight(_ id: UUID, at date: Date = .now) -> Bool {
         guard let record = state.checkins.weights.first(where: { $0.id == id }),
@@ -1231,6 +1255,14 @@ final class LogbookStore: ObservableObject {
         }
     }
 
+    func permanentlyDeleteSupplement(_ id: UUID) {
+        transact { state in
+            guard state.checkins.supplements.contains(where: { $0.id == id && $0.deletedAt != nil }) else { return }
+            state.checkins.supplements.removeAll { $0.id == id && $0.deletedAt != nil }
+            state.checkins.doses.removeAll { $0.supplementID == id }
+        }
+    }
+
     func markSupplement(_ supplement: Supplement, taken: Bool, on date: Date = .now) {
         guard let activeSupplement = state.checkins.supplements.first(where: { $0.id == supplement.id && $0.deletedAt == nil }) else { return }
         let weekday = Calendar.current.component(.weekday, from: date)
@@ -1247,7 +1279,7 @@ final class LogbookStore: ObservableObject {
         }
     }
 
-    func recentlyDeletedCheckIns(asOf date: Date = .now) -> (sleep: [SleepLog], weights: [WeightLog], supplements: [Supplement]) {
+    func recentlyDeletedCheckIns(asOf date: Date = .now) -> (sleep: [SleepLog], weights: [WeightLog], supplements: [Supplement], doses: [SupplementDose]) {
         func unexpired(_ deletedAt: Date?) -> Bool {
             guard let deletedAt else { return false }
             return date.timeIntervalSince(deletedAt) >= 0 && date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60
@@ -1255,7 +1287,8 @@ final class LogbookStore: ObservableObject {
         return (
             state.checkins.sleep.filter { unexpired($0.deletedAt) },
             state.checkins.weights.filter { unexpired($0.deletedAt) },
-            state.checkins.supplements.filter { unexpired($0.deletedAt) }
+            state.checkins.supplements.filter { unexpired($0.deletedAt) },
+            state.checkins.doses.filter { unexpired($0.deletedAt) }
         )
     }
 
@@ -1285,6 +1318,32 @@ final class LogbookStore: ObservableObject {
             state.checkins.supplements.removeAll { $0.id == id && $0.deletedAt != nil }
             state.checkins.doses.removeAll { $0.supplementID == id }
         }
+    }
+
+    func deleteSupplementDose(_ id: UUID, at date: Date = .now) {
+        transact { state in
+            guard let index = state.checkins.doses.firstIndex(where: { $0.id == id && $0.deletedAt == nil }) else { return }
+            state.checkins.doses[index].deletedAt = date
+        }
+    }
+
+    @discardableResult
+    func restoreDeletedSupplementDose(_ id: UUID, at date: Date = .now) -> Bool {
+        guard let dose = state.checkins.doses.first(where: { $0.id == id }),
+              let deletedAt = dose.deletedAt,
+              date.timeIntervalSince(deletedAt) >= 0,
+              date.timeIntervalSince(deletedAt) < 30 * 24 * 60 * 60,
+              state.checkins.supplements.contains(where: { $0.id == dose.supplementID && $0.deletedAt == nil }),
+              !state.checkins.doses.contains(where: { $0.id != id && $0.deletedAt == nil && $0.supplementID == dose.supplementID && $0.date == dose.date }) else { return false }
+        transact { state in
+            guard let index = state.checkins.doses.firstIndex(where: { $0.id == id }) else { return }
+            state.checkins.doses[index].deletedAt = nil
+        }
+        return state.checkins.doses.first(where: { $0.id == id })?.deletedAt == nil
+    }
+
+    func permanentlyDeleteSupplementDose(_ id: UUID) {
+        transact { $0.checkins.doses.removeAll { $0.id == id && $0.deletedAt != nil } }
     }
 
     func purgeExpiredCheckIns(asOf date: Date = .now) {
@@ -1508,10 +1567,9 @@ final class LogbookStore: ObservableObject {
             guard let deletedAt = record.deletedAt else { return false }
             return date.timeIntervalSince(deletedAt) >= expiration
         }
-        let knownSupplementIDs = Set(checkins.supplements.map(\.id))
         checkins.doses.removeAll { dose in
-            guard !knownSupplementIDs.contains(dose.supplementID) else { return false }
-            return true
+            if let deletedAt = dose.deletedAt, date.timeIntervalSince(deletedAt) >= expiration { return true }
+            return !checkins.supplements.contains { $0.id == dose.supplementID }
         }
         return checkins.sleep.count + checkins.weights.count + checkins.supplements.count + checkins.doses.count != originalCount
     }

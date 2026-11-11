@@ -580,7 +580,11 @@ private struct FoodSearchScreen: View {
                     }
                     .accessibilityIdentifier("food-search-online")
                 } footer: {
-                    Text("Search the Canadian Nutrient File and Open Food Facts. Requests run only when you submit, to respect provider limits.")
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Search the Canadian Nutrient File and Open Food Facts. Requests run only when you submit, to respect provider limits.")
+                        Text("Open Food Facts data is licensed under ODbL; attribution and share-alike terms apply to reused datasets. Imported results include source details.")
+                            .font(.caption2)
+                    }
                 }
             }
             Section(recentOnly ? "Recently logged" : (favoriteOnly ? "Favorites" : "Foods")) {
@@ -592,6 +596,9 @@ private struct FoodSearchScreen: View {
                                 Text("\(Int(food.calories)) kcal · \(Int(food.protein)) g protein per \(food.basisAmount.formatted()) \(food.basisUnit)")
                                     .font(.caption).foregroundStyle(.secondary)
                                 Text(food.source).font(.caption2).foregroundStyle(.tertiary)
+                                if let sourceURL = food.sourceURL, let url = URL(string: sourceURL) {
+                                    Link("View source", destination: url).font(.caption2)
+                                }
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                         }
@@ -832,7 +839,7 @@ private struct FoodLogEditorScreen: View {
     }
 }
 
-private struct FoodHistoryScreen: View {
+struct FoodHistoryScreen: View {
     @EnvironmentObject private var store: LogbookStore
     private var logs: [FoodLog] { store.state.nutrition.logs.filter { $0.deletedAt == nil }.sorted { ($0.date, $0.confirmedAt) > ($1.date, $1.confirmedAt) } }
     var body: some View {

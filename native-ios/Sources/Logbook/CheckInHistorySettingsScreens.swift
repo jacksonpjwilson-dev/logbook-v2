@@ -2,7 +2,7 @@ import Charts
 import SwiftUI
 import UniformTypeIdentifiers
 
-private enum CheckInPermanentDeleteKind { case sleep, weight, supplement }
+private enum CheckInPermanentDeleteKind { case sleep, weight, supplement, supplementDose }
 private struct CheckInPermanentDelete: Identifiable {
     let kind: CheckInPermanentDeleteKind
     let id: UUID
@@ -10,7 +10,15 @@ private struct CheckInPermanentDelete: Identifiable {
 
 struct CheckInScreen: View {
     @EnvironmentObject private var store: LogbookStore
-    @State private var selectedDate = Calendar.current.startOfDay(for: .now)
+    private let initialFocusSection: CheckInSection?
+    private let initialSleepID: UUID?
+    @State private var selectedDate: Date
+
+    init(initialDate: Date = .now, focusSection: CheckInSection? = nil, sleepID: UUID? = nil) {
+        _selectedDate = State(initialValue: Calendar.current.startOfDay(for: initialDate))
+        initialFocusSection = focusSection
+        initialSleepID = sleepID
+    }
     @State private var bedtime = Calendar.current.date(bySettingHour: 22, minute: 30, second: 0, of: .now) ?? .now
     @State private var wakeTime = Calendar.current.date(bySettingHour: 6, minute: 30, second: 0, of: .now) ?? .now
     @State private var sleepIsNap = false
@@ -174,8 +182,8 @@ struct CheckInScreen: View {
 
                 let deleted = store.recentlyDeletedCheckIns()
                 Section("Recently Deleted · 30 days") {
-                    if deleted.sleep.isEmpty && deleted.weights.isEmpty && deleted.supplements.isEmpty {
-                        Text("Deleted sleep, weight and supplement records can be restored here for 30 days.")
+                    if deleted.sleep.isEmpty && deleted.weights.isEmpty && deleted.supplements.isEmpty && deleted.doses.isEmpty {
+                        Text("Sleep, weight, supplements and individual doses can be restored here for 30 days.")
                             .font(.footnote).foregroundStyle(.secondary)
                     }
                     ForEach(deleted.sleep) { record in
@@ -214,6 +222,18 @@ struct CheckInScreen: View {
                             .accessibilityIdentifier("permanently-delete-supplement-\(record.id.uuidString)")
                         }
                     }
+                    ForEach(deleted.doses) { dose in
+                        HStack {
+                            Text("\(dose.supplementName) dose · \(dose.date)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedSupplementDose(dose.id) }
+                                .accessibilityIdentifier("restore-supplement-dose-\(dose.id.uuidString)")
+                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .supplementDose, id: dose.id) } label: {
+                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            }
+                            .accessibilityIdentifier("permanently-delete-supplement-dose-\(dose.id.uuidString)")
+                        }
+                    }
                 }
 
                 Section {
@@ -225,7 +245,11 @@ struct CheckInScreen: View {
             }
             .onAppear {
                 loadWeightForSelectedDate()
-                scrollToRequestedSection(using: proxy)
+                if let initialSleepID, let record = store.state.checkins.sleep.first(where: { $0.id == initialSleepID && $0.deletedAt == nil }) {
+                    editSleep(record)
+                }
+                if let initialFocusSection { scroll(to: initialFocusSection, using: proxy) }
+                else { scrollToRequestedSection(using: proxy) }
             }
             .onChange(of: selectedDate) { _, _ in loadWeightForSelectedDate() }
             .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
@@ -265,6 +289,7 @@ struct CheckInScreen: View {
                 case .sleep: store.permanentlyDeleteSleep(selection.id)
                 case .weight: store.permanentlyDeleteWeight(selection.id)
                 case .supplement: store.permanentlyDeleteSupplement(selection.id)
+                case .supplementDose: store.permanentlyDeleteSupplementDose(selection.id)
                 }
                 permanentDelete = nil
             }
@@ -385,9 +410,13 @@ struct CheckInScreen: View {
 
     private func scrollToRequestedSection(using proxy: ScrollViewProxy) {
         guard let section = store.focusedCheckInSection else { return }
+        scroll(to: section, using: proxy)
+        store.clearCheckInFocus()
+    }
+
+    private func scroll(to section: CheckInSection, using proxy: ScrollViewProxy) {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(section, anchor: .top) }
-            store.clearCheckInFocus()
         }
     }
 
@@ -521,6 +550,20 @@ struct HistoryScreen: View {
     var body: some View {
         ScrollViewReader { proxy in
         List {
+            Section("Category histories") {
+                NavigationLink("Training", destination: WorkoutCalendarScreen())
+                    .accessibilityIdentifier("history-category-training")
+                NavigationLink("Nutrition", destination: FoodHistoryScreen())
+                    .accessibilityIdentifier("history-category-nutrition")
+                NavigationLink("Weight", destination: CheckInCategoryHistoryScreen(category: .weight))
+                    .accessibilityIdentifier("history-category-weight")
+                NavigationLink("Sleep", destination: CheckInCategoryHistoryScreen(category: .sleep))
+                    .accessibilityIdentifier("history-category-sleep")
+                NavigationLink("Supplements", destination: CheckInCategoryHistoryScreen(category: .supplements))
+                    .accessibilityIdentifier("history-category-supplements")
+                NavigationLink("Habits", destination: CheckInCategoryHistoryScreen(category: .habits))
+                    .accessibilityIdentifier("history-category-habits")
+            }
             if let date = selectedHistoryDate {
                 Section {
                     Text(date).font(.caption).foregroundStyle(.secondary)
@@ -722,6 +765,132 @@ struct HistoryScreen: View {
     }
 
     private func displayedWeight(_ kg: Double) -> Double { store.state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
+}
+
+private enum CheckInHistoryCategory: String {
+    case sleep, weight, supplements, habits
+    var title: String { rawValue.capitalized }
+}
+
+private struct CheckInCategoryHistoryScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    let category: CheckInHistoryCategory
+
+    private var sleepRecords: [SleepLog] {
+        store.state.checkins.sleep.filter { $0.deletedAt == nil }.sorted { ($0.wakeDate, $0.wakeTime) > ($1.wakeDate, $1.wakeTime) }
+    }
+    private var weightRecords: [WeightLog] {
+        store.state.checkins.weights.filter { $0.deletedAt == nil }.sorted { $0.date > $1.date }
+    }
+    private var supplementRecords: [SupplementDose] {
+        store.state.checkins.doses.filter { $0.deletedAt == nil }.sorted { ($0.date, $0.supplementName) > ($1.date, $1.supplementName) }
+    }
+    private var deletedSupplementDoses: [SupplementDose] { store.recentlyDeletedCheckIns().doses }
+    @State private var doseToDeletePermanently: UUID?
+    private var habitDates: [String] {
+        Set(sleepRecords.map(\.wakeDate) + weightRecords.map(\.date) + supplementRecords.map(\.date)).sorted(by: >)
+    }
+
+    var body: some View {
+        List {
+            switch category {
+            case .sleep:
+                Section("Sleep records") {
+                    if sleepRecords.isEmpty { ContentUnavailableView("No sleep history", systemImage: "moon.zzz", description: Text("Recorded overnight sleep and naps appear here.")) }
+                    ForEach(sleepRecords) { record in
+                        if let date = LocalDay.formatter.date(from: record.wakeDate) {
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .sleep, sleepID: record.id)) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(record.isNap ? "Nap" : "Overnight sleep").font(.headline)
+                                    let quality = record.qualityRating.map { "\($0)/5 stars" } ?? "not rated"
+                                    Text("\(record.wakeDate) · \(record.durationMinutes) min · \(quality)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .accessibilityIdentifier("history-sleep-\(record.id.uuidString)")
+                            .swipeActions { Button("Delete", role: .destructive) { store.deleteSleep(record.id) } }
+                        }
+                    }
+                }
+            case .weight:
+                Section("Weight records") {
+                    if weightRecords.isEmpty { ContentUnavailableView("No weight history", systemImage: "scalemass", description: Text("Daily weight entries appear here.")) }
+                    ForEach(weightRecords) { record in
+                        if let date = LocalDay.formatter.date(from: record.date) {
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .weight)) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(record.date) · \(displayedWeight(record.kilograms)) \(store.state.home.preferredWeightUnit)")
+                                    Text("Tap to inspect or edit this measurement").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .accessibilityIdentifier("history-weight-\(record.id.uuidString)")
+                            .swipeActions { Button("Delete", role: .destructive) { store.deleteWeight(record.id) } }
+                        }
+                    }
+                }
+            case .supplements:
+                Section("Supplement dose history") {
+                    if supplementRecords.isEmpty { ContentUnavailableView("No supplement history", systemImage: "pills", description: Text("Taken and undone doses appear here.")) }
+                    ForEach(supplementRecords) { record in
+                        if let date = LocalDay.formatter.date(from: record.date) {
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .supplements)) {
+                                LabeledContent(record.supplementName, value: "\(record.date) · \(record.taken ? "Taken" : "Not taken")")
+                            }
+                            .accessibilityIdentifier("history-supplement-\(record.id.uuidString)")
+                            .swipeActions { Button("Delete", role: .destructive) { store.deleteSupplementDose(record.id) } }
+                        }
+                    }
+                }
+                Section("Recently Deleted doses") {
+                    if deletedSupplementDoses.isEmpty { Text("Deleted supplement doses can be restored for 30 days.").font(.footnote).foregroundStyle(.secondary) }
+                    ForEach(deletedSupplementDoses) { dose in
+                        HStack {
+                            Text("\(dose.supplementName) · \(dose.date)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedSupplementDose(dose.id) }
+                                .accessibilityIdentifier("restore-history-supplement-dose-\(dose.id.uuidString)")
+                            Button(role: .destructive) { doseToDeletePermanently = dose.id } label: {
+                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            }
+                        }
+                    }
+                }
+            case .habits:
+                Section("Daily completion history") {
+                    if habitDates.isEmpty { ContentUnavailableView("No habit history", systemImage: "checkmark.circle", description: Text("Sleep, weight and scheduled supplement check-ins appear here.")) }
+                    ForEach(habitDates, id: \.self) { key in
+                        if let date = LocalDay.formatter.date(from: key) {
+                            let metrics = DailyHomeMetrics(state: store.state, date: date)
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .sleep)) {
+                                LabeledContent(key, value: "\(metrics.completedCount)/\(metrics.eligibleCount) · streak \(metrics.perfectDayStreak)")
+                            }
+                            .accessibilityIdentifier("history-habit-day-\(key)")
+                        }
+                    }
+                }
+            }
+            Section {
+                NavigationLink("Manage Recently Deleted", destination: CheckInScreen())
+                    .accessibilityIdentifier("checkin-history-recently-deleted")
+            } footer: { Text("Deleted check-ins remain recoverable for 30 days from Sleep & Check-ins.") }
+        }
+        .navigationTitle("\(category.title) History")
+        .confirmationDialog("Permanently delete this supplement dose?", isPresented: Binding(
+            get: { doseToDeletePermanently != nil },
+            set: { if !$0 { doseToDeletePermanently = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete Permanently", role: .destructive) {
+                if let doseToDeletePermanently { store.permanentlyDeleteSupplementDose(doseToDeletePermanently) }
+                doseToDeletePermanently = nil
+            }
+            Button("Cancel", role: .cancel) { doseToDeletePermanently = nil }
+        } message: { Text("This cannot be undone.") }
+    }
+
+    private func displayedWeight(_ kilograms: Double) -> String {
+        let value = store.state.home.preferredWeightUnit == "lb" ? kilograms * 2.2046226218 : kilograms
+        return value.formatted(.number.precision(.fractionLength(1)))
+    }
 }
 
 private struct WorkoutHistoryDetailScreen: View {

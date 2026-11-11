@@ -41,6 +41,7 @@ targets:
           - UIInterfaceOrientationPortrait
         NSSupportsLiveActivities: true
         NSCameraUsageDescription: Logbook uses the camera only to scan a food barcode.
+        LogbookFoodProviderContactURL: "https://github.com/jacksonpjwilson-dev/logbook-v2"
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.example.logbook

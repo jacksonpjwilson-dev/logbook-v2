@@ -119,9 +119,12 @@ actor FoodCatalogService {
         for attempt in 0...2 {
             var request = URLRequest(url: url, timeoutInterval: 12)
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.1"
-            let contact = Bundle.main.infoDictionary?["LogbookFoodProviderContactEmail"] as? String
-            let trimmedContact = contact?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-            let agent = trimmedContact.isEmpty ? "Logbook/\(version)" : "Logbook/\(version) (\(trimmedContact))"
+            let configuredContact = Bundle.main.infoDictionary?["LogbookFoodProviderContactEmail"] as? String
+            let configuredURL = Bundle.main.infoDictionary?["LogbookFoodProviderContactURL"] as? String
+            let contact = [configuredContact, configuredURL, "https://github.com/jacksonpjwilson-dev/logbook-v2"]
+                .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .first { !$0.isEmpty }!
+            let agent = "Logbook/\(version) (\(contact))"
             request.setValue(agent, forHTTPHeaderField: "User-Agent")
             request.setValue("application/json", forHTTPHeaderField: "Accept")
 
