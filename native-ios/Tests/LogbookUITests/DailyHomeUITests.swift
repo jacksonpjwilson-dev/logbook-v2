@@ -658,6 +658,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoredWorkout.waitForExistence(timeout: 5), "Restoring should return that exact record to the Training history list")
         XCTAssertEqual(todaySessions.count, 2, "Restoring the session returns both same-day records")
         XCTAssertEqual(historyRows.count, 3, "Restoration preserves the separate previous-day baseline history record")
+        scrollToElement(visiblePRRows.firstMatch, in: app)
+        XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR row remains reachable after restoration")
         XCTAssertEqual(visiblePRRows.count, 1, "Restoration recalculates records without duplicating the retained PR")
     }
 
@@ -1218,7 +1220,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
         app.buttons["sleep-delete-\(sleepID)"].tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
-        scrollToElement(permanentlyDeleteSleep, in: app)
+        for _ in 0..<12 {
+            if permanentlyDeleteSleep.isHittable { break }
+            app.swipeUp()
+        }
         XCTAssertTrue(permanentlyDeleteSleep.waitForExistence(timeout: 5), "Recently Deleted offers explicit permanent removal")
         permanentlyDeleteSleep.tap()
         app.buttons["Delete Permanently"].tap()
