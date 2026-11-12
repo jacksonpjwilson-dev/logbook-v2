@@ -1229,10 +1229,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreSleep.isHittable, "The restore action should be reachable in the Recently Deleted section")
         restoreSleep.tap()
         let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
-        scrollToElement(restoredSleep, in: app)
+        scrollToElement(restoredSleep, in: app, towardTop: true)
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
         let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
-        scrollToElement(deleteRestoredSleep, in: app)
+        scrollToElement(deleteRestoredSleep, in: app, towardTop: true)
         XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
@@ -1326,7 +1326,9 @@ final class DailyHomeUITests: XCTestCase {
         }
         attachScreenshot(of: app, named: "History-Categories-Candidate")
 
-        app.buttons["history-category-sleep"].tap()
+        let sleepCategory = app.buttons["history-category-sleep"]
+        scrollToElement(sleepCategory, in: app, towardTop: true)
+        sleepCategory.tap()
         XCTAssertTrue(app.navigationBars["Sleep History"].waitForExistence(timeout: 5))
         let sleepHistoryRow = app.buttons["history-sleep-\(sleepID)"]
         XCTAssertTrue(sleepHistoryRow.waitForExistence(timeout: 5), "Sleep History keeps individual nap records")
@@ -1336,7 +1338,9 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        app.buttons["history-category-weight"].tap()
+        let weightCategory = app.buttons["history-category-weight"]
+        scrollToElement(weightCategory, in: app, towardTop: true)
+        weightCategory.tap()
         XCTAssertTrue(app.navigationBars["Weight History"].waitForExistence(timeout: 5))
         let weightHistoryRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-weight-")).firstMatch
         XCTAssertTrue(weightHistoryRow.waitForExistence(timeout: 5), "Weight History lists the saved daily measurement")
@@ -1348,7 +1352,9 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars.buttons.element(boundBy: 0).tap()
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        app.buttons["history-category-supplements"].tap()
+        let supplementCategory = app.buttons["history-category-supplements"]
+        scrollToElement(supplementCategory, in: app, towardTop: true)
+        supplementCategory.tap()
         XCTAssertTrue(app.navigationBars["Supplements History"].waitForExistence(timeout: 5))
         let supplementHistoryRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-supplement-")).firstMatch
         XCTAssertTrue(supplementHistoryRow.waitForExistence(timeout: 5), "Supplement History lists dated dose records")
@@ -1363,7 +1369,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(app.buttons["history-supplement-\(doseID)"].waitForExistence(timeout: 5), "Restoring a dose returns it to dated supplement history")
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
-        app.buttons["history-category-habits"].tap()
+        let habitsCategory = app.buttons["history-category-habits"]
+        scrollToElement(habitsCategory, in: app, towardTop: true)
+        habitsCategory.tap()
         XCTAssertTrue(app.navigationBars["Habits History"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-habit-day-")).firstMatch.waitForExistence(timeout: 5), "Habits History derives dated completion records")
         attachScreenshot(of: app, named: "Habits-History-Candidate")
