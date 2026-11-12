@@ -519,6 +519,10 @@ struct HistoryScreen: View {
     @State private var workoutToDeletePermanently: UUID?
     @State private var selectedHistoryDate: String?
     @State private var selectedStrengthExerciseID = ""
+
+    init(initialDate: String? = nil) {
+        _selectedHistoryDate = State(initialValue: initialDate)
+    }
     private let ranges = [7, 30, 90]
     private var cutoff: String {
         LocalDay.string(Calendar.current.date(byAdding: .day, value: -range + 1, to: .now) ?? .now)
@@ -550,13 +554,18 @@ struct HistoryScreen: View {
         NutritionHistorySeries.protein(from: store.state.nutrition.logs, since: cutoff)
     }
 
+    private func scrollToSelectedDate(using proxy: ScrollViewProxy) {
+        guard selectedHistoryDate != nil else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day", anchor: .top) }
+        }
+    }
+
     private func consumeFocusedDate(using proxy: ScrollViewProxy) {
         guard let date = store.focusedHistoryDate else { return }
         selectedHistoryDate = date
         store.consumeHistoryDateFocus()
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day", anchor: .top) }
-        }
+        scrollToSelectedDate(using: proxy)
     }
 
     var body: some View {
@@ -746,14 +755,13 @@ struct HistoryScreen: View {
         }
         .onAppear {
             consumeFocusedDate(using: proxy)
+            scrollToSelectedDate(using: proxy)
             if selectedStrengthExerciseID.isEmpty { selectedStrengthExerciseID = strengthOptions.first?.id ?? "" }
         }
         .onChange(of: store.focusedHistoryDate) { _, _ in consumeFocusedDate(using: proxy) }
         .onChange(of: selectedHistoryDate) { _, date in
             guard date != nil else { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day", anchor: .top) }
-            }
+            scrollToSelectedDate(using: proxy)
         }
         }
         .navigationTitle("History")

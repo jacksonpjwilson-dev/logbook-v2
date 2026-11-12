@@ -60,6 +60,7 @@ struct LogbookApp: App {
                             case .training: TrainingScreen()
                             case .food: FoodScreen()
                             case .history: HistoryScreen()
+                            case .historyDate(let date): HistoryScreen(initialDate: date)
                             case .checkins: CheckInScreen()
                             case .settings: SettingsScreen()
                             }
@@ -84,8 +85,15 @@ struct LogbookApp: App {
                     }
                 }
                 .onOpenURL { url in
-                    guard url.scheme == "logbook", let route = LogbookRoute(rawValue: url.host ?? "") else { return }
-                    path = [route]
+                    guard url.scheme == "logbook" else { return }
+                    switch url.host {
+                    case "training": path = [.training]
+                    case "food": path = [.food]
+                    case "history": path = [.history]
+                    case "checkins": path = [.checkins]
+                    case "settings": path = [.settings]
+                    default: break
+                    }
                 }
                 .alert("Data needs attention", isPresented: Binding(
                     get: { store.persistenceError != nil },

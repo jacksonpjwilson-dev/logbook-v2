@@ -995,8 +995,8 @@ struct LogbookState: Codable {
     }
 }
 
-enum LogbookRoute: String, Hashable {
-    case training, food, history, checkins, settings
+enum LogbookRoute: Hashable {
+    case training, food, history, historyDate(String), checkins, settings
 }
 
 enum FoodNavigationFocus: Equatable {

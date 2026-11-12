@@ -1382,6 +1382,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(activityDay.waitForExistence(timeout: 5), "The numbered activity heatmap should be tappable")
         let dateKey = String(activityDay.identifier.dropFirst("activity-day-".count))
         activityDay.tap()
+        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5), "Selecting a heatmap day navigates to History")
         let selectedHistoryDate = app.staticTexts["history-selected-day-date"]
         XCTAssertTrue(selectedHistoryDate.waitForExistence(timeout: 5), "Heatmap selection opens and scrolls to that day in History")
         XCTAssertEqual(selectedHistoryDate.label, dateKey)

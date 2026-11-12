@@ -361,12 +361,7 @@ private struct HomePageGrid: View {
                 state: store.state,
                 openHistory: { open(.history) },
                 openHistoryDate: { date in
-                    open(.history)
-                    // Deliver the date after the History destination is active so
-                    // a prebuilt/off-screen destination cannot consume the focus.
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                        store.focusHistoryDate(date)
-                    }
+                    open(.historyDate(date))
                 }
             )
             .frame(width: width, height: height)
