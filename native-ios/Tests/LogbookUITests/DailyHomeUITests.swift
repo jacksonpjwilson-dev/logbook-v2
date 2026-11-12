@@ -579,25 +579,28 @@ final class DailyHomeUITests: XCTestCase {
         dateFormatter.timeZone = .current
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let today = dateFormatter.string(from: .now)
-        let todayRow = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today)).firstMatch
-        scrollToElement(todayRow, in: app)
-        XCTAssertTrue(todayRow.waitForExistence(timeout: 5), "History surfaces the completed sessions for today")
         let previousDay = dateFormatter.string(from: Calendar.current.date(byAdding: .day, value: -1, to: .now)!)
-        let baselineRow = app.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "history-workout-", previousDay
-        )).firstMatch
-        scrollToElement(baselineRow, in: app)
-        XCTAssertTrue(baselineRow.waitForExistence(timeout: 5), "The fixture's prior-day baseline remains a distinct history record")
-        let baselineWorkoutID = String(baselineRow.identifier.dropFirst("history-workout-".count))
-        XCTAssertFalse(baselineWorkoutID.isEmpty)
         let calendarButton = app.buttons["workout-calendar-open"]
         scrollToElement(calendarButton, in: app)
         calendarButton.tap()
         XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5))
+
+        // Verify date grouping in the calendar itself. History rows are lazy and
+        // their accessibility labels vary with the list's visible child content.
+        let calendarPrevious = app.buttons["workout-calendar-\(previousDay)"]
+        if !calendarPrevious.waitForExistence(timeout: 2) {
+            app.buttons["Previous month"].tap()
+        }
+        XCTAssertTrue(calendarPrevious.waitForExistence(timeout: 5), "The prior-day calendar cell must be available")
+        calendarPrevious.tap()
+        let calendarSessionRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "calendar-workout-"))
+        XCTAssertEqual(calendarSessionRows.count, 1, "The fixture has one distinct prior-day baseline workout")
+        let baselineWorkoutID = String(calendarSessionRows.firstMatch.identifier.dropFirst("calendar-workout-".count))
+        XCTAssertFalse(baselineWorkoutID.isEmpty)
+
         let calendarToday = app.buttons["workout-calendar-\(today)"]
         XCTAssertTrue(calendarToday.waitForExistence(timeout: 5))
         calendarToday.tap()
-        let calendarSessionRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "calendar-workout-"))
         XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
         let editedWorkoutID = String(calendarSessionRows.firstMatch.identifier.dropFirst("calendar-workout-".count))
         let retainedWorkoutID = String(calendarSessionRows.element(boundBy: 1).identifier.dropFirst("calendar-workout-".count))
@@ -649,15 +652,15 @@ final class DailyHomeUITests: XCTestCase {
             1,
             "The selected calendar day contains only the retained completed session"
         )
+        // Confirm the untouched prior-day record remains after deleting one
+        // of today's sessions, then return to Today before closing the calendar.
+        calendarPrevious.tap()
+        XCTAssertTrue(app.buttons["calendar-workout-\(baselineWorkoutID)"].waitForExistence(timeout: 5),
+                      "Deleting today's workout must preserve the prior-day record")
+        calendarToday.tap()
+        XCTAssertEqual(calendarSessionRows.count, 1, "Only the retained same-day session remains")
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        let retainedWorkout = app.descendants(matching: .any)["history-workout-\(retainedWorkoutID)"]
-        scrollToElement(retainedWorkout, in: app)
-        XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Deleting one of two same-day sessions leaves the other exact session active")
-        XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
-        let retainedBaseline = app.descendants(matching: .any)["history-workout-\(baselineWorkoutID)"]
-        scrollToElement(retainedBaseline, in: app)
-        XCTAssertTrue(retainedBaseline.waitForExistence(timeout: 5), "Deleting one session preserves the prior-day baseline record")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
         scrollToElement(visiblePRRows.firstMatch, in: app)
         XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR must be discoverable in the lazy History list")

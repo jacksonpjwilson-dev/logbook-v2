@@ -92,13 +92,18 @@ struct CheckInScreen: View {
                                             .font(.caption).foregroundStyle(.secondary)
                                     }
                                     .frame(maxWidth: .infinity, alignment: .leading)
+                                    .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                                 .accessibilityIdentifier("sleep-edit-\(record.id.uuidString)")
                                 Button(role: .destructive) { store.deleteSleep(record.id) } label: {
-                                    Image(systemName: "trash").frame(width: 38, height: 42)
+                                    Image(systemName: "trash")
+                                        .frame(width: 44, height: 44)
+                                        .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.borderless)
+                                .frame(width: 44, height: 44)
                                 .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
                                 .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
                             }
