@@ -830,10 +830,10 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(foodHistory, in: app)
         XCTAssertTrue(foodHistory.waitForExistence(timeout: 5))
         foodHistory.tap()
-        XCTAssertTrue(app.descendants(matching: .any)["food-history-screen"].waitForExistence(timeout: 5), "Food History navigation reaches the persistent record list")
-        attachScreenshot(of: app, named: "Food-History-Candidate")
+        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5), "Food History navigation opens the persistent record screen")
         let historyRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
-        XCTAssertTrue(historyRow.waitForExistence(timeout: 5))
+        XCTAssertTrue(historyRow.waitForExistence(timeout: 5), "Food History exposes the saved record row")
+        attachScreenshot(of: app, named: "Food-History-Candidate")
         historyRow.tap()
         XCTAssertTrue(app.navigationBars["Edit food entry"].waitForExistence(timeout: 5))
         attachScreenshot(of: app, named: "Food-History-Edit-Candidate")
@@ -1223,11 +1223,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
-        for _ in 0..<12 {
-            if permanentlyDeleteSleep.isHittable { break }
-            app.swipeUp()
-        }
+        scrollToElement(permanentlyDeleteSleep, in: app)
         XCTAssertTrue(permanentlyDeleteSleep.waitForExistence(timeout: 5), "Recently Deleted offers explicit permanent removal")
+        XCTAssertTrue(permanentlyDeleteSleep.isHittable, "Permanent removal must be reachable from the active Recently Deleted list")
         permanentlyDeleteSleep.tap()
         app.buttons["Delete Permanently"].tap()
         XCTAssertFalse(app.buttons["restore-sleep-\(sleepID)"].exists, "Permanent deletion removes the record from recovery")
