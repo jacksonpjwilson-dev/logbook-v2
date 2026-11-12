@@ -192,9 +192,12 @@ struct CheckInScreen: View {
                             Spacer()
                             Button("Restore") { restoreSleep(record, using: proxy) }
                                 .accessibilityIdentifier("restore-sleep-\(record.id.uuidString)")
-                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .sleep, id: record.id) } label: {
-                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .sleep, id: record.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
                             }
+                            .accessibilityLabel("Delete Permanently")
                             .accessibilityIdentifier("permanently-delete-sleep-\(record.id.uuidString)")
                         }
                     }
@@ -204,9 +207,12 @@ struct CheckInScreen: View {
                             Spacer()
                             Button("Restore") { restoreWeight(record, using: proxy) }
                                 .accessibilityIdentifier("restore-weight-\(record.id.uuidString)")
-                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .weight, id: record.id) } label: {
-                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .weight, id: record.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
                             }
+                            .accessibilityLabel("Delete Permanently")
                             .accessibilityIdentifier("permanently-delete-weight-\(record.id.uuidString)")
                         }
                     }
@@ -216,9 +222,12 @@ struct CheckInScreen: View {
                             Spacer()
                             Button("Restore") { restoreSupplement(record, using: proxy) }
                                 .accessibilityIdentifier("restore-supplement-\(record.id.uuidString)")
-                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .supplement, id: record.id) } label: {
-                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .supplement, id: record.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
                             }
+                            .accessibilityLabel("Delete Permanently")
                             .accessibilityIdentifier("permanently-delete-supplement-\(record.id.uuidString)")
                         }
                     }
@@ -228,9 +237,12 @@ struct CheckInScreen: View {
                             Spacer()
                             Button("Restore") { _ = store.restoreDeletedSupplementDose(dose.id) }
                                 .accessibilityIdentifier("restore-supplement-dose-\(dose.id.uuidString)")
-                            Button(role: .destructive) { permanentDelete = CheckInPermanentDelete(kind: .supplementDose, id: dose.id) } label: {
-                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .supplementDose, id: dose.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
                             }
+                            .accessibilityLabel("Delete Permanently")
                             .accessibilityIdentifier("permanently-delete-supplement-dose-\(dose.id.uuidString)")
                         }
                     }
