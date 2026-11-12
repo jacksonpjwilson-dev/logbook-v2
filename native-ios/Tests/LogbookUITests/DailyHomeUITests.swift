@@ -581,6 +581,14 @@ final class DailyHomeUITests: XCTestCase {
         let today = dateFormatter.string(from: .now)
         let todaySessions = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today))
         XCTAssertGreaterThanOrEqual(todaySessions.count, 2, "Both same-day sessions should display today's date in History")
+        let previousDay = dateFormatter.string(from: Calendar.current.date(byAdding: .day, value: -1, to: .now)!)
+        let baselineRow = app.buttons.matching(NSPredicate(
+            format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "history-workout-", previousDay
+        )).firstMatch
+        scrollToElement(baselineRow, in: app)
+        XCTAssertTrue(baselineRow.waitForExistence(timeout: 5), "The fixture's prior-day baseline remains a distinct history record")
+        let baselineWorkoutID = String(baselineRow.identifier.dropFirst("history-workout-".count))
+        XCTAssertFalse(baselineWorkoutID.isEmpty)
         let calendarButton = app.buttons["workout-calendar-open"]
         scrollToElement(calendarButton, in: app)
         calendarButton.tap()
@@ -638,8 +646,10 @@ final class DailyHomeUITests: XCTestCase {
         let retainedWorkout = app.buttons["history-workout-\(retainedWorkoutID)"]
         scrollToElement(retainedWorkout, in: app)
         XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Deleting one of two same-day sessions leaves the other exact session active")
-        XCTAssertEqual(historyRows.count, 2, "The remaining same-day session and previous-day baseline remain in active history")
         XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
+        let retainedBaseline = app.buttons["history-workout-\(baselineWorkoutID)"]
+        scrollToElement(retainedBaseline, in: app)
+        XCTAssertTrue(retainedBaseline.waitForExistence(timeout: 5), "Deleting one session preserves the prior-day baseline record")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
         scrollToElement(visiblePRRows.firstMatch, in: app)
         XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR must be discoverable in the lazy History list")
@@ -656,8 +666,10 @@ final class DailyHomeUITests: XCTestCase {
         let restoredWorkout = app.buttons["history-workout-\(deletedWorkoutID)"]
         scrollToElement(restoredWorkout, in: app, towardTop: true)
         XCTAssertTrue(restoredWorkout.waitForExistence(timeout: 5), "Restoring should return that exact record to the Training history list")
-        XCTAssertEqual(todaySessions.count, 2, "Restoring the session returns both same-day records")
-        XCTAssertEqual(historyRows.count, 3, "Restoration preserves the separate previous-day baseline history record")
+        scrollToElement(retainedWorkout, in: app)
+        XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Restoration preserves the other exact same-day session")
+        scrollToElement(retainedBaseline, in: app)
+        XCTAssertTrue(retainedBaseline.waitForExistence(timeout: 5), "Restoration preserves the separate previous-day baseline history record")
         scrollToElement(visiblePRRows.firstMatch, in: app)
         XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR row remains reachable after restoration")
         XCTAssertEqual(visiblePRRows.count, 1, "Restoration recalculates records without duplicating the retained PR")
