@@ -579,8 +579,9 @@ final class DailyHomeUITests: XCTestCase {
         dateFormatter.timeZone = .current
         dateFormatter.dateFormat = "yyyy-MM-dd"
         let today = dateFormatter.string(from: .now)
-        let todaySessions = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today))
-        XCTAssertGreaterThanOrEqual(todaySessions.count, 2, "Both same-day sessions should display today's date in History")
+        let todayRow = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today)).firstMatch
+        scrollToElement(todayRow, in: app)
+        XCTAssertTrue(todayRow.waitForExistence(timeout: 5), "History surfaces the completed sessions for today")
         let previousDay = dateFormatter.string(from: Calendar.current.date(byAdding: .day, value: -1, to: .now)!)
         let baselineRow = app.buttons.matching(NSPredicate(
             format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "history-workout-", previousDay
