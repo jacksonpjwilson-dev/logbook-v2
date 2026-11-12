@@ -636,7 +636,7 @@ final class DailyHomeUITests: XCTestCase {
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         let retainedWorkout = app.buttons["history-workout-\(retainedWorkoutID)"]
-        scrollToElement(retainedWorkout, in: app, towardTop: true)
+        scrollToElement(retainedWorkout, in: app)
         XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Deleting one of two same-day sessions leaves the other exact session active")
         XCTAssertEqual(historyRows.count, 2, "The remaining same-day session and previous-day baseline remain in active history")
         XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
@@ -1216,7 +1216,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreSleep.isHittable, "The restore action should be reachable in the Recently Deleted section")
         restoreSleep.tap()
         let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
-        scrollToElement(restoredSleep, in: app, towardTop: true)
+        scrollToElement(restoredSleep, in: app)
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
         let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
         scrollToElement(deleteRestoredSleep, in: app)
