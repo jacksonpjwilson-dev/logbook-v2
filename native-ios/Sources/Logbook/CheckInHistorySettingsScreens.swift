@@ -98,6 +98,7 @@ struct CheckInScreen: View {
                                 Button(role: .destructive) { store.deleteSleep(record.id) } label: {
                                     Image(systemName: "trash").frame(width: 38, height: 42)
                                 }
+                                .buttonStyle(.borderless)
                                 .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
                                 .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
                             }
@@ -686,6 +687,7 @@ struct HistoryScreen: View {
                         }
                     }
                     .accessibilityIdentifier("history-workout-\(session.id.uuidString)")
+                    .accessibilityLabel("\(session.templateName), \(session.localDate)")
                 }
                 Button { showingWorkoutCalendar = true } label: { Label("Workout Calendar", systemImage: "calendar") }
                     .accessibilityIdentifier("workout-calendar-open")
