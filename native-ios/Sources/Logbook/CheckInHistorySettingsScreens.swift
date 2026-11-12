@@ -557,7 +557,7 @@ struct HistoryScreen: View {
     private func scrollToSelectedDate(using proxy: ScrollViewProxy) {
         guard selectedHistoryDate != nil else { return }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day", anchor: .top) }
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day-scroll-target", anchor: .top) }
         }
     }
 
@@ -589,7 +589,7 @@ struct HistoryScreen: View {
                 Section {
                     Text(date).font(.caption).foregroundStyle(.secondary)
                         .accessibilityIdentifier("history-selected-day-date")
-                        .id("history-selected-day")
+                        .id("history-selected-day-scroll-target")
                     let nutrition = store.state.nutritionTotals(on: date)
                     let sleepMinutes = store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == date }.reduce(0) { $0 + $1.durationMinutes }
                     let activeSessions = sessions.filter { $0.localDate == date }
@@ -608,7 +608,7 @@ struct HistoryScreen: View {
                     Button("Close selected day") { selectedHistoryDate = nil }
                         .accessibilityIdentifier("history-close-selected-day")
                 }
-                .accessibilityIdentifier("history-selected-day")
+
             }
             Section {
                 Picker("Range", selection: $range) { ForEach(ranges, id: \.self) { Text("\($0) days").tag($0) } }

@@ -133,6 +133,9 @@ actor FoodCatalogService {
                 guard let http = response as? HTTPURLResponse else { throw FoodCatalogError.invalidResponse }
                 if (200..<300).contains(http.statusCode) { return data }
                 let retryable = http.statusCode == 429 || (500...599).contains(http.statusCode)
+                #if DEBUG
+                NSLog("Food provider request to %@ returned HTTP %d", url.host ?? "unknown host", http.statusCode)
+                #endif
                 guard retryable, attempt < 2 else { throw FoodCatalogError.unavailable }
                 let retryAfter = http.value(forHTTPHeaderField: "Retry-After").flatMap(Double.init)
                 let delay = retryAfter.map { min(max($0, 0.25), 8) } ?? (0.5 * pow(2, Double(attempt)))

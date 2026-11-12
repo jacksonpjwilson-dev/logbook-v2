@@ -72,7 +72,7 @@ final class DailyHomeUITests: XCTestCase {
         dailyPage.tap()
         app.buttons["home-widget-kcal"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Calories widget should open Food")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         XCTAssertTrue(app.buttons["Food page"].waitForExistence(timeout: 5))
         app.buttons["Food page"].tap()
         let foodTrendWidget = app.descendants(matching: .any)["home-widget-food-kcal"]
@@ -120,7 +120,7 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["food-home-water-log"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("250 mL"), "The Home hydration action persists to today's water log")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         app.buttons["Food page"].tap()
 
         let homeMeal = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-home-meal-")).firstMatch
@@ -129,18 +129,18 @@ final class DailyHomeUITests: XCTestCase {
         homeMeal.tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["add-to-meal-\(mealID)"].waitForExistence(timeout: 5), "A Home meal row opens the corresponding meal expanded in Food")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         app.buttons["Food page"].tap()
         app.buttons["food-home-all-meals"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["food-add-food"].waitForExistence(timeout: 5), "The All action opens the complete meal list in Food")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         app.buttons["Food page"].tap()
 
         app.buttons["food-home-nutrition-streak"].tap()
         XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.segmentedControls["food-trend-metric"].waitForExistence(timeout: 5), "The streak opens the Food adherence history")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         app.buttons["Food page"].tap()
 
         app.buttons["food-home-easy-next-action"].tap()
@@ -156,27 +156,27 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertGreaterThanOrEqual(habitSleep.frame.height, 20, "Habit rows need a reliable touch target")
         habitSleep.tap()
         XCTAssertTrue(app.buttons["sleep-save"].waitForExistence(timeout: 5), "Habits Sleep region must open Sleep controls")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["habit-weight"].tap()
         XCTAssertTrue(app.buttons["weight-save"].waitForExistence(timeout: 5), "Habits Weight region must open Weight controls")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["habit-supplements"].tap()
         XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Habits Supplements region must open supplement controls")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["checkin-sleep"].tap()
         XCTAssertTrue(app.buttons["sleep-save"].waitForExistence(timeout: 5), "Daily Check-in Sleep value must open Sleep controls")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["checkin-weight"].tap()
         XCTAssertTrue(app.buttons["weight-save"].waitForExistence(timeout: 5), "Daily Check-in Weight value must open Weight controls")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["checkin-supplements"].tap()
         XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Daily Check-in Supplements must open supplement controls")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["checkin-checklist"].tap()
         XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Checklist icon must open the supplement checklist")
@@ -186,7 +186,7 @@ final class DailyHomeUITests: XCTestCase {
         let app = launchApp()
         app.buttons["view-next-workout"].tap()
         XCTAssertTrue(app.buttons["New workout"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         app.buttons["start-next-workout"].tap()
         XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
@@ -488,7 +488,7 @@ final class DailyHomeUITests: XCTestCase {
         confirm.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         app.buttons["workout-summary-done"].tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         let nextTemplate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
         XCTAssertTrue(nextTemplate.waitForExistence(timeout: 5))
@@ -563,9 +563,9 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["confirm-finish-workout"].tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         app.buttons["workout-summary-done"].tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
 
         app.buttons["History tab"].tap()
@@ -644,11 +644,11 @@ final class DailyHomeUITests: XCTestCase {
 
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        let retainedWorkout = app.buttons["history-workout-\(retainedWorkoutID)"]
+        let retainedWorkout = app.descendants(matching: .any)["history-workout-\(retainedWorkoutID)"]
         scrollToElement(retainedWorkout, in: app)
         XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Deleting one of two same-day sessions leaves the other exact session active")
         XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
-        let retainedBaseline = app.buttons["history-workout-\(baselineWorkoutID)"]
+        let retainedBaseline = app.descendants(matching: .any)["history-workout-\(baselineWorkoutID)"]
         scrollToElement(retainedBaseline, in: app)
         XCTAssertTrue(retainedBaseline.waitForExistence(timeout: 5), "Deleting one session preserves the prior-day baseline record")
         let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
@@ -706,7 +706,7 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["confirm-finish-workout"].tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         app.buttons["workout-summary-done"].tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Completing an out-of-order workout records history without advancing the scheduled workout")
 
         programB.tap()
@@ -864,7 +864,7 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons["Delete"].tap()
         // Verify the delete through the durable soft-delete destination rather
         // than querying the same recycled List row immediately after mutation.
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         let recentlyDeleted = app.buttons["food-recently-deleted-link"]
         scrollToElement(recentlyDeleted, in: app)
         recentlyDeleted.tap()
@@ -874,12 +874,12 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restore.waitForExistence(timeout: 5), "Recently Deleted should retain the same food entry")
         restore.tap()
         XCTAssertFalse(restore.exists, "Restoring removes the food record from Recently Deleted")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         let history = app.buttons["food-history-link"]
         scrollToElement(history, in: app)
         history.tap()
         XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "QA Manual Oats")).firstMatch.waitForExistence(timeout: 5), "Restored food entry returns to Food History")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         let addAgain = app.buttons["food-add-food"]
         scrollToElement(addAgain, in: app, towardTop: true)
         addAgain.tap()
@@ -1168,6 +1168,12 @@ final class DailyHomeUITests: XCTestCase {
         return matching.firstMatch
     }
 
+    private func tapBack(in app: XCUIApplication) {
+        let backButton = app.navigationBars.buttons.element(boundBy: 0)
+        XCTAssertTrue(backButton.waitForExistence(timeout: 5), "The current screen has a back button")
+        backButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
+    }
+
     private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
         // Reacquire the visible list on each pass: navigation, sheets, and
         // List virtualization can replace its accessibility element while a
@@ -1232,7 +1238,7 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(restoredSleep, in: app, towardTop: true)
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
         let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
-        scrollToElement(deleteRestoredSleep, in: app, towardTop: true)
+        scrollToElement(deleteRestoredSleep, in: app)
         XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
@@ -1312,7 +1318,7 @@ final class DailyHomeUITests: XCTestCase {
         takeSupplement.tap()
 
         // Check-ins is a pushed screen; return to Home before using the fixed dock.
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
         XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
         app.buttons["History tab"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
@@ -1335,8 +1341,8 @@ final class DailyHomeUITests: XCTestCase {
         attachScreenshot(of: app, named: "Sleep-History-Candidate")
         sleepHistoryRow.tap()
         XCTAssertTrue(app.buttons["sleep-edit-\(sleepID)"].waitForExistence(timeout: 5), "A history row opens its exact editable check-in record")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
+        tapBack(in: app)
 
         let weightCategory = app.buttons["history-category-weight"]
         scrollToElement(weightCategory, in: app, towardTop: true)
@@ -1349,8 +1355,8 @@ final class DailyHomeUITests: XCTestCase {
         let currentWeight = app.descendants(matching: .any)["weight-current-value"]
         XCTAssertTrue(currentWeight.waitForExistence(timeout: 5))
         XCTAssertTrue(currentWeight.label.contains("78"), "Weight history navigates to the selected date's editable value")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
+        tapBack(in: app)
 
         let supplementCategory = app.buttons["history-category-supplements"]
         scrollToElement(supplementCategory, in: app, towardTop: true)
@@ -1367,7 +1373,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreDose.waitForExistence(timeout: 5), "Deleted supplement doses are retained for recovery")
         restoreDose.tap()
         XCTAssertTrue(app.buttons["history-supplement-\(doseID)"].waitForExistence(timeout: 5), "Restoring a dose returns it to dated supplement history")
-        app.navigationBars.buttons.element(boundBy: 0).tap()
+        tapBack(in: app)
 
         let habitsCategory = app.buttons["history-category-habits"]
         scrollToElement(habitsCategory, in: app, towardTop: true)
@@ -1404,7 +1410,7 @@ final class DailyHomeUITests: XCTestCase {
         let dateKey = String(activityDay.identifier.dropFirst("activity-day-".count))
         activityDay.tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5), "Selecting a heatmap day navigates to History")
-        let selectedHistoryDate = app.staticTexts["history-selected-day-date"]
+        let selectedHistoryDate = app.descendants(matching: .any)["history-selected-day-date"]
         XCTAssertTrue(selectedHistoryDate.waitForExistence(timeout: 5), "Heatmap selection opens and scrolls to that day in History")
         XCTAssertEqual(selectedHistoryDate.label, dateKey)
         attachScreenshot(of: app, named: "Progress-Home-Candidate")
