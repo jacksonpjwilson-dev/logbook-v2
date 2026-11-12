@@ -1218,7 +1218,10 @@ final class DailyHomeUITests: XCTestCase {
         let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
         scrollToElement(restoredSleep, in: app, towardTop: true)
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
-        app.buttons["sleep-delete-\(sleepID)"].tap()
+        let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
+        scrollToElement(deleteRestoredSleep, in: app)
+        XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
+        deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
         for _ in 0..<12 {
             if permanentlyDeleteSleep.isHittable { break }
@@ -1274,6 +1277,7 @@ final class DailyHomeUITests: XCTestCase {
         let sleepID = String(sleepRow.identifier.dropFirst("sleep-edit-".count))
 
         let weightField = app.textFields["checkin-weight-value"]
+        scrollToElement(weightField, in: app)
         XCTAssertTrue(weightField.waitForExistence(timeout: 5))
         replaceText(in: weightField, with: "78")
         dismissKeyboard(in: app)
@@ -1296,6 +1300,9 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(takeSupplement.waitForExistence(timeout: 5))
         takeSupplement.tap()
 
+        // Check-ins is a pushed screen; return to Home before using the fixed dock.
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
         app.buttons["History tab"].tap()
         XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
         let categoryIDs = [
