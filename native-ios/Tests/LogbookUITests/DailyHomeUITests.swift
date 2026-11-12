@@ -1,1448 +1,1468 @@
-import XCTest
+import Charts
+import SwiftUI
+import UniformTypeIdentifiers
 
-final class DailyHomeUITests: XCTestCase {
-    override func setUpWithError() throws {
-        continueAfterFailure = false
+private enum CheckInPermanentDeleteKind { case sleep, weight, supplement, supplementDose }
+private struct CheckInPermanentDelete: Identifiable {
+    let kind: CheckInPermanentDeleteKind
+    let id: UUID
+}
+
+struct CheckInScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    private let initialFocusSection: CheckInSection?
+    private let initialSleepID: UUID?
+    @State private var selectedDate: Date
+
+    init(initialDate: Date = .now, focusSection: CheckInSection? = nil, sleepID: UUID? = nil) {
+        _selectedDate = State(initialValue: Calendar.current.startOfDay(for: initialDate))
+        initialFocusSection = focusSection
+        initialSleepID = sleepID
+    }
+    @State private var bedtime = Calendar.current.date(bySettingHour: 22, minute: 30, second: 0, of: .now) ?? .now
+    @State private var wakeTime = Calendar.current.date(bySettingHour: 6, minute: 30, second: 0, of: .now) ?? .now
+    @State private var sleepIsNap = false
+    @State private var manualDuration = ""
+    @State private var qualityRating = 0
+    @State private var editingSleepID: UUID?
+    @State private var weight = ""
+    @State private var showWeightSaved = false
+    @State private var showSleepReplace = false
+    @State private var showWeightReplace = false
+    @State private var showSupplementEditor = false
+    @State private var editingSupplement: Supplement?
+    @State private var permanentDelete: CheckInPermanentDelete?
+
+    private var unit: String { store.state.home.preferredWeightUnit }
+    private var dateKey: String { LocalDay.string(selectedDate) }
+    private var weightForDate: WeightLog? { store.state.checkins.weights.first { $0.deletedAt == nil && $0.date == dateKey } }
+    private var activeSleep: [SleepLog] {
+        store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == dateKey }.sorted { $0.wakeTime > $1.wakeTime }
+    }
+    private var activeSupplements: [Supplement] { store.state.checkins.supplements.filter { $0.deletedAt == nil }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending } }
+    private var previousWeight: WeightLog? {
+        store.state.checkins.weights.filter { $0.deletedAt == nil && $0.date < dateKey }.max { $0.date < $1.date }
     }
 
-    func testDailyHomeLayoutAndCaptureAllHomePages() throws {
-        let app = launchApp()
-        let calories = app.buttons["home-widget-kcal"]
-        let nextWorkout = app.descendants(matching: .any)["home-widget-next"]
-        let habits = app.otherElements["home-widget-streak"]
-        let checkIn = app.otherElements["home-widget-vitals"]
-
-        XCTAssertTrue(calories.waitForExistence(timeout: 20), "Daily nutrition widget did not appear")
-        XCTAssertTrue(nextWorkout.exists)
-        XCTAssertTrue(habits.exists)
-        XCTAssertTrue(checkIn.exists)
-        XCTAssertTrue(calories.label.localizedCaseInsensitiveContains("Calories and macros remaining"))
-        XCTAssertTrue(nextWorkout.label.contains("Upper Body"))
-        XCTAssertTrue(nextWorkout.label.contains("4 exercises"))
-        XCTAssertTrue(nextWorkout.label.contains("minutes"))
-        XCTAssertTrue(app.buttons["start-next-workout"].exists)
-        XCTAssertEqual(app.buttons["start-next-workout"].label, "Start workout")
-        XCTAssertTrue(app.buttons["view-next-workout"].exists)
-        let checkInTitle = app.staticTexts["DAILY CHECK-IN"]
-        XCTAssertTrue(checkInTitle.exists)
-        XCTAssertLessThan(checkInTitle.frame.height, 13, "The check-in heading should stay on one line in its fixed square cell")
-        XCTAssertTrue(app.buttons["habit-sleep"].exists)
-        XCTAssertTrue(app.buttons["habit-weight"].exists)
-        XCTAssertTrue(app.buttons["habit-supplements"].exists)
-        XCTAssertTrue(app.buttons["checkin-sleep"].exists)
-        XCTAssertTrue(app.buttons["checkin-weight"].exists)
-        XCTAssertTrue(app.buttons["checkin-supplements"].exists)
-
-        let measuredMediumSize = (nextWorkout.value as? String ?? "").split(separator: "|").compactMap { Double($0) }
-        XCTAssertEqual(measuredMediumSize.count, 2, "Next Workout should expose its measured outer widget dimensions")
-        let mediumWidth = measuredMediumSize.count == 2 ? measuredMediumSize[0] : nextWorkout.frame.width
-        let mediumHeight = measuredMediumSize.count == 2 ? measuredMediumSize[1] : nextWorkout.frame.height
-        XCTAssertEqual(calories.frame.width, mediumWidth, accuracy: 2)
-        XCTAssertGreaterThan(calories.frame.height, mediumHeight)
-        XCTAssertEqual(habits.frame.width, checkIn.frame.width, accuracy: 2)
-        XCTAssertEqual(habits.frame.width, habits.frame.height, accuracy: 2, "Small widgets must occupy square cells")
-        XCTAssertEqual(calories.frame.width, calories.frame.height, accuracy: 2, "Large widgets must be square")
-        XCTAssertEqual(mediumHeight, habits.frame.height, accuracy: 2, "Medium widget must be two cells wide and one cell tall")
-        XCTAssertEqual(mediumWidth, habits.frame.width * 2 + 9, accuracy: 3, "Medium width must span two cells and one grid gap")
-        XCTAssertEqual(habits.frame.minY, checkIn.frame.minY, accuracy: 2)
-        XCTAssertLessThanOrEqual(calories.frame.maxY, nextWorkout.frame.minY)
-        XCTAssertLessThanOrEqual(nextWorkout.frame.minY + mediumHeight, habits.frame.minY)
-        XCTAssertLessThan(habits.frame.maxY, app.buttons["Training tab"].frame.minY)
-        XCTAssertTrue(app.buttons["Training tab"].exists)
-        XCTAssertTrue(app.buttons["Food tab"].exists)
-        XCTAssertTrue(app.buttons["History tab"].exists)
-        XCTAssertTrue(app.buttons["Sleep tab"].exists)
-        XCTAssertTrue(app.buttons["Settings tab"].exists)
-
-        let pageNames = ["Daily page", "Training page", "Food page", "Progress & History page"]
-        XCTAssertEqual(app.buttons.matching(NSPredicate(format: "label IN %@", pageNames)).count, 4)
-
-        let dockFrame = app.buttons["Training tab"].frame
-        let measurement = "Default Daily widget frames (points): large=\(calories.frame), mediumElement=\(nextWorkout.frame), mediumMeasuredSize=\(measuredMediumSize), small-left=\(habits.frame), small-right=\(checkIn.frame), dock=\(dockFrame)"
-        print("GRID_MEASUREMENT: \(measurement)")
-        add(XCTAttachment(string: measurement))
-
-        attachScreenshot(of: app, named: "Home-Daily-Default-Candidate")
-        capturePage("Training", in: app)
-        capturePage("Food", in: app)
-        capturePage("Progress & History", in: app)
-
-        let dailyPage = app.buttons["Daily page"]
-        XCTAssertTrue(dailyPage.waitForExistence(timeout: 5))
-        dailyPage.tap()
-        app.buttons["home-widget-kcal"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Calories widget should open Food")
-        tapBack(in: app)
-        XCTAssertTrue(app.buttons["Food page"].waitForExistence(timeout: 5))
-        app.buttons["Food page"].tap()
-        let foodTrendWidget = app.descendants(matching: .any)["home-widget-food-kcal"]
-        let foodMealsWidget = app.descendants(matching: .any)["home-widget-food-meals"]
-        let foodStreakWidget = app.descendants(matching: .any)["home-widget-food-fibre"]
-        let easyNextWidget = app.descendants(matching: .any)["home-widget-food-easynext"]
-        XCTAssertTrue(foodTrendWidget.waitForExistence(timeout: 5))
-        XCTAssertTrue(foodMealsWidget.exists)
-        XCTAssertTrue(foodStreakWidget.exists)
-        XCTAssertTrue(easyNextWidget.exists)
-        // The grid container publishes the exact frame values it gave each
-        // widget; child-content accessibility bounds can be smaller than the
-        // rounded exterior surface.
-        let trendFrame = foodTrendWidget
-        let mealsFrame = foodMealsWidget
-        let streakFrame = foodStreakWidget
-        let easyNextFrame = easyNextWidget
-        func measuredSize(_ element: XCUIElement) -> (width: Double, height: Double) {
-            let values = (element.value as? String ?? "").split(separator: "|").compactMap { Double($0) }
-            return (values.count == 2 ? values[0] : element.frame.width,
-                    values.count == 2 ? values[1] : element.frame.height)
-        }
-        let trendSize = measuredSize(trendFrame)
-        let mealsSize = measuredSize(mealsFrame)
-        let streakSize = measuredSize(streakFrame)
-        let easyNextSize = measuredSize(easyNextFrame)
-        XCTAssertEqual(trendSize.width, trendSize.height, accuracy: 2)
-        XCTAssertEqual(mealsSize.width, trendSize.width, accuracy: 2)
-        XCTAssertGreaterThan(trendSize.height, mealsSize.height)
-        XCTAssertEqual(streakSize.width, easyNextSize.width, accuracy: 2)
-        XCTAssertEqual(streakSize.width, streakSize.height, accuracy: 2)
-        XCTAssertEqual(mealsSize.height, streakSize.height, accuracy: 2)
-        XCTAssertLessThan(streakFrame.frame.maxY, app.buttons["Training tab"].frame.minY, "Food widgets stay above the fixed dock on supported simulators")
-        XCTAssertTrue(app.segmentedControls["food-home-trend-picker"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["food-home-seven-day-chart"].exists)
-        attachScreenshot(of: app, named: "Home-Food-Widgets-Candidate")
-
-        let trendPicker = app.segmentedControls["food-home-trend-picker"]
-        for metric in ["Protein", "Carbs", "Fats", "Calories"] {
-            trendPicker.buttons[metric].tap()
-            XCTAssertTrue(app.descendants(matching: .any)["food-home-seven-day-chart"].exists)
-        }
-
-        app.buttons["food-home-water-250"].tap()
-        app.buttons["food-home-water-log"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("250 mL"), "The Home hydration action persists to today's water log")
-        tapBack(in: app)
-        app.buttons["Food page"].tap()
-
-        let homeMeal = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-home-meal-")).firstMatch
-        XCTAssertTrue(homeMeal.waitForExistence(timeout: 5))
-        let mealID = String(homeMeal.identifier.dropFirst("food-home-meal-".count))
-        homeMeal.tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["add-to-meal-\(mealID)"].waitForExistence(timeout: 5), "A Home meal row opens the corresponding meal expanded in Food")
-        tapBack(in: app)
-        app.buttons["Food page"].tap()
-        app.buttons["food-home-all-meals"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["food-add-food"].waitForExistence(timeout: 5), "The All action opens the complete meal list in Food")
-        tapBack(in: app)
-        app.buttons["Food page"].tap()
-
-        app.buttons["food-home-nutrition-streak"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.segmentedControls["food-trend-metric"].waitForExistence(timeout: 5), "The streak opens the Food adherence history")
-        tapBack(in: app)
-        app.buttons["Food page"].tap()
-
-        app.buttons["food-home-easy-next-action"].tap()
-        for option in ["food-option-search", "food-option-scan", "food-option-manual", "food-option-recent"] {
-            XCTAssertTrue(app.buttons[option].waitForExistence(timeout: 3), "Easy Next opens one of the four approved Add Food options")
-        }
-    }
-
-    func testDailySmallWidgetRegionsOpenTheirMatchingCheckInSections() throws {
-        let app = launchApp()
-        let habitSleep = app.buttons["habit-sleep"]
-        XCTAssertTrue(habitSleep.waitForExistence(timeout: 10))
-        XCTAssertGreaterThanOrEqual(habitSleep.frame.height, 20, "Habit rows need a reliable touch target")
-        habitSleep.tap()
-        XCTAssertTrue(app.buttons["sleep-save"].waitForExistence(timeout: 5), "Habits Sleep region must open Sleep controls")
-        tapBack(in: app)
-
-        app.buttons["habit-weight"].tap()
-        XCTAssertTrue(app.buttons["weight-save"].waitForExistence(timeout: 5), "Habits Weight region must open Weight controls")
-        tapBack(in: app)
-
-        app.buttons["habit-supplements"].tap()
-        XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Habits Supplements region must open supplement controls")
-        tapBack(in: app)
-
-        app.buttons["checkin-sleep"].tap()
-        XCTAssertTrue(app.buttons["sleep-save"].waitForExistence(timeout: 5), "Daily Check-in Sleep value must open Sleep controls")
-        tapBack(in: app)
-
-        app.buttons["checkin-weight"].tap()
-        XCTAssertTrue(app.buttons["weight-save"].waitForExistence(timeout: 5), "Daily Check-in Weight value must open Weight controls")
-        tapBack(in: app)
-
-        app.buttons["checkin-supplements"].tap()
-        XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Daily Check-in Supplements must open supplement controls")
-        tapBack(in: app)
-
-        app.buttons["checkin-checklist"].tap()
-        XCTAssertTrue(app.buttons["supplement-add"].waitForExistence(timeout: 5), "Checklist icon must open the supplement checklist")
-    }
-
-    func testNextWorkoutStartActionCreatesAnActiveWorkout() throws {
-        let app = launchApp()
-        app.buttons["view-next-workout"].tap()
-        XCTAssertTrue(app.buttons["New workout"].waitForExistence(timeout: 5), "View Workout must open the Training screen")
-        tapBack(in: app)
-
-        app.buttons["start-next-workout"].tap()
-        XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["Upper Body"].waitForExistence(timeout: 5), "Start Workout must create and open the scheduled program")
-        XCTAssertTrue(app.descendants(matching: .any)["training-active-session"].waitForExistence(timeout: 5), "Start Workout must create an active session")
-        let restTimer = app.descendants(matching: .any)["rest-timer-value"]
-        XCTAssertTrue(restTimer.waitForExistence(timeout: 5), "Starting Workout opens the active session with its rest card")
-        XCTAssertEqual(restTimer.label, "Ready", "A new workout starts in the Ready timer state")
-        XCTAssertTrue(app.buttons["rest-duration-menu"].exists, "Default rest duration should be adjustable")
-        // Leave enough time for the persistence/relaunch steps on the slower SE
-        // simulator while still exercising the normal timer controls.
-        app.buttons["rest-duration-menu"].tap()
-        app.buttons["180 seconds"].tap()
-        XCTAssertTrue(app.descendants(matching: .any)["workout-set-table-header"].exists, "Active workout should show its five-column set table")
-        let activeExerciseHeader = app.buttons.matching(
-            NSPredicate(format: "identifier BEGINSWITH %@", "active-exercise-header-")
-        ).firstMatch
-        XCTAssertTrue(activeExerciseHeader.waitForExistence(timeout: 5), "The active workout should render its current exercise")
-        XCTAssertEqual((activeExerciseHeader.value as? String)?.lowercased(), "expanded", "The current exercise must be expanded when a session starts")
-        attachScreenshot(of: app, named: "Training-Active-Workout-Default-Candidate")
-
-        let timerWeight = inputField(app, labelled: "Weight in kilograms")
-        scrollToElement(timerWeight, in: app)
-        XCTAssertTrue(restTimer.isHittable, "The blue rest timer stays pinned below the workout header while set rows scroll")
-        XCTAssertLessThan(restTimer.frame.minY, timerWeight.frame.minY, "The timer remains above the active exercise list")
-        replaceText(in: timerWeight, with: "40")
-        dismissKeyboard(in: app)
-        attachScreenshot(of: app, named: "Training-Active-Workout-Set-Entry-Candidate")
-        let completeFirstSet = app.buttons.matching(identifier: "Mark set complete").firstMatch
-        XCTAssertTrue(completeFirstSet.waitForExistence(timeout: 5), "A planned set should be available to start its configured rest timer")
-        completeFirstSet.tap()
-        let timerStarted = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label != %@", "Ready"),
-            object: restTimer
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerStarted], timeout: 5), .completed, "Completing a set should start its configured rest interval")
-        let addTime = app.buttons["rest-add-15"]
-        scrollToElement(addTime, in: app, towardTop: true)
-        XCTAssertTrue(addTime.isHittable, "The timer extension control should be interactive")
-        // The test fixture starts a 90-second exercise rest; extend it to 210 seconds
-        // so simulator relaunch latency cannot turn this recovery test into a timer-expiry test.
-        for _ in 0..<8 {
-            addTime.tap()
-        }
-        XCTAssertNotEqual(restTimer.label, "Ready", "The timer should still be active before pausing")
-        let timerToggle = app.buttons["rest-toggle"]
-        XCTAssertTrue(timerToggle.waitForExistence(timeout: 5), "The rest timer needs one stable pause/resume control")
-        XCTAssertTrue(timerToggle.isEnabled, "The extended rest interval should still be running before pausing")
-        timerToggle.tap()
-        let timerPaused = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", "Resume rest timer"),
-            object: timerToggle
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerPaused], timeout: 5), .completed, "Pausing should persist the timer state and expose Resume")
-        XCTAssertEqual(timerToggle.label, "Resume rest timer")
-        let pausedRemaining = restTimer.label
-        app.terminate()
-        app.launch()
-        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 10), "The app should reopen to Home after termination")
-        app.buttons["Training tab"].tap()
-
-        let resumeWorkout = app.buttons["training-active-session"]
-        XCTAssertTrue(resumeWorkout.waitForExistence(timeout: 5), "A terminated app should retain a non-intrusive Resume Workout entry")
-        resumeWorkout.tap()
-        let recoveredTimer = app.descendants(matching: .any)["rest-timer-value"]
-        XCTAssertTrue(recoveredTimer.waitForExistence(timeout: 5), "The saved in-progress session resumes from Training")
-        XCTAssertEqual(recoveredTimer.label, pausedRemaining, "The paused remaining time must survive app termination")
-        let resumeTimer = app.buttons["rest-toggle"]
-        XCTAssertTrue(resumeTimer.waitForExistence(timeout: 5), "The recovered timer should preserve its paused state")
-        XCTAssertEqual(resumeTimer.value as? String, "Paused")
-        XCTAssertEqual(resumeTimer.label, "Resume rest timer")
-        XCTAssertTrue(resumeTimer.isEnabled, "A paused rest interval can be resumed after relaunch")
-        resumeTimer.tap()
-        let timerRunning = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", "Pause rest timer"),
-            object: resumeTimer
-        )
-        XCTAssertEqual(XCTWaiter.wait(for: [timerRunning], timeout: 5), .completed, "The recovered timer should resume and expose Pause")
-        XCTAssertEqual(resumeTimer.label, "Pause rest timer")
-        XCTAssertNotEqual(recoveredTimer.label, "Ready", "The recovered timer should continue running after resume")
-    }
-
-    func testDefaultTrainingHomeShowsSplitTilesAndNavigableWorkoutCalendar() throws {
-        // This isolated fixture contains eight real synthetic plan records so the
-        // screenshot exercises every tile in the approved 2-column × 4-row grid.
-        let app = launchApp(trainingSplitCount: 8)
-        app.buttons["Training page"].tap()
-
-        let allSplitTiles = (1...8).map { app.buttons["training-split-workout-\($0)"] }
-        for tile in allSplitTiles {
-            XCTAssertTrue(tile.waitForExistence(timeout: 5), "All eight synthetic workout tiles should render in the full split candidate")
-        }
-        let firstWorkout = app.buttons["training-split-workout-1"]
-        XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5), "The split widget must show a tappable numbered workout tile")
-        XCTAssertGreaterThanOrEqual(firstWorkout.frame.height, 27, "Split rows should use the available four-row grid height")
-        XCTAssertLessThanOrEqual(firstWorkout.frame.height, 100, "A split item must stay a compact tile instead of stretching into a nested card")
-        XCTAssertTrue(firstWorkout.label.contains("Upper Body"))
-        XCTAssertTrue(firstWorkout.label.localizedCaseInsensitiveContains("next scheduled"))
-        XCTAssertTrue(firstWorkout.label.localizedCaseInsensitiveContains("last completed"))
-        XCTAssertTrue(app.buttons["training-split-full"].exists, "The complete split remains available from the fixed-size widget")
-        let monthLabel = app.staticTexts["training-calendar-month-label"]
-        XCTAssertTrue(monthLabel.exists)
-        let currentMonth = monthLabel.label
-        app.buttons["training-calendar-next"].tap()
-        XCTAssertNotEqual(monthLabel.label, currentMonth, "The in-widget calendar month control must change the displayed month")
-        app.buttons["training-calendar-previous"].tap()
-        XCTAssertEqual(monthLabel.label, currentMonth)
-
-        attachScreenshot(of: app, named: "Home-Training-Default-Interactive-Candidate")
-        let calendarDay = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-calendar-day-")).firstMatch
-        XCTAssertTrue(calendarDay.waitForExistence(timeout: 5), "The compact calendar must expose tappable dates")
-        calendarDay.tap()
-        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Selecting a date opens the full calendar and its session history")
-        app.buttons["Done"].tap()
-        firstWorkout.tap()
-        XCTAssertTrue(app.buttons["Start Upper Body"].waitForExistence(timeout: 5), "Tapping a split tile opens its workout details without changing the scheduled workout")
-    }
-
-    func testWorkoutSplitEditorSupportsReorderingExerciseSearchAndCustomExercises() throws {
-        let app = launchApp()
-        app.buttons["Training tab"].tap()
-
-        let newWorkout = app.buttons["New workout"]
-        XCTAssertTrue(newWorkout.waitForExistence(timeout: 5))
-        newWorkout.tap()
-        let name = app.textFields["Workout name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 5))
-        replaceText(in: name, with: "Lower Body")
-        app.buttons["Create"].tap()
-
-        let rows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-"))
-        let originalWorkout = rows.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Upper Body")).firstMatch
-        let createdWorkout = rows.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Lower Body")).firstMatch
-        scrollToElement(createdWorkout, in: app)
-        XCTAssertTrue(createdWorkout.waitForExistence(timeout: 5), "The newly created workout should be saved into the active program")
-        scrollToElement(originalWorkout, in: app, towardTop: true)
-        XCTAssertTrue(originalWorkout.waitForExistence(timeout: 5), "Creating a workout must preserve the existing program workout")
-        let firstID = originalWorkout.identifier
-        let secondID = createdWorkout.identifier
-        app.buttons["Edit"].tap()
-        let reorderHandles = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS[cd] %@", "reorder"))
-        XCTAssertGreaterThanOrEqual(reorderHandles.count, 2, "Edit mode should expose a drag handle for each workout row. UI: \(app.debugDescription)")
-        attachScreenshot(of: app, named: "Training-Split-Editor-Reorder-Candidate")
-        let sourceHandle = reorderHandles.element(boundBy: 0)
-        let destinationRow = app.buttons[secondID]
-        XCTAssertTrue(destinationRow.exists, "Both workout rows should remain in the list while editing")
-        // Drop at the destination row center and hold briefly so SwiftUI's List
-        // reorder interaction can settle consistently across compact and large
-        // simulator screens.
-        let dropPoint = destinationRow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-        sourceHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
-            .press(forDuration: 1.2, thenDragTo: dropPoint, withVelocity: .slow, thenHoldForDuration: 0.8)
-        let reordered = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "identifier == %@", secondID),
-            object: rows.element(boundBy: 0)
-        )
-        XCTAssertEqual(
-            XCTWaiter.wait(for: [reordered], timeout: 5),
-            .completed,
-            "Dragging a workout handle should update the saved split order"
-        )
-        XCTAssertNotEqual(rows.element(boundBy: 0).identifier, firstID)
-        app.buttons["Done"].tap()
-
-        rows.firstMatch.tap()
-        XCTAssertTrue(app.buttons["workout-template-add-exercise"].waitForExistence(timeout: 5))
-        app.buttons["workout-template-add-exercise"].tap()
-        XCTAssertTrue(app.navigationBars["Choose exercise"].waitForExistence(timeout: 5))
-        let search = app.searchFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap()
-        search.typeText("bench")
-        XCTAssertTrue((search.value as? String)?.localizedCaseInsensitiveContains("bench") == true,
-                      "The exercise search query should be accepted by the real picker")
-        let result = app.descendants(matching: .any)["exercise-picker-result-builtin-2"]
-        XCTAssertTrue(result.waitForExistence(timeout: 5),
-                      "Search should expose the catalog's Flat barbell bench press exercise. UI: \(app.debugDescription)")
-        result.tap()
-        XCTAssertTrue(app.staticTexts["Flat barbell bench press"].waitForExistence(timeout: 5), "Selecting a search result should persist it in the workout plan")
-
-        app.buttons["workout-template-add-exercise"].tap()
-        app.buttons["exercise-picker-create-custom"].tap()
-        XCTAssertTrue(app.navigationBars["Custom exercise"].waitForExistence(timeout: 5))
-        let customName = app.textFields["custom-exercise-name"]
-        replaceText(in: customName, with: "QA Cable Fly")
-        let customMuscle = app.textFields["custom-exercise-muscle"]
-        replaceText(in: customMuscle, with: "Chest")
-        let customEquipment = app.textFields["custom-exercise-equipment"]
-        replaceText(in: customEquipment, with: "Cable")
-        app.buttons["custom-exercise-save"].tap()
-        XCTAssertTrue(app.staticTexts["QA Cable Fly"].waitForExistence(timeout: 5), "A custom exercise should return to the persisted workout plan")
-
-        // Open the selected catalog exercise through its stable disclosure row.
-        let exerciseRow = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "planned-exercise-", "Flat barbell bench press")
-        ).firstMatch
-        XCTAssertTrue(exerciseRow.waitForExistence(timeout: 5), "The selected exercise has an identifiable disclosure row")
-        if (exerciseRow.value as? String)?.lowercased() != "expanded" { exerciseRow.tap() }
-        let sets = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-sets-")
-        ).firstMatch
-        scrollToElement(sets, in: app)
-        XCTAssertTrue(sets.waitForExistence(timeout: 5), "The selected exercise exposes its planned set configuration")
-        let increaseSets = sets.buttons["Increment"]
-        if increaseSets.exists { increaseSets.tap() }
-        else { sets.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
-        XCTAssertTrue(app.staticTexts["Sets · 4"].waitForExistence(timeout: 5), "Set-count customization should update the saved plan")
-
-        let reps = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-reps-")
-        ).firstMatch
-        XCTAssertTrue(reps.waitForExistence(timeout: 5))
-        let increaseReps = reps.buttons["Increment"]
-        if increaseReps.exists { increaseReps.tap() }
-        else { reps.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
-        XCTAssertTrue(app.staticTexts["Reps · 9"].waitForExistence(timeout: 5), "Rep-count customization should update the saved plan")
-
-        let rest = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-rest-")
-        ).firstMatch
-        XCTAssertTrue(rest.waitForExistence(timeout: 5))
-        let increaseRest = rest.buttons["Increment"]
-        if increaseRest.exists { increaseRest.tap() }
-        else { rest.coordinate(withNormalizedOffset: CGVector(dx: 0.92, dy: 0.5)).tap() }
-        XCTAssertTrue(app.staticTexts["Rest · 105s"].waitForExistence(timeout: 5), "Exercise-specific rest configuration should be retained")
-
-        let trackingMode = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier BEGINSWITH %@", "planned-exercise-tracking-")
-        ).firstMatch
-        XCTAssertTrue(trackingMode.waitForExistence(timeout: 5))
-        trackingMode.tap()
-        let repsOnly = app.buttons["Reps only"]
-        XCTAssertTrue(repsOnly.waitForExistence(timeout: 5), "The exercise-specific tracking picker offers the configured reps-only mode")
-        repsOnly.tap()
-
-        let cableExercise = app.buttons.matching(
-            NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "planned-exercise-", "QA Cable Fly")
-        ).firstMatch
-        XCTAssertTrue(cableExercise.waitForExistence(timeout: 5))
-        cableExercise.press(forDuration: 1.1)
-        let supersetAction = app.buttons["Superset with Flat barbell bench press"]
-        XCTAssertTrue(supersetAction.waitForExistence(timeout: 5), "The adjacent exercise should offer the superset grouping action")
-        supersetAction.tap()
-        XCTAssertTrue((cableExercise.value as? String)?.contains("Superset") == true, "The saved workout plan should expose the grouped relationship")
-        attachScreenshot(of: app, named: "Training-Superset-And-Tracking-Plan-Candidate")
-
-        let startWorkout = app.buttons["workout-template-start"]
-        scrollToElement(startWorkout, in: app, towardTop: true)
-        startWorkout.tap()
-        let timer = app.descendants(matching: .any)["rest-timer-value"]
-        XCTAssertTrue(timer.waitForExistence(timeout: 5))
-        XCTAssertEqual(timer.label, "Ready")
-        let firstReps = inputField(app, labelled: "Repetitions")
-        scrollToElement(firstReps, in: app)
-        replaceText(in: firstReps, with: "8")
-        dismissKeyboard(in: app)
-        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        XCTAssertEqual(timer.label, "Ready", "Superset rest starts after all exercises complete the round")
-
-        let cableHeader = app.buttons.matching(
-            NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "active-exercise-header-", "QA Cable Fly")
-        ).firstMatch
-        XCTAssertTrue(cableHeader.waitForExistence(timeout: 5), "Completing the first superset member advances to its partner")
-        let cableWeight = inputField(app, labelled: "Weight in kilograms")
-        scrollToElement(cableWeight, in: app)
-        replaceText(in: cableWeight, with: "40")
-        dismissKeyboard(in: app)
-        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        let restStarted = XCTNSPredicateExpectation(predicate: NSPredicate(format: "label != %@", "Ready"), object: timer)
-        XCTAssertEqual(XCTWaiter.wait(for: [restStarted], timeout: 5), .completed, "Finishing the round starts the configured superset rest interval")
-        attachScreenshot(of: app, named: "Training-Superset-Active-Candidate")
-
-        attachScreenshot(of: app, named: "Training-Split-Editor-Candidate")
-    }
-
-    func testProgressionSuggestionRequiresAndAppliesExplicitAcceptance() throws {
-        let app = launchApp()
-        app.buttons["Training tab"].tap()
-        let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
-        XCTAssertTrue(template.waitForExistence(timeout: 5))
-        template.tap()
-        XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
-        app.buttons["workout-template-start"].tap()
-
-        // Create a real prior workout through the UI so the next session exercises the
-        // same history lookup used in normal use, rather than depending on hidden seed data.
-        let firstSetWeight = inputField(app, labelled: "Weight in kilograms")
-        XCTAssertTrue(firstSetWeight.waitForExistence(timeout: 5))
-        scrollToElement(firstSetWeight, in: app)
-        replaceText(in: firstSetWeight, with: "60")
-        dismissKeyboard(in: app)
-        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        let finish = app.buttons["finish-workout"]
-        XCTAssertTrue(finish.waitForExistence(timeout: 5))
-        finish.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        let confirm = app.buttons["confirm-finish-workout"]
-        XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Saving a partially completed workout requires an explicit confirmation")
-        confirm.tap()
-        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
-        app.buttons["workout-summary-done"].tap()
-        tapBack(in: app)
-
-        let nextTemplate = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
-        XCTAssertTrue(nextTemplate.waitForExistence(timeout: 5))
-        nextTemplate.tap()
-        app.buttons["workout-template-start"].tap()
-
-        let suggestion = app.buttons["accept-progression-suggestion"]
-        XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "The newly saved completed set should produce an optional next-session suggestion")
-        let suggestedText = suggestion.label
-        let suggestedLoad: Double? = {
-            guard let raw = suggestedText.components(separatedBy: "·").last else { return nil }
-            return Double(raw.replacingOccurrences(of: "kg", with: "").trimmingCharacters(in: .whitespaces))
-        }()
-        let expectedSuggestedLoad = try XCTUnwrap(suggestedLoad, "The suggestion should expose its proposed load: \(suggestedText)")
-        let weight = inputField(app, labelled: "Weight in kilograms")
-        XCTAssertTrue(weight.exists)
-        XCTAssertNotEqual(Double(String(describing: weight.value ?? "")), suggestedLoad, "Suggested load must not be applied before explicit acceptance")
-        scrollToElement(suggestion, in: app)
-        suggestion.tap()
-        // The suggestion lives after the set rows, so bring the first set row
-        // back above the pinned footer before verifying its accepted value.
-        scrollToElement(weight, in: app, towardTop: true)
-        XCTAssertTrue(weight.isHittable, "The current set field should scroll above the pinned workout controls")
-        XCTAssertFalse(suggestion.exists, "Accepting the suggestion dismisses the optional prompt")
-        let acceptedWeight = inputField(app, labelled: "Weight in kilograms")
-        XCTAssertTrue(acceptedWeight.waitForExistence(timeout: 5))
-        let displayedWeight = try XCTUnwrap(Double(String(describing: acceptedWeight.value ?? "").replacingOccurrences(of: ",", with: ".")))
-        XCTAssertEqual(displayedWeight, expectedSuggestedLoad, accuracy: 0.01,
-                       "Accepting \(suggestedText) should update the current set weight")
-        attachScreenshot(of: app, named: "Training-Progression-Acceptance-Candidate")
-    }
-
-    func testWorkoutCompletionHistoryEditingAndRecentlyDeletedRecovery() throws {
-        // A one-exercise fixture keeps the complete history edit/recovery flow
-        // reachable on compact devices without changing the production layout.
-        let app = launchApp(progressionHistory: true, singleExercise: true)
-        app.buttons["Training tab"].tap()
-        let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
-        XCTAssertTrue(template.waitForExistence(timeout: 5))
-        template.tap()
-        XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
-        app.buttons["workout-template-start"].tap()
-
-        let finish = app.buttons["finish-workout"]
-        XCTAssertTrue(finish.waitForExistence(timeout: 5))
-        let firstWeight = app.textFields["Weight in kilograms"].firstMatch
-        scrollToElement(firstWeight, in: app)
-        replaceText(in: firstWeight, with: "80")
-        dismissKeyboard(in: app)
-        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        XCTAssertTrue(finish.isHittable, "Finish & Save should remain reachable after set entry")
-        finish.tap()
-        let confirmSave = app.buttons["confirm-finish-workout"]
-        XCTAssertTrue(confirmSave.waitForExistence(timeout: 5))
-        confirmSave.tap()
-        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts.containing(NSPredicate(format: "label CONTAINS %@", "Sets completed")).firstMatch.exists)
-        let prSection = app.descendants(matching: .any)["workout-summary-pr-section"]
-        XCTAssertTrue(prSection.waitForExistence(timeout: 5), "A completed set that beats the prior completed workout should be presented as a PR")
-        attachScreenshot(of: app, named: "Training-Completion-Summary-Candidate")
-        app.buttons["workout-summary-done"].tap()
-        XCTAssertTrue(app.buttons["workout-template-start"].waitForExistence(timeout: 5))
-        app.buttons["workout-template-start"].tap()
-        let secondWeight = inputField(app, labelled: "Weight in kilograms")
-        XCTAssertTrue(secondWeight.waitForExistence(timeout: 5))
-        scrollToElement(secondWeight, in: app)
-        replaceText(in: secondWeight, with: "85")
-        dismissKeyboard(in: app)
-        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        app.buttons["finish-workout"].tap()
-        XCTAssertTrue(app.buttons["confirm-finish-workout"].waitForExistence(timeout: 5))
-        app.buttons["confirm-finish-workout"].tap()
-        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
-        app.buttons["workout-summary-done"].tap()
-        tapBack(in: app)
-        XCTAssertTrue(app.navigationBars["Training"].waitForExistence(timeout: 5))
-        tapBack(in: app)
-        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
-
-        app.buttons["History tab"].tap()
-        let historyRows = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-workout-"))
-        let historyList = app.collectionViews.firstMatch
-        for _ in 0..<12 where historyRows.count < 2 { historyList.swipeUp() }
-        XCTAssertGreaterThanOrEqual(historyRows.count, 2, "Two workouts completed on one day must remain separate history sessions")
-        let dateFormatter = DateFormatter()
-        dateFormatter.calendar = Calendar.current
-        dateFormatter.locale = Locale(identifier: "en_US_POSIX")
-        dateFormatter.timeZone = .current
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let today = dateFormatter.string(from: .now)
-        let todayRow = historyRows.matching(NSPredicate(format: "label CONTAINS %@", today)).firstMatch
-        scrollToElement(todayRow, in: app)
-        XCTAssertTrue(todayRow.waitForExistence(timeout: 5), "History surfaces the completed sessions for today")
-        let previousDay = dateFormatter.string(from: Calendar.current.date(byAdding: .day, value: -1, to: .now)!)
-        let baselineRow = app.buttons.matching(NSPredicate(
-            format: "identifier BEGINSWITH %@ AND label CONTAINS %@", "history-workout-", previousDay
-        )).firstMatch
-        scrollToElement(baselineRow, in: app)
-        XCTAssertTrue(baselineRow.waitForExistence(timeout: 5), "The fixture's prior-day baseline remains a distinct history record")
-        let baselineWorkoutID = String(baselineRow.identifier.dropFirst("history-workout-".count))
-        XCTAssertFalse(baselineWorkoutID.isEmpty)
-        let calendarButton = app.buttons["workout-calendar-open"]
-        scrollToElement(calendarButton, in: app)
-        calendarButton.tap()
-        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5))
-        let calendarToday = app.buttons["workout-calendar-\(today)"]
-        XCTAssertTrue(calendarToday.waitForExistence(timeout: 5))
-        calendarToday.tap()
-        let calendarSessionRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "calendar-workout-"))
-        XCTAssertEqual(calendarSessionRows.count, 2, "Calendar date drill-in shows both same-day sessions separately")
-        let editedWorkoutID = String(calendarSessionRows.firstMatch.identifier.dropFirst("calendar-workout-".count))
-        let retainedWorkoutID = String(calendarSessionRows.element(boundBy: 1).identifier.dropFirst("calendar-workout-".count))
-        XCTAssertFalse(editedWorkoutID.isEmpty, "Capture the stable workout ID from the selected calendar session")
-        XCTAssertNotEqual(editedWorkoutID, retainedWorkoutID)
-        calendarSessionRows.firstMatch.tap()
-        XCTAssertTrue(app.navigationBars["Upper Body"].waitForExistence(timeout: 5), "Each calendar session opens its individual editable history record")
-        attachScreenshot(of: app, named: "Training-History-Detail-Candidate")
-
-        let historyWeight = inputField(app, labelled: "history-set-weight")
-        XCTAssertTrue(historyWeight.waitForExistence(timeout: 5))
-        replaceText(in: historyWeight, with: "40")
-        let historyReps = inputField(app, labelled: "history-set-reps")
-        XCTAssertTrue(historyReps.waitForExistence(timeout: 5))
-        replaceText(in: historyReps, with: "8")
-        let completionToggles = app.buttons.matching(identifier: "history-set-complete")
-        completionToggles.firstMatch.tap()
-        let historicalCompletionUpdated = XCTNSPredicateExpectation(
-            predicate: NSPredicate(format: "label == %@", "Mark set complete"),
-            object: completionToggles.firstMatch
-        )
-        XCTAssertEqual(
-            XCTWaiter.wait(for: [historicalCompletionUpdated], timeout: 5),
-            .completed,
-            "Historical set completion should update after the store publishes its edit"
-        )
-        dismissKeyboard(in: app)
-        let notes = app.descendants(matching: .any)["history-workout-notes"]
-        scrollToElement(notes, in: app)
-        XCTAssertTrue(notes.waitForExistence(timeout: 5), "Workout notes remain editable in the multiline history field")
-        notes.tap()
-        notes.typeText("QA history edit")
-        dismissKeyboard(in: app)
-
-        // Keep the workflow on the selected calendar record. This avoids
-        // depending on a lazy History row's accessibility frame after the
-        // calendar sheet has dismissed while still exercising the real editor.
-        let deleteWorkout = app.buttons["Delete workout"]
-        scrollToElement(deleteWorkout, in: app)
-        XCTAssertTrue(deleteWorkout.waitForExistence(timeout: 5), "The delete action is below the completed set and notes history")
-        deleteWorkout.tap()
-        app.buttons["Delete Workout"].tap()
-        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5), "Deleting a calendar record returns to the selected date")
-
-        app.navigationBars["Workout Calendar"].buttons["Done"].tap()
-        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        let retainedWorkout = app.descendants(matching: .any)["history-workout-\(retainedWorkoutID)"]
-        scrollToElement(retainedWorkout, in: app)
-        XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Deleting one of two same-day sessions leaves the other exact session active")
-        XCTAssertFalse(app.buttons["history-workout-\(editedWorkoutID)"].exists, "The deleted session ID is absent from active workout history")
-        let retainedBaseline = app.descendants(matching: .any)["history-workout-\(baselineWorkoutID)"]
-        scrollToElement(retainedBaseline, in: app)
-        XCTAssertTrue(retainedBaseline.waitForExistence(timeout: 5), "Deleting one session preserves the prior-day baseline record")
-        let visiblePRRows = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-pr-"))
-        scrollToElement(visiblePRRows.firstMatch, in: app)
-        XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR must be discoverable in the lazy History list")
-        XCTAssertEqual(visiblePRRows.count, 1, "The earlier retained session still appears as a PR after the newest record is edited or deleted")
-        let restoreButtons = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-deleted-workout-"))
-        // Recently Deleted is below the charts and Training history sections.
-        // Scroll the visible History list so its lazy row enters the accessibility tree.
-        scrollToElement(restoreButtons.firstMatch, in: app)
-        XCTAssertTrue(restoreButtons.firstMatch.waitForExistence(timeout: 5), "Deleting a workout should move it into Recently Deleted")
-        XCTAssertTrue(restoreButtons.firstMatch.isHittable)
-        let deletedWorkoutID = String(restoreButtons.firstMatch.identifier.dropFirst("restore-deleted-workout-".count))
-        XCTAssertEqual(deletedWorkoutID, editedWorkoutID, "Recently Deleted preserves the selected record identity")
-        restoreButtons.firstMatch.tap()
-        let restoredWorkout = app.buttons["history-workout-\(deletedWorkoutID)"]
-        scrollToElement(restoredWorkout, in: app, towardTop: true)
-        XCTAssertTrue(restoredWorkout.waitForExistence(timeout: 5), "Restoring should return that exact record to the Training history list")
-        scrollToElement(retainedWorkout, in: app)
-        XCTAssertTrue(retainedWorkout.waitForExistence(timeout: 5), "Restoration preserves the other exact same-day session")
-        scrollToElement(retainedBaseline, in: app)
-        XCTAssertTrue(retainedBaseline.waitForExistence(timeout: 5), "Restoration preserves the separate previous-day baseline history record")
-        scrollToElement(visiblePRRows.firstMatch, in: app)
-        XCTAssertTrue(visiblePRRows.firstMatch.waitForExistence(timeout: 5), "The retained PR row remains reachable after restoration")
-        XCTAssertEqual(visiblePRRows.count, 1, "Restoration recalculates records without duplicating the retained PR")
-    }
-
-    func testProgramSwitchingPreservesIndependentRotationAndSkipAdvancesOnlyScheduledProgram() throws {
-        let app = launchApp(trainingPrograms: true)
-        app.buttons["Training tab"].tap()
-
-        let programA = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Program A")).firstMatch
-        let programB = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Program B")).firstMatch
-        XCTAssertTrue(programA.waitForExistence(timeout: 5))
-        XCTAssertTrue(programB.waitForExistence(timeout: 5))
-        XCTAssertTrue(programA.label.contains("Upper Body"), "Program A begins with its first workout")
-        XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Program B begins at its independently stored second workout")
-        attachScreenshot(of: app, named: "Training-Program-Rotations-Before-Skip-Candidate")
-
-        app.buttons["skip-scheduled-workout"].tap()
-        XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Skipping advances the scheduled rotation")
-        XCTAssertTrue(app.staticTexts["Completed workouts will appear here."].exists, "Skipping must not create a completed workout")
-
-        let firstWorkout = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "training-template-", "Upper Body")).firstMatch
-        XCTAssertTrue(firstWorkout.waitForExistence(timeout: 5))
-        firstWorkout.tap()
-        app.buttons["workout-template-start"].tap()
-        let firstWeight = inputField(app, labelled: "Weight in kilograms")
-        scrollToElement(firstWeight, in: app)
-        replaceText(in: firstWeight, with: "55")
-        dismissKeyboard(in: app)
-        app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
-        app.buttons["finish-workout"].tap()
-        XCTAssertTrue(app.buttons["confirm-finish-workout"].waitForExistence(timeout: 5))
-        app.buttons["confirm-finish-workout"].tap()
-        XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
-        app.buttons["workout-summary-done"].tap()
-        tapBack(in: app)
-        XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Completing an out-of-order workout records history without advancing the scheduled workout")
-
-        programB.tap()
-        XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Switching programs preserves that program's rotation")
-        programA.tap()
-        XCTAssertTrue(programA.label.contains("Program A Workout 2"), "Returning to Program A preserves its advanced position")
-        programB.tap()
-        XCTAssertTrue(programB.label.contains("Program B Workout 2"), "Switching away and back does not reset Program B")
-        attachScreenshot(of: app, named: "Training-Program-Rotations-After-Skip-Candidate")
-    }
-
-    func testProgressionSuggestionCanBeDeclinedWithoutChangingPlannedLoad() throws {
-        let app = launchApp(progressionHistory: true)
-        app.buttons["Training tab"].tap()
-        let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
-        XCTAssertTrue(template.waitForExistence(timeout: 5))
-        template.tap()
-        app.buttons["workout-template-start"].tap()
-
-        let suggestion = app.buttons["decline-progression-suggestion"]
-        XCTAssertTrue(suggestion.waitForExistence(timeout: 5), "A prior completed workout should create an optional suggestion")
-        let weight = app.textFields.matching(NSPredicate(format: "identifier BEGINSWITH %@", "workout-set-weight-")).firstMatch
-        XCTAssertTrue(weight.waitForExistence(timeout: 5), "The same planned set must be observed before and after declining")
-        scrollToElement(weight, in: app)
-        let stableWeightID = weight.identifier
-        let before = String(describing: weight.value ?? "")
-
-        scrollToElement(suggestion, in: app)
-        suggestion.tap()
-        XCTAssertFalse(app.buttons["accept-progression-suggestion"].exists, "Declining removes the suggestion for this active workout")
-        let sameWeightField = app.textFields[stableWeightID]
-        scrollToElement(sameWeightField, in: app, towardTop: true)
-        XCTAssertTrue(sameWeightField.exists, "Declining retains the same set control for further editing")
-        XCTAssertFalse(before.isEmpty, "The test captures the set before declining; store-level tests assert that decline never writes the suggested load")
-        attachScreenshot(of: app, named: "Training-Progression-Declined-Candidate")
-    }
-
-    func testFoodManualEntryOptionsHistoryCorrectionAndRecovery() throws {
-        let app = launchApp()
-        app.buttons["Food tab"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        let dateKey = app.staticTexts["food-date-key"]
-        XCTAssertTrue(dateKey.waitForExistence(timeout: 5))
-        let originalDate = dateKey.label
-
-        // Exercise the compact system date picker itself, not only swipe and arrow navigation.
-        let foodDatePicker = app.descendants(matching: .any)["food-day-picker"].firstMatch
-        XCTAssertTrue(foodDatePicker.waitForExistence(timeout: 5), "Food must expose its calendar date picker")
-        let pickerTarget = Calendar.current.date(byAdding: .day, value: -1, to: Date())!
-        let monthDay = pickerTarget.formatted(.dateTime.month(.wide).day())
-        foodDatePicker.tap()
-        let calendarDay = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", monthDay)).firstMatch
-        XCTAssertTrue(calendarDay.waitForExistence(timeout: 5), "The compact date picker should expose the selected month’s day buttons")
-        calendarDay.tap()
-        let dateFormatter = DateFormatter()
-        dateFormatter.locale = Locale(identifier: "en_CA_POSIX")
-        dateFormatter.timeZone = .current
-        dateFormatter.dateFormat = "yyyy-MM-dd"
-        let pickerSelectedKey = dateFormatter.string(from: pickerTarget)
-        let pickerSelectedDate = app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label == %@", "food-date-key", pickerSelectedKey
-        )).firstMatch
-        XCTAssertTrue(pickerSelectedDate.waitForExistence(timeout: 5), "Selecting a date in the compact picker changes the food log date")
-        app.buttons["food-day-next"].tap()
-        XCTAssertTrue(app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label == %@", "food-date-key", originalDate
-        )).firstMatch.waitForExistence(timeout: 5), "The date picker’s selection remains navigable with the day arrows")
-
-        let swipeArea = app.descendants(matching: .any)["food-macro-swipe-area"].firstMatch
-        XCTAssertTrue(swipeArea.waitForExistence(timeout: 5))
-        swipeArea.swipeLeft()
-        let advancedDate = app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label != %@", "food-date-key", originalDate
-        )).firstMatch
-        XCTAssertTrue(advancedDate.waitForExistence(timeout: 5), "A right-to-left swipe should select the next food date")
-        app.buttons["food-day-previous"].tap()
-        let previousDateRestored = app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label == %@", "food-date-key", originalDate
-        )).firstMatch
-        XCTAssertTrue(previousDateRestored.waitForExistence(timeout: 5), "Previous-day action returns to the selected log date")
-
-        let addFood = app.buttons["food-add-food"]
-        scrollToElement(addFood, in: app)
-        XCTAssertTrue(addFood.waitForExistence(timeout: 5))
-        addFood.tap()
-        for option in ["food-option-search", "food-option-scan", "food-option-manual", "food-option-recent"] {
-            XCTAssertTrue(app.buttons[option].waitForExistence(timeout: 3), "Add Food must retain the four approved entry options")
-        }
-        app.buttons["food-option-search"].tap()
-        XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5))
-        let foodSearch = app.searchFields.firstMatch
-        XCTAssertTrue(foodSearch.waitForExistence(timeout: 5))
-        foodSearch.tap()
-        foodSearch.typeText("QA breakfast")
-        XCTAssertTrue(app.buttons["food-search-online"].waitForExistence(timeout: 3), "Remote search is explicit so typing does not exceed provider request limits")
-        let searchResult = app.buttons["food-search-result-qa-breakfast"]
-        XCTAssertTrue(searchResult.waitForExistence(timeout: 5), "Search should show a saved local food before remote results arrive")
-        searchResult.tap()
-        XCTAssertTrue(app.navigationBars["Review food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["food-confirm-log"].isEnabled, "The quantity step requires confirmation before adding a food")
-        app.buttons["food-confirm-log"].tap()
-        XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5), "Search stays open so another item can be logged")
-        if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
-        app.buttons["food-add-done"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Done returns to the selected Food day")
-
-        scrollToElement(addFood, in: app)
-        addFood.tap()
-        XCTAssertTrue(app.buttons["food-option-manual"].waitForExistence(timeout: 3))
-        app.buttons["food-option-manual"].tap()
-        XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5))
-        replaceText(in: app.textFields["manual-food-name"], with: "QA Manual Oats")
-        let manualAmount = app.textFields["manual-food-quantity"]
-        manualAmount.coordinate(withNormalizedOffset: CGVector(dx: 0.95, dy: 0.5)).tap()
-        let amountBeforeReplacement = manualAmount.value as? String ?? ""
-        if !amountBeforeReplacement.isEmpty {
-            manualAmount.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: amountBeforeReplacement.count))
-        }
-        manualAmount.typeText("50")
-        XCTAssertEqual(manualAmount.value as? String, "50", "The manual serving amount must be replaced, not appended to its 100 g default")
-        replaceText(in: app.textFields["manual-food-calories"], with: "380")
-        replaceText(in: app.textFields["manual-food-protein"], with: "13")
-        replaceText(in: app.textFields["manual-food-carbohydrates"], with: "68")
-        replaceText(in: app.textFields["manual-food-fat"], with: "7")
-        dismissKeyboard(in: app)
-        app.buttons["manual-food-save"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving manual food returns to the selected Food day")
-
-        let foodTotal = app.staticTexts["food-calories-total"]
-        XCTAssertTrue(foodTotal.waitForExistence(timeout: 5))
-        XCTAssertEqual(foodTotal.label.replacingOccurrences(of: ",", with: ""), "1090", "A confirmed 450 kcal search result plus 190 kcal from a 50 g manual entry should add to the 450 kcal fixture")
-        attachScreenshot(of: app, named: "Food-Nutrition-Home-Candidate")
-        let foodHistory = app.buttons["food-history-link"]
-        scrollToElement(foodHistory, in: app)
-        XCTAssertTrue(foodHistory.waitForExistence(timeout: 5))
-        foodHistory.tap()
-        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5), "Food History navigation opens the persistent record screen")
-        let historyRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
-        XCTAssertTrue(historyRow.waitForExistence(timeout: 5), "Food History exposes the saved record row")
-        attachScreenshot(of: app, named: "Food-History-Candidate")
-        historyRow.tap()
-        XCTAssertTrue(app.navigationBars["Edit food entry"].waitForExistence(timeout: 5))
-        attachScreenshot(of: app, named: "Food-History-Edit-Candidate")
-        let calories = app.textFields["food-log-calories"]
-        XCTAssertTrue(calories.waitForExistence(timeout: 5))
-        replaceText(in: calories, with: "200")
-        app.buttons["food-log-edit-save"].tap()
-        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5))
-
-        let editedRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
-        XCTAssertTrue(editedRow.label.contains("200 kcal"), "The historical nutrition correction should be reflected in the saved row")
-        let deletedFoodID = String(editedRow.identifier.dropFirst("food-history-".count))
-        XCTAssertFalse(deletedFoodID.isEmpty, "Capture the stable food-entry identity before deletion")
-        editedRow.swipeLeft()
-        app.buttons["Delete"].tap()
-        // Verify the delete through the durable soft-delete destination rather
-        // than querying the same recycled List row immediately after mutation.
-        tapBack(in: app)
-        let recentlyDeleted = app.buttons["food-recently-deleted-link"]
-        scrollToElement(recentlyDeleted, in: app)
-        recentlyDeleted.tap()
-        XCTAssertTrue(app.navigationBars["Recently Deleted"].waitForExistence(timeout: 5))
-        attachScreenshot(of: app, named: "Food-Recently-Deleted-Candidate")
-        let restore = app.buttons["restore-food-\(deletedFoodID)"]
-        XCTAssertTrue(restore.waitForExistence(timeout: 5), "Recently Deleted should retain the same food entry")
-        restore.tap()
-        XCTAssertFalse(restore.exists, "Restoring removes the food record from Recently Deleted")
-        tapBack(in: app)
-        let history = app.buttons["food-history-link"]
-        scrollToElement(history, in: app)
-        history.tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "QA Manual Oats")).firstMatch.waitForExistence(timeout: 5), "Restored food entry returns to Food History")
-        tapBack(in: app)
-        let addAgain = app.buttons["food-add-food"]
-        scrollToElement(addAgain, in: app, towardTop: true)
-        addAgain.tap()
-        app.buttons["food-option-scan"].tap()
-        XCTAssertTrue(app.navigationBars["Scan Barcode"].waitForExistence(timeout: 5))
-        app.buttons["barcode-manual-fallback"].tap()
-        XCTAssertTrue(app.navigationBars["Manual Entry"].waitForExistence(timeout: 5), "Barcode entry always offers a safe manual fallback")
-        attachScreenshot(of: app, named: "Food-Barcode-Manual-Fallback-Candidate")
-    }
-
-    func testFoodTargetsHydrationFavoritesRecentsAndRecipeWorkflow() throws {
-        let app = launchApp()
-        app.buttons["Food tab"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-
-        let metricPicker = app.segmentedControls["food-trend-metric"]
-        scrollToElement(metricPicker, in: app)
-        XCTAssertTrue(metricPicker.waitForExistence(timeout: 5))
-        for metric in ["Calories", "Protein", "Carbs", "Fats"] {
-            metricPicker.buttons[metric].tap()
-            let chart = app.descendants(matching: .any)["food-seven-day-chart"]
-            XCTAssertTrue(chart.exists, "The seven-day chart remains available for the \(metric.lowercased()) view")
-            XCTAssertTrue(chart.label.contains(metric), "The selected \(metric.lowercased()) metric is reflected in the chart")
-        }
-
-        scrollToElement(app.buttons["food-targets"], in: app, towardTop: true)
-        app.buttons["food-targets"].tap()
-        XCTAssertTrue(app.navigationBars["Nutrition targets"].waitForExistence(timeout: 5))
-        replaceText(in: app.textFields["nutrition-target-calories"], with: "2200")
-        replaceText(in: app.textFields["nutrition-target-protein"], with: "160")
-        dismissKeyboard(in: app)
-        app.navigationBars["Nutrition targets"].buttons["Save"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving targets returns to Food before hydration controls are used")
-
-        let foodBack = app.navigationBars["Food"].buttons.firstMatch
-        XCTAssertTrue(foodBack.waitForExistence(timeout: 5))
-        foodBack.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        XCTAssertTrue(app.buttons["Food page"].waitForExistence(timeout: 5))
-        app.buttons["Food page"].tap()
-        app.buttons["food-home-water-250"].tap()
-        app.buttons["food-home-water-log"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("250 mL"), "Food Home quick logging routes into the persisted hydration history")
-
-        let waterQuickAdd = app.buttons["water-quick-500"]
-        XCTAssertTrue(waterQuickAdd.waitForExistence(timeout: 5))
-        waterQuickAdd.tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("750 mL"))
-        let customWater = app.buttons["water-custom-entry"]
-        XCTAssertTrue(customWater.waitForExistence(timeout: 5))
-        customWater.tap()
-        XCTAssertTrue(app.navigationBars["Add water"].waitForExistence(timeout: 5))
-        let customAmount = app.textFields["water-entry-amount"]
-        replaceText(in: customAmount, with: "375")
-        dismissKeyboard(in: app)
-        app.navigationBars["Add water"].buttons["Save"].tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("1125 mL"), "Custom hydration is added to the persisted daily total")
-        let waterGoalEdit = app.buttons["water-goal-edit"]
-        scrollToElement(waterGoalEdit, in: app)
-        waterGoalEdit.tap()
-        XCTAssertTrue(app.navigationBars["Water goal"].waitForExistence(timeout: 5))
-        let waterGoalAmount = app.textFields["water-goal-amount"]
-        replaceText(in: waterGoalAmount, with: "23000")
-        XCTAssertFalse(app.navigationBars["Water goal"].buttons["Save"].isEnabled, "Invalid water goals cannot be saved silently")
-        replaceText(in: waterGoalAmount, with: "2300")
-        dismissKeyboard(in: app)
-        app.navigationBars["Water goal"].buttons["Save"].tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("of 2300 mL"))
-
-        let createRecipe = app.buttons["food-create-recipe"]
-        for _ in 0..<5 where !createRecipe.exists { app.swipeUp() }
-        XCTAssertTrue(createRecipe.waitForExistence(timeout: 5))
-        createRecipe.tap()
-        XCTAssertTrue(app.navigationBars["Recipe Builder"].waitForExistence(timeout: 5))
-        replaceText(in: app.textFields["recipe-name"], with: "QA breakfast bowl")
-        dismissKeyboard(in: app)
-        app.buttons["recipe-add-ingredient"].tap()
-        let ingredient = app.buttons["recipe-food-qa-breakfast"]
-        XCTAssertTrue(ingredient.waitForExistence(timeout: 5))
-        ingredient.tap()
-        XCTAssertTrue(app.navigationBars["Ingredient amount"].waitForExistence(timeout: 5))
-        app.navigationBars["Ingredient amount"].buttons["Add"].tap()
-        XCTAssertTrue(app.buttons["recipe-save"].isEnabled)
-        app.buttons["recipe-save"].tap()
-
-        let addFoodForRecipeSearch = app.buttons["food-add-food"]
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Saving a recipe returns to the Food log")
-        scrollToElement(addFoodForRecipeSearch, in: app, towardTop: true)
-        addFoodForRecipeSearch.tap()
-        app.buttons["food-option-search"].tap()
-        XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5))
-        let recipeSearch = app.searchFields.firstMatch
-        recipeSearch.tap()
-        recipeSearch.typeText("QA breakfast bowl")
-        let recipeSearchResult = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@ AND label CONTAINS[cd] %@", "food-search-result-recipe-", "QA breakfast bowl")).firstMatch
-        XCTAssertTrue(recipeSearchResult.waitForExistence(timeout: 5), "Saved recipes are available from food search before they are logged")
-        let recipeFavorite = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-favorite-recipe-")).firstMatch
-        recipeFavorite.tap()
-        app.switches["food-favorites-filter"].tap()
-        XCTAssertTrue(recipeSearchResult.exists, "Saved recipes can be favorited independently of the Recent Foods list")
-        if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
-        app.buttons["food-add-done"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-
-        let caloriesTotal = app.staticTexts["food-calories-total"]
-        scrollToElement(caloriesTotal, in: app, towardTop: true)
-        XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
-        let caloriesBeforeRecipe = Int(caloriesTotal.label) ?? 0
-        let logRecipe = app.buttons.matching(NSPredicate(format: "label CONTAINS[cd] %@", "Log QA breakfast bowl")).firstMatch
-        scrollToElement(logRecipe, in: app)
-        XCTAssertTrue(logRecipe.waitForExistence(timeout: 5))
-        logRecipe.tap()
-        scrollToElement(caloriesTotal, in: app, towardTop: true)
-        XCTAssertTrue(caloriesTotal.waitForExistence(timeout: 5))
-        let expectedRecipeTotal = String(caloriesBeforeRecipe + 450)
-        let recipeAdded = app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label == %@", "food-calories-total", expectedRecipeTotal
-        )).firstMatch
-        XCTAssertTrue(recipeAdded.waitForExistence(timeout: 5), "Logging one recipe serving adds its calculated 450 kcal without rewriting the source food")
-
-        let addFood = app.buttons["food-add-food"]
-        scrollToElement(addFood, in: app)
-        addFood.tap()
-        app.buttons["food-option-search"].tap()
-        let search = app.searchFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap()
-        search.typeText("QA breakfast")
-        let result = app.buttons["food-search-result-qa-breakfast"]
-        XCTAssertTrue(result.waitForExistence(timeout: 5))
-        app.buttons["food-favorite-qa-breakfast"].tap()
-        app.switches["food-favorites-filter"].tap()
-        XCTAssertTrue(result.exists, "Favorites are a search filter, not a fifth Add Food option")
-        if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
-        app.buttons["food-add-done"].tap()
-
-        scrollToElement(addFood, in: app)
-        addFood.tap()
-        app.buttons["food-option-recent"].tap()
-        XCTAssertTrue(app.navigationBars["Recent Foods"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons["food-search-result-qa-breakfast"].waitForExistence(timeout: 5))
-        attachScreenshot(of: app, named: "Food-Recipe-Hydration-Targets-Candidate")
-        app.navigationBars["Recent Foods"].buttons["Done"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        let recipeRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "log-recipe-")).firstMatch
-        scrollToElement(recipeRow, in: app)
-        XCTAssertTrue(recipeRow.waitForExistence(timeout: 5))
-        recipeRow.press(forDuration: 1.2)
-        let deleteRecipe = app.buttons["Delete recipe"]
-        XCTAssertTrue(deleteRecipe.waitForExistence(timeout: 5))
-        deleteRecipe.tap()
-        let recentlyDeleted = app.buttons["food-recently-deleted-link"]
-        scrollToElement(recentlyDeleted, in: app)
-        recentlyDeleted.tap()
-        XCTAssertTrue(app.navigationBars["Recently Deleted"].waitForExistence(timeout: 5))
-        let restoreRecipe = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-recipe-")).firstMatch
-        XCTAssertTrue(restoreRecipe.waitForExistence(timeout: 5), "Saved recipes remain recoverable after deletion")
-        restoreRecipe.tap()
-        XCTAssertFalse(restoreRecipe.exists)
-    }
-
-    func testFoodCopyAddAndReplaceUsesSelectedDateAndMatchingMeal() throws {
-        let app = launchApp()
-        app.buttons["Food tab"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        let foodDate = app.staticTexts["food-date-key"]
-        XCTAssertTrue(foodDate.waitForExistence(timeout: 5))
-        let today = foodDate.label
-        app.buttons["food-day-previous"].tap()
-        let updatedFoodDate = app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label != %@", "food-date-key", today
-        )).firstMatch
-        XCTAssertTrue(updatedFoodDate.waitForExistence(timeout: 5), "Previous-day control selects the prior date before logging")
-
-        let addMeal = app.buttons["Add meal"]
-        scrollToElement(addMeal, in: app)
-        addMeal.tap()
-        let copyMeal = app.staticTexts["Meal 4"]
-        scrollToElement(copyMeal, in: app)
-        copyMeal.tap()
-        let addToMeal = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "add-to-meal-")).firstMatch
-        XCTAssertTrue(addToMeal.waitForExistence(timeout: 5))
-        addToMeal.tap()
-
-        func logFixtureFoodIntoOpenMeal() {
-            XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5))
-            let search = app.searchFields.firstMatch
-            XCTAssertTrue(search.waitForExistence(timeout: 5))
-            search.tap()
-            search.typeText("QA breakfast")
-            let result = app.buttons["food-search-result-qa-breakfast"]
-            XCTAssertTrue(result.waitForExistence(timeout: 5))
-            result.tap()
-            XCTAssertTrue(app.buttons["food-confirm-log"].waitForExistence(timeout: 5))
-            app.buttons["food-confirm-log"].tap()
-            XCTAssertTrue(app.navigationBars["Search Foods"].waitForExistence(timeout: 5), "Confirmed items leave the picker available for additional entries")
-            if app.buttons["Cancel"].exists { app.buttons["Cancel"].tap() }
-            app.buttons["food-add-done"].tap()
-            XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5), "Done closes Food search and returns to the selected log date")
-        }
-        logFixtureFoodIntoOpenMeal()
-        XCTAssertNotEqual(foodDate.label, today, "Food added to the prior selected day must remain attached to that date")
-
-        let nextFoodDay = app.buttons["food-day-next"]
-        scrollToElement(nextFoodDay, in: app, towardTop: true)
-        nextFoodDay.tap()
-        let returnedToToday = app.staticTexts.matching(NSPredicate(
-            format: "identifier == %@ AND label == %@", "food-date-key", today
-        )).firstMatch
-        XCTAssertTrue(returnedToToday.waitForExistence(timeout: 5), "The date controls remain usable after returning from the food-entry sheet")
-        XCTAssertEqual(app.staticTexts["food-calories-total"].label, "450", "The source day's entry is saved separately from today's food log")
-        let addToDestinationMeal = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "add-to-meal-")).firstMatch
-        if !addToDestinationMeal.exists { copyMeal.tap() }
-        XCTAssertTrue(addToDestinationMeal.waitForExistence(timeout: 5))
-        addToDestinationMeal.tap()
-        logFixtureFoodIntoOpenMeal()
-        XCTAssertEqual(app.staticTexts["food-calories-total"].label, "900", "The destination has an unrelated Meal 1 entry and a matching Meal 4 entry")
-        let copy = app.buttons["food-copy-meals"]
-        scrollToElement(copy, in: app)
-        copy.tap()
-        XCTAssertTrue(app.navigationBars["Copy meals"].waitForExistence(timeout: 5))
-        app.buttons["copy-food-add"].tap()
-        app.swipeUp()
-        let copyStatus = app.staticTexts["copy-food-status"]
-        XCTAssertTrue(copyStatus.waitForExistence(timeout: 5))
-        XCTAssertTrue(copyStatus.label.contains("Copied 1 food entries"))
-        XCTAssertEqual(copyStatus.label, "Copied 1 food entries to \(today).")
-        app.buttons["copy-food-replace"].tap()
-        XCTAssertEqual(app.staticTexts["copy-food-status"].label, "Copied 1 food entries to \(today).")
-        attachScreenshot(of: app, named: "Food-Copy-Add-Replace-Candidate")
-        app.navigationBars["Copy meals"].buttons["Done"].tap()
-        let destinationCalories = app.staticTexts["food-calories-total"]
-        scrollToElement(destinationCalories, in: app, towardTop: true)
-        XCTAssertEqual(destinationCalories.label, "900", "Replace swaps matching Meal 4 entries while preserving the unrelated Meal 1 log")
-    }
-
-    func testWaterHistoryCanBeDeletedAndRestoredThroughRecentlyDeleted() throws {
-        let app = launchApp()
-        app.buttons["Food page"].tap()
-        app.buttons["food-home-water-log"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        let customEntry = app.buttons["water-custom-entry"]
-        scrollToElement(customEntry, in: app)
-        customEntry.tap()
-        XCTAssertTrue(app.navigationBars["Add water"].waitForExistence(timeout: 5))
-        replaceText(in: app.textFields["water-entry-amount"], with: "375")
-        dismissKeyboard(in: app)
-        app.navigationBars["Add water"].buttons["Save"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("375 mL"), "Custom hydration amount is persisted to the selected log date")
-        let quickAdd = app.buttons["water-quick-500"]
-        scrollToElement(quickAdd, in: app)
-        quickAdd.tap()
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("875 mL"))
-        let waterEntry = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "water-history-")).firstMatch
-        scrollToElement(waterEntry, in: app)
-        XCTAssertTrue(waterEntry.waitForExistence(timeout: 5))
-        waterEntry.tap()
-        XCTAssertTrue(app.navigationBars["Edit water"].waitForExistence(timeout: 5))
-        app.buttons["Delete water entry"].tap()
-        XCTAssertTrue(app.navigationBars["Food"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.staticTexts["food-water-total"].label.contains("375 mL"), "Deleting a history entry removes only the selected amount")
-
-        let recentlyDeleted = app.buttons["food-recently-deleted-link"]
-        scrollToElement(recentlyDeleted, in: app)
-        recentlyDeleted.tap()
-        XCTAssertTrue(app.navigationBars["Recently Deleted"].waitForExistence(timeout: 5))
-        let restore = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "restore-water-")).firstMatch
-        XCTAssertTrue(restore.waitForExistence(timeout: 5), "Deleted water entries remain recoverable for 30 days")
-        restore.tap()
-        XCTAssertFalse(restore.exists, "Restored water entry leaves Recently Deleted")
-    }
-
-    private func inputField(_ app: XCUIApplication, labelled label: String) -> XCUIElement {
-        let stablePrefix: String
-        switch label {
-        case "Weight in kilograms": stablePrefix = "workout-set-weight-"
-        case "Repetitions": stablePrefix = "workout-set-reps-"
-        case "history-set-weight": stablePrefix = "history-set-weight"
-        case "history-set-reps": stablePrefix = "history-set-reps"
-        default: stablePrefix = label
-        }
-        let matching = app.descendants(matching: .any).matching(
-            NSPredicate(format: "identifier == %@ OR identifier BEGINSWITH %@ OR label CONTAINS[cd] %@", label, stablePrefix, label)
-        )
-        return matching.firstMatch
-    }
-
-    private func tapBack(in app: XCUIApplication) {
-        let backButton = app.navigationBars.buttons.element(boundBy: 0)
-        XCTAssertTrue(backButton.waitForExistence(timeout: 5), "The current screen has a back button")
-        backButton.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-    }
-
-    private func scrollToElement(_ element: XCUIElement, in app: XCUIApplication, towardTop: Bool = false) {
-        // Reacquire the visible list on each pass: navigation, sheets, and
-        // List virtualization can replace its accessibility element while a
-        // workflow is running.
-        let pinnedFooter = app.buttons["finish-workout"]
-        for _ in 0..<10 {
-            if element.exists {
-                let aboveFooter = !pinnedFooter.exists || element.frame.maxY < pinnedFooter.frame.minY - 8
-                if element.isHittable && aboveFooter { return }
+    var body: some View {
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    DatePicker("Check-in date", selection: $selectedDate, displayedComponents: .date)
+                        .accessibilityIdentifier("checkin-date-picker")
+                    Text("Sleep, weight and supplement records are saved to the selected local date.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+
+                Section("Sleep") {
+                    Picker("Session type", selection: $sleepIsNap) {
+                        Text("Overnight").tag(false)
+                        Text("Nap").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("sleep-session-type")
+                    DatePicker("Bedtime", selection: $bedtime, displayedComponents: .hourAndMinute)
+                    DatePicker("Wake time", selection: $wakeTime, displayedComponents: .hourAndMinute)
+                    TextField("Optional duration override (minutes)", text: $manualDuration)
+                        .keyboardType(.numberPad)
+                        .accessibilityIdentifier("sleep-duration-override")
+                    Picker("Sleep quality", selection: $qualityRating) {
+                        Text("Not rated").tag(0)
+                        ForEach(1...5, id: \.self) { value in
+                            Text(String(repeating: "★", count: value)).tag(value)
+                        }
+                    }
+                    .accessibilityIdentifier("sleep-quality-rating")
+                    Button { saveSleep() } label: {
+                        Label(editingSleepID == nil ? (sleepIsNap ? "Save nap" : "Save overnight sleep") : "Update sleep", systemImage: "moon.zzz.fill")
+                    }
+                    .accessibilityIdentifier("sleep-save")
+                    .disabled(!sleepInputIsValid)
+
+                    if activeSleep.isEmpty {
+                        Text("No sleep logged for this date. Naps add to sleep-hour totals but do not satisfy the overnight Sleep check-in.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(activeSleep) { record in
+                            HStack(spacing: 8) {
+                                Button { editSleep(record) } label: {
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(record.isNap ? "Nap" : "Overnight sleep").font(.headline)
+                                        Text("\(sleepDuration(record.durationMinutes)) · \(record.qualityRating.map { "\($0) of 5 stars" } ?? "not rated") · wakes \(record.wakeTime.formatted(date: .omitted, time: .shortened))")
+                                            .font(.caption).foregroundStyle(.secondary)
+                                    }
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityIdentifier("sleep-edit-\(record.id.uuidString)")
+                                Button(role: .destructive) { store.deleteSleep(record.id) } label: {
+                                    Image(systemName: "trash").frame(width: 38, height: 42)
+                                }
+                                .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
+                                .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
+                            }
+                        }
+                    }
+                    Text("Sleep is entered manually. Apple Health access remains disabled.").font(.footnote).foregroundStyle(.secondary)
+                }
+                .id(CheckInSection.sleep)
+
+                Section("Weight") {
+                    HStack {
+                        TextField("Weight", text: $weight).keyboardType(.decimalPad).accessibilityIdentifier("checkin-weight-value")
+                        Text(unit).foregroundStyle(.secondary)
+                    }
+                    Button { saveWeight() } label: {
+                        Label(weightForDate == nil ? "Save weight for this date" : "Replace weight for this date", systemImage: "scalemass.fill")
+                    }
+                    .accessibilityIdentifier("weight-save")
+                    .disabled((Double(weight) ?? 0) <= 0)
+                    if let saved = weightForDate {
+                        LabeledContent("Saved measurement", value: "\(displayWeight(saved.kilograms)) \(unit)")
+                            .accessibilityIdentifier("weight-current-value")
+                        if let previousWeight {
+                            let difference = displayWeight(saved.kilograms - previousWeight.kilograms)
+                            LabeledContent("Change from \(previousWeight.date)", value: "\(difference) \(unit)")
+                        }
+                        Button(role: .destructive) { store.deleteWeight(saved.id) } label: {
+                            Label("Delete this weight entry", systemImage: "trash")
+                        }
+                        .accessibilityIdentifier("weight-delete-current")
+                    } else if let previousWeight {
+                        Text("Previous entry: \(displayWeight(previousWeight.kilograms)) \(unit) · \(previousWeight.date)")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
+                }
+                .id(CheckInSection.weight)
+
+                Section {
+                    if activeSupplements.isEmpty {
+                        Text("Add supplements you want to track. Only scheduled doses count toward today’s Habits check-in.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    ForEach(activeSupplements) { supplement in
+                        let dose = store.state.checkins.doses.first { $0.supplementID == supplement.id && $0.date == dateKey && $0.deletedAt == nil }
+                        let due = isScheduled(supplement, on: selectedDate)
+                        HStack(spacing: 8) {
+                            Button {
+                                editingSupplement = supplement
+                                showSupplementEditor = true
+                            } label: {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(supplement.name).font(.headline)
+                                    Text([supplement.doseDescription, scheduleDescription(supplement), due ? (dose?.taken == true ? "Taken" : "Not taken") : "Not scheduled"].compactMap { $0 }.joined(separator: " · "))
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("supplement-edit-\(supplement.id.uuidString)")
+                            Button {
+                                store.markSupplement(supplement, taken: dose?.taken != true, on: selectedDate)
+                            } label: {
+                                Image(systemName: dose?.taken == true ? "checkmark.circle.fill" : "circle")
+                                    .font(.system(size: 25)).foregroundStyle(dose?.taken == true ? Color.green : Color.secondary)
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!due)
+                            .accessibilityLabel(dose?.taken == true ? "Undo \(supplement.name)" : "Mark \(supplement.name) taken")
+                            .accessibilityIdentifier("supplement-taken-\(supplement.id.uuidString)")
+                        }
+                        .swipeActions {
+                            Button(role: .destructive) { store.deleteSupplement(supplement.id) } label: { Label("Delete", systemImage: "trash") }
+                        }
+                    }
+                    Button {
+                        editingSupplement = nil
+                        showSupplementEditor = true
+                    } label: { Label("Add supplement", systemImage: "plus") }
+                    .accessibilityIdentifier("supplement-add")
+                } header: { Text("Supplements") }
+                .id(CheckInSection.supplements)
+
+                let deleted = store.recentlyDeletedCheckIns()
+                Section("Recently Deleted · 30 days") {
+                    if deleted.sleep.isEmpty && deleted.weights.isEmpty && deleted.supplements.isEmpty && deleted.doses.isEmpty {
+                        Text("Sleep, weight, supplements and individual doses can be restored here for 30 days.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    }
+                    ForEach(deleted.sleep) { record in
+                        HStack {
+                            Text("\(record.isNap ? "Nap" : "Sleep") · \(record.wakeDate)")
+                            Spacer()
+                            Button("Restore") { restoreSleep(record, using: proxy) }
+                                .accessibilityIdentifier("restore-sleep-\(record.id.uuidString)")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .sleep, id: record.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
+                            }
+                            .accessibilityLabel("Delete Permanently")
+                            .accessibilityIdentifier("permanently-delete-sleep-\(record.id.uuidString)")
+                        }
+                    }
+                    ForEach(deleted.weights) { record in
+                        HStack {
+                            Text("Weight · \(record.date)")
+                            Spacer()
+                            Button("Restore") { restoreWeight(record, using: proxy) }
+                                .accessibilityIdentifier("restore-weight-\(record.id.uuidString)")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .weight, id: record.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
+                            }
+                            .accessibilityLabel("Delete Permanently")
+                            .accessibilityIdentifier("permanently-delete-weight-\(record.id.uuidString)")
+                        }
+                    }
+                    ForEach(deleted.supplements) { record in
+                        HStack {
+                            Text("Supplement · \(record.name)")
+                            Spacer()
+                            Button("Restore") { restoreSupplement(record, using: proxy) }
+                                .accessibilityIdentifier("restore-supplement-\(record.id.uuidString)")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .supplement, id: record.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
+                            }
+                            .accessibilityLabel("Delete Permanently")
+                            .accessibilityIdentifier("permanently-delete-supplement-\(record.id.uuidString)")
+                        }
+                    }
+                    ForEach(deleted.doses) { dose in
+                        HStack {
+                            Text("\(dose.supplementName) dose · \(dose.date)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedSupplementDose(dose.id) }
+                                .accessibilityIdentifier("restore-supplement-dose-\(dose.id.uuidString)")
+                            Button(role: .destructive) {
+                                permanentDelete = CheckInPermanentDelete(kind: .supplementDose, id: dose.id)
+                            } label: {
+                                Label("Delete Permanently", systemImage: "trash")
+                            }
+                            .accessibilityLabel("Delete Permanently")
+                            .accessibilityIdentifier("permanently-delete-supplement-dose-\(dose.id.uuidString)")
+                        }
+                    }
+                }
+
+                Section {
+                    NavigationLink("Reminder settings", destination: ReminderSettingsScreen())
+                        .font(.footnote)
+                    Text("Reminder times are optional and use local notifications. They are not guaranteed during Focus or when iOS limits delivery.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
             }
-            let lists = app.collectionViews
-            let list = lists.element(boundBy: max(0, lists.count - 1))
-            // Lazy List rows may not enter the accessibility tree until they are
-            // scrolled into view; avoid reading a missing element's frame first.
-            if lists.count > 0 && list.exists {
-                if towardTop { list.swipeDown() } else { list.swipeUp() }
+            .onAppear {
+                loadWeightForSelectedDate()
+                if let initialSleepID, let record = store.state.checkins.sleep.first(where: { $0.id == initialSleepID && $0.deletedAt == nil }) {
+                    editSleep(record)
+                }
+                if let initialFocusSection { scroll(to: initialFocusSection, using: proxy) }
+                else { scrollToRequestedSection(using: proxy) }
+            }
+            .onChange(of: selectedDate) { _, _ in loadWeightForSelectedDate() }
+            .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
+        }
+        .navigationTitle("Sleep & Check-ins")
+        .alert("Weight saved", isPresented: $showWeightSaved) { Button("OK", role: .cancel) { } }
+        .sheet(isPresented: $showSupplementEditor) {
+            SupplementEditorScreen(supplement: editingSupplement) { value in
+                if editingSupplement == nil {
+                    store.addSupplement(name: value.name, doseDescription: value.doseDescription, schedule: value.schedule, weekdays: value.weekdays)
+                } else {
+                    store.updateSupplement(value)
+                }
+            }
+            .environmentObject(store)
+        }
+        .confirmationDialog("Replace the overnight sleep record for \(dateKey)?", isPresented: $showSleepReplace, titleVisibility: .visible) {
+            Button("Replace overnight sleep", role: .destructive) { _ = persistSleep(confirmedReplace: true) }
+            Button("Keep existing record", role: .cancel) { }
+        } message: { Text("The prior main sleep entry is moved to Recently Deleted; naps remain separate.") }
+        .confirmationDialog("Replace the weight record for \(dateKey)?", isPresented: $showWeightReplace, titleVisibility: .visible) {
+            Button("Replace weight", role: .destructive) {
+                if store.addWeight(Double(weight) ?? 0, unit: unit, date: selectedDate, confirmedReplace: true) {
+                    weight = ""
+                    showWeightSaved = true
+                }
+            }
+            Button("Keep existing record", role: .cancel) { }
+        } message: { Text("The previous daily measurement is moved to Recently Deleted.") }
+        .confirmationDialog("Permanently delete this check-in?", isPresented: Binding(
+            get: { permanentDelete != nil },
+            set: { if !$0 { permanentDelete = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete Permanently", role: .destructive) {
+                guard let selection = permanentDelete else { return }
+                switch selection.kind {
+                case .sleep: store.permanentlyDeleteSleep(selection.id)
+                case .weight: store.permanentlyDeleteWeight(selection.id)
+                case .supplement: store.permanentlyDeleteSupplement(selection.id)
+                case .supplementDose: store.permanentlyDeleteSupplementDose(selection.id)
+                }
+                permanentDelete = nil
+            }
+            Button("Cancel", role: .cancel) { permanentDelete = nil }
+        } message: { Text("This cannot be undone.") }
+    }
+
+    private var sleepInputIsValid: Bool {
+        guard sleepWakeTime > sleepBedtime else { return false }
+        guard !manualDuration.isEmpty else { return true }
+        guard let minutes = Int(manualDuration), minutes > 0 else { return false }
+        return true
+    }
+
+    private var sleepWakeTime: Date {
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: selectedDate)
+        return calendar.date(
+            bySettingHour: calendar.component(.hour, from: wakeTime),
+            minute: calendar.component(.minute, from: wakeTime),
+            second: 0,
+            of: day
+        ) ?? wakeTime
+    }
+
+    private var sleepBedtime: Date {
+        let calendar = Calendar.current
+        let day = calendar.startOfDay(for: selectedDate)
+        let bedHour = calendar.component(.hour, from: bedtime)
+        let bedMinute = calendar.component(.minute, from: bedtime)
+        let wakeHour = calendar.component(.hour, from: wakeTime)
+        let wakeMinute = calendar.component(.minute, from: wakeTime)
+        let crossesMidnight = bedHour * 60 + bedMinute >= wakeHour * 60 + wakeMinute
+        let bedDay = crossesMidnight ? (calendar.date(byAdding: .day, value: -1, to: day) ?? day) : day
+        return calendar.date(bySettingHour: bedHour, minute: bedMinute, second: 0, of: bedDay) ?? bedtime
+    }
+
+    private func editSleep(_ record: SleepLog) {
+        editingSleepID = record.id
+        selectedDate = LocalDay.formatter.date(from: record.wakeDate) ?? selectedDate
+        bedtime = record.bedtime
+        wakeTime = record.wakeTime
+        sleepIsNap = record.isNap
+        manualDuration = record.manualMinutes.map(String.init) ?? ""
+        qualityRating = record.qualityRating ?? 0
+    }
+
+    private func persistSleep(confirmedReplace: Bool = false) -> Bool {
+        let manual = manualDuration.isEmpty ? nil : Int(manualDuration)
+        let quality = qualityRating == 0 ? nil : qualityRating
+        if let editingSleepID {
+            let updated = store.updateSleep(editingSleepID, bedtime: sleepBedtime, wakeTime: sleepWakeTime, manualMinutes: manual, isNap: sleepIsNap, qualityRating: quality)
+            if updated { self.editingSleepID = nil }
+            return updated
+        }
+        return store.addSleep(bedtime: sleepBedtime, wakeTime: sleepWakeTime, manualMinutes: manual, isNap: sleepIsNap, qualityRating: quality, confirmedReplace: confirmedReplace)
+    }
+
+    private func saveSleep() {
+        if editingSleepID != nil {
+            _ = persistSleep()
+            manualDuration = ""
+            qualityRating = 0
+        } else if !sleepIsNap && activeSleep.contains(where: { !$0.isNap }) {
+            showSleepReplace = true
+        } else if persistSleep() {
+            manualDuration = ""
+            qualityRating = 0
+        }
+    }
+
+    private func loadWeightForSelectedDate() {
+        weight = weightForDate.map { displayWeight($0.kilograms) } ?? ""
+    }
+
+    private func saveWeight() {
+        guard let value = Double(weight), value.isFinite, value > 0 else { return }
+        if weightForDate != nil { showWeightReplace = true }
+        else if store.addWeight(value, unit: unit, date: selectedDate) { weight = ""; showWeightSaved = true }
+    }
+
+    private func isScheduled(_ supplement: Supplement, on date: Date) -> Bool {
+        supplement.schedule.lowercased() == "daily" || supplement.weekdays.contains(Calendar.current.component(.weekday, from: date))
+    }
+
+    private func scheduleDescription(_ supplement: Supplement) -> String {
+        supplement.schedule.lowercased() == "daily" ? "Daily" : supplement.weekdays.sorted().map { Calendar.current.shortWeekdaySymbols[$0 - 1] }.joined(separator: ", ")
+    }
+
+    private func restoreSleep(_ record: SleepLog, using proxy: ScrollViewProxy) {
+        guard store.restoreDeletedSleep(record.id) else { return }
+        if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.sleep, anchor: .top) }
+        }
+    }
+
+    private func restoreWeight(_ record: WeightLog, using proxy: ScrollViewProxy) {
+        guard store.restoreDeletedWeight(record.id) else { return }
+        if let restoredDate = date(from: record.date) { selectedDate = restoredDate }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.weight, anchor: .top) }
+        }
+    }
+
+    private func restoreSupplement(_ record: Supplement, using proxy: ScrollViewProxy) {
+        guard store.restoreDeletedSupplement(record.id) else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.supplements, anchor: .top) }
+        }
+    }
+
+    private func date(from key: String) -> Date? {
+        let values = key.split(separator: "-").compactMap { Int($0) }
+        guard values.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: values[0], month: values[1], day: values[2]))
+    }
+
+    private func scrollToRequestedSection(using proxy: ScrollViewProxy) {
+        guard let section = store.focusedCheckInSection else { return }
+        scroll(to: section, using: proxy)
+        store.clearCheckInFocus()
+    }
+
+    private func scroll(to section: CheckInSection, using proxy: ScrollViewProxy) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(section, anchor: .top) }
+        }
+    }
+
+    private func sleepDuration(_ minutes: Int) -> String {
+        let hours = minutes / 60
+        let remainder = minutes % 60
+        if hours == 0 { return "\(remainder) min" }
+        if remainder == 0 { return "\(hours) hr" }
+        return "\(hours) hr \(remainder) min"
+    }
+
+    private func displayWeight(_ kg: Double) -> String {
+        let value = unit == "lb" ? kg * 2.2046226218 : kg
+        return value.formatted(.number.precision(.fractionLength(1)))
+    }
+}
+
+private struct SupplementEditorScreen: View {
+    @Environment(\.dismiss) private var dismiss
+    let initial: Supplement?
+    let onSave: (Supplement) -> Void
+    @State private var name: String
+    @State private var dose: String
+    @State private var daily: Bool
+    @State private var weekdays: Set<Int>
+
+    init(supplement: Supplement?, onSave: @escaping (Supplement) -> Void) {
+        initial = supplement
+        self.onSave = onSave
+        _name = State(initialValue: supplement?.name ?? "")
+        _dose = State(initialValue: supplement?.doseDescription ?? "")
+        _daily = State(initialValue: supplement?.schedule.lowercased() != "weekdays")
+        _weekdays = State(initialValue: Set(supplement?.weekdays ?? []))
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Supplement") {
+                    TextField("Name", text: $name).accessibilityIdentifier("supplement-name")
+                    TextField("Optional dose", text: $dose).accessibilityIdentifier("supplement-dose")
+                }
+                Section("Schedule") {
+                    Picker("Repeat", selection: $daily) {
+                        Text("Every day").tag(true)
+                        Text("Selected days").tag(false)
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("supplement-schedule-mode")
+                    if !daily {
+                        ForEach(1...7, id: \.self) { day in
+                            Toggle(Calendar.current.shortWeekdaySymbols[day - 1], isOn: Binding(
+                                get: { weekdays.contains(day) },
+                                set: { selected in
+                                    if selected { weekdays.insert(day) } else { weekdays.remove(day) }
+                                }
+                            ))
+                        }
+                    }
+                }
+            }
+            .navigationTitle(initial == nil ? "Add supplement" : "Edit supplement")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") {
+                        var value = initial ?? Supplement(name: name)
+                        value.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+                        value.doseDescription = dose.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : dose
+                        value.schedule = daily ? "daily" : "weekdays"
+                        value.weekdays = daily ? [] : weekdays.sorted()
+                        onSave(value)
+                        dismiss()
+                    }
+                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || (!daily && weekdays.isEmpty))
+                    .accessibilityIdentifier("supplement-editor-save")
+                }
+            }
+        }
+    }
+}
+
+struct HistoryScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @State private var range = 30
+    @State private var showingWorkoutCalendar = false
+    @State private var workoutToDeletePermanently: UUID?
+    @State private var selectedHistoryDate: String?
+    @State private var selectedStrengthExerciseID = ""
+
+    init(initialDate: String? = nil) {
+        _selectedHistoryDate = State(initialValue: initialDate)
+    }
+    private let ranges = [7, 30, 90]
+    private var cutoff: String {
+        LocalDay.string(Calendar.current.date(byAdding: .day, value: -range + 1, to: .now) ?? .now)
+    }
+    private var weights: [WeightLog] { store.state.checkins.weights.filter { $0.deletedAt == nil && $0.date >= cutoff }.sorted { $0.date < $1.date } }
+    private var sleepByDate: [DailyHistoryPoint] {
+        Dictionary(grouping: store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate >= cutoff }, by: \.wakeDate)
+            .map { date, logs in DailyHistoryPoint(date: date, value: Double(logs.reduce(0) { $0 + $1.durationMinutes }) / 60) }
+            .sorted { $0.date < $1.date }
+    }
+    private var caloriesByDate: [DailyHistoryPoint] {
+        NutritionHistorySeries.calories(from: store.state.nutrition.logs, since: cutoff)
+    }
+    private var sessions: [WorkoutSession] { store.state.training.visibleCompletedSessions.sorted { $0.startedAt > $1.startedAt } }
+    private var strengthOptions: [HistoryExerciseOption] {
+        var names: [String: String] = [:]
+        for session in sessions {
+            for exercise in session.exercises where (exercise.trackingMode ?? .weightAndReps) == .weightAndReps {
+                names[exercise.exerciseID] = exercise.name
+            }
+        }
+        return names.keys.sorted { (names[$0] ?? $0) < (names[$1] ?? $1) }
+            .map { HistoryExerciseOption(id: $0, name: names[$0] ?? $0) }
+    }
+    private var strengthByDate: [DailyHistoryPoint] {
+        StrengthHistorySeries.points(from: sessions, exerciseID: selectedStrengthExerciseID, since: cutoff)
+    }
+    private var proteinByDate: [DailyHistoryPoint] {
+        NutritionHistorySeries.protein(from: store.state.nutrition.logs, since: cutoff)
+    }
+
+    private func scrollToSelectedDate(using proxy: ScrollViewProxy) {
+        guard selectedHistoryDate != nil else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day-scroll-target", anchor: .top) }
+        }
+    }
+
+    private func consumeFocusedDate(using proxy: ScrollViewProxy) {
+        guard let date = store.focusedHistoryDate else { return }
+        selectedHistoryDate = date
+        store.consumeHistoryDateFocus()
+        scrollToSelectedDate(using: proxy)
+    }
+
+    var body: some View {
+        ScrollViewReader { proxy in
+        List {
+            Section("Category histories") {
+                NavigationLink("Training", destination: WorkoutCalendarScreen())
+                    .accessibilityIdentifier("history-category-training")
+                NavigationLink("Nutrition", destination: FoodHistoryScreen())
+                    .accessibilityIdentifier("history-category-nutrition")
+                NavigationLink("Weight", destination: CheckInCategoryHistoryScreen(category: .weight))
+                    .accessibilityIdentifier("history-category-weight")
+                NavigationLink("Sleep", destination: CheckInCategoryHistoryScreen(category: .sleep))
+                    .accessibilityIdentifier("history-category-sleep")
+                NavigationLink("Supplements", destination: CheckInCategoryHistoryScreen(category: .supplements))
+                    .accessibilityIdentifier("history-category-supplements")
+                NavigationLink("Habits", destination: CheckInCategoryHistoryScreen(category: .habits))
+                    .accessibilityIdentifier("history-category-habits")
+            }
+            if let date = selectedHistoryDate {
+                Section {
+                    Text(date).font(.caption).foregroundStyle(.secondary)
+                        .accessibilityIdentifier("history-selected-day-date")
+                        .id("history-selected-day-scroll-target")
+                    let nutrition = store.state.nutritionTotals(on: date)
+                    let sleepMinutes = store.state.checkins.sleep.filter { $0.deletedAt == nil && $0.wakeDate == date }.reduce(0) { $0 + $1.durationMinutes }
+                    let activeSessions = sessions.filter { $0.localDate == date }
+                    LabeledContent("Food entries", value: "\(store.state.nutrition.logs.filter { $0.deletedAt == nil && $0.date == date }.count)")
+                    LabeledContent("Nutrition", value: "\(Int(nutrition.calories ?? 0)) kcal · \(Int(nutrition.protein ?? 0)) g protein")
+                    LabeledContent("Sleep", value: sleepMinutes == 0 ? "No record" : "\((Double(sleepMinutes) / 60).formatted(.number.precision(.fractionLength(1)))) h")
+                    LabeledContent("Workouts", value: "\(activeSessions.count)")
+                    if let weight = store.state.checkins.weights.first(where: { $0.deletedAt == nil && $0.date == date }) {
+                        LabeledContent("Weight", value: "\(displayedWeight(weight.kilograms).formatted(.number.precision(.fractionLength(1)))) \(store.state.home.preferredWeightUnit)")
+                    } else {
+                        LabeledContent("Weight", value: "No record")
+                    }
+                    ForEach(activeSessions) { session in
+                        NavigationLink(session.templateName, destination: WorkoutHistoryDetailScreen(sessionID: session.id))
+                    }
+                    Button("Close selected day") { selectedHistoryDate = nil }
+                        .accessibilityIdentifier("history-close-selected-day")
+                }
+
+            }
+            Section {
+                Picker("Range", selection: $range) { ForEach(ranges, id: \.self) { Text("\($0) days").tag($0) } }
+                    .pickerStyle(.segmented)
+                if weights.isEmpty { ContentUnavailableView("No weight records", systemImage: "scalemass", description: Text("Log a weight check-in to start this chart.")) }
+                else {
+                    Chart(weights) { point in
+                        LineMark(x: .value("Date", point.date), y: .value("Weight", displayedWeight(point.kilograms)))
+                            .interpolationMethod(.catmullRom).foregroundStyle(store.state.home.theme.palette.accentColor)
+                        PointMark(x: .value("Date", point.date), y: .value("Weight", displayedWeight(point.kilograms)))
+                            .foregroundStyle(store.state.home.theme.palette.accentColor)
+                    }
+                    .frame(height: 180)
+                    .chartYAxisLabel("\(store.state.home.preferredWeightUnit)")
+                }
+            } header: { Text("Body") }
+
+            Section("Nutrition") {
+                if caloriesByDate.isEmpty { Text("Calories appear on days with logged food. Missing days are left blank.").font(.footnote).foregroundStyle(.secondary) }
+                else {
+                    Chart(caloriesByDate) { point in
+                        BarMark(x: .value("Date", point.date), y: .value("Calories", point.value))
+                            .foregroundStyle(store.state.home.theme.palette.accentColor.gradient)
+                    }
+                    .frame(height: 170)
+                    ForEach(caloriesByDate.suffix(7)) { point in LabeledContent(point.date, value: "\(Int(point.value)) kcal") }
+                }
+                if proteinByDate.isEmpty {
+                    Text("Protein appears on days with logged food.").font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    Chart(proteinByDate) { point in
+                        BarMark(x: .value("Date", point.date), y: .value("Protein", point.value))
+                            .foregroundStyle(store.state.home.theme.palette.accentColor.gradient)
+                    }
+                    .frame(height: 150)
+                    .chartYAxisLabel("g protein")
+                    .accessibilityIdentifier("history-protein-chart")
+                }
+            }
+
+            Section("Training") {
+                if !strengthOptions.isEmpty {
+                    if strengthOptions.count > 1 {
+                        Picker("Strength exercise", selection: $selectedStrengthExerciseID) {
+                            ForEach(strengthOptions) { option in Text(option.name).tag(option.id) }
+                        }
+                        .accessibilityIdentifier("history-strength-exercise")
+                    }
+                    if strengthByDate.isEmpty {
+                        Text("Complete compatible weighted sets to build this exercise’s estimated 1RM trend.")
+                            .font(.footnote).foregroundStyle(.secondary)
+                    } else {
+                        Chart(strengthByDate) { point in
+                            LineMark(x: .value("Date", point.date), y: .value("Estimated 1RM", point.value))
+                                .interpolationMethod(.catmullRom).foregroundStyle(store.state.home.theme.palette.accentColor)
+                            PointMark(x: .value("Date", point.date), y: .value("Estimated 1RM", point.value))
+                                .foregroundStyle(store.state.home.theme.palette.accentColor)
+                        }
+                        .frame(height: 150)
+                        .chartYAxisLabel("kg · estimated 1RM")
+                        .accessibilityIdentifier("history-strength-chart")
+                    }
+                } else {
+                    Text("Strength trends appear after a completed weighted exercise.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                }
+                if sessions.isEmpty { Text("Completed workouts appear here; unfinished sessions are not counted.").foregroundStyle(.secondary) }
+                ForEach(sessions) { session in
+                    NavigationLink(destination: WorkoutHistoryDetailScreen(sessionID: session.id)) {
+                        VStack(alignment: .leading, spacing: 5) {
+                            HStack { Text(session.templateName).font(.headline); Spacer(); Text(session.localDate).font(.caption).foregroundStyle(.secondary) }
+                            let complete = session.exercises.flatMap(\.sets).filter(\.completed)
+                            Text("\(complete.count) sets · \(Int(complete.reduce(0.0) { $0 + ($1.weightKg ?? 0) * Double($1.reps) })) kg volume")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    .accessibilityIdentifier("history-workout-\(session.id.uuidString)")
+                    .accessibilityLabel("\(session.templateName), \(session.localDate)")
+                }
+                Button { showingWorkoutCalendar = true } label: { Label("Workout Calendar", systemImage: "calendar") }
+                    .accessibilityIdentifier("workout-calendar-open")
+            }
+
+            Section("Personal records") {
+                let records = store.state.training.personalRecordEvents.filter {
+                    Calendar.current.isDate($0.date, equalTo: .now, toGranularity: .month)
+                }.sorted { $0.date > $1.date }
+                if records.isEmpty {
+                    Text("No new estimated 1RM records this month. Your first completed workout establishes an exercise baseline.")
+                        .font(.footnote).foregroundStyle(.secondary)
+                } else {
+                    ForEach(records) { record in
+                        NavigationLink(destination: WorkoutHistoryDetailScreen(sessionID: record.sessionID)) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(record.exerciseName).font(.headline)
+                                Text("Estimated 1RM \(record.estimatedOneRepMaxKg.formatted(.number.precision(.fractionLength(1)))) kg · \(record.date.formatted(date: .abbreviated, time: .omitted))")
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        .accessibilityIdentifier("history-pr-\(record.sessionID.uuidString)-\(record.exerciseID)")
+                    }
+                }
+            }
+
+            Section("Recently Deleted") {
+                let deleted = store.state.training.recentlyDeletedSessions()
+                if deleted.isEmpty { Text("Deleted workouts can be restored for 30 days.").font(.footnote).foregroundStyle(.secondary) }
+                ForEach(deleted) { session in
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(session.templateName).font(.headline)
+                            Text("Deleted \((session.deletedAt ?? .now).formatted(date: .abbreviated, time: .shortened))")
+                                .font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button("Restore") { _ = store.restoreDeletedWorkout(session.id) }
+                            .buttonStyle(.bordered).controlSize(.small)
+                            .accessibilityIdentifier("restore-deleted-workout-\(session.id.uuidString)")
+                        Button(role: .destructive) { workoutToDeletePermanently = session.id } label: {
+                            Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                }
+            }
+
+            Section("Sleep") {
+                if sleepByDate.isEmpty {
+                    Text("Sleep charts use recorded check-ins only.").foregroundStyle(.secondary)
+                } else {
+                    Chart(sleepByDate) { point in
+                        LineMark(x: .value("Date", point.date), y: .value("Hours", point.value))
+                            .interpolationMethod(.catmullRom)
+                            .foregroundStyle(store.state.home.theme.palette.accentColor)
+                        PointMark(x: .value("Date", point.date), y: .value("Hours", point.value))
+                            .foregroundStyle(store.state.home.theme.palette.accentColor)
+                    }
+                    .frame(height: 170)
+                    .chartYAxisLabel("hours · includes naps")
+                    ForEach(sleepByDate.suffix(7)) { point in
+                        LabeledContent(point.date, value: "\(point.value.formatted(.number.precision(.fractionLength(1)))) hours")
+                    }
+                }
+            }
+        }
+        .onAppear {
+            consumeFocusedDate(using: proxy)
+            scrollToSelectedDate(using: proxy)
+            if selectedStrengthExerciseID.isEmpty { selectedStrengthExerciseID = strengthOptions.first?.id ?? "" }
+        }
+        .onChange(of: store.focusedHistoryDate) { _, _ in consumeFocusedDate(using: proxy) }
+        .onChange(of: selectedHistoryDate) { _, date in
+            guard date != nil else { return }
+            scrollToSelectedDate(using: proxy)
+        }
+        }
+        .navigationTitle("History")
+        .toolbar { ToolbarItem(placement: .topBarTrailing) {
+            Button { showingWorkoutCalendar = true } label: { Image(systemName: "calendar") }
+                .accessibilityLabel("Workout Calendar")
+        } }
+        .sheet(isPresented: $showingWorkoutCalendar) {
+            WorkoutCalendarScreen().presentationDetents([.large]).presentationDragIndicator(.visible)
+        }
+        .confirmationDialog("Delete this workout permanently?", isPresented: Binding(
+            get: { workoutToDeletePermanently != nil },
+            set: { if !$0 { workoutToDeletePermanently = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete Permanently", role: .destructive) {
+                if let workoutToDeletePermanently { store.permanentlyDeleteWorkout(workoutToDeletePermanently) }
+                workoutToDeletePermanently = nil
+            }
+            Button("Cancel", role: .cancel) { workoutToDeletePermanently = nil }
+        } message: { Text("This cannot be undone. Otherwise Logbook removes deleted workouts automatically after 30 days.") }
+    }
+
+    private func displayedWeight(_ kg: Double) -> Double { store.state.home.preferredWeightUnit == "lb" ? kg * 2.2046226218 : kg }
+}
+
+private enum CheckInHistoryCategory: String {
+    case sleep, weight, supplements, habits
+    var title: String { rawValue.capitalized }
+}
+
+private struct CheckInCategoryHistoryScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    let category: CheckInHistoryCategory
+
+    private var sleepRecords: [SleepLog] {
+        store.state.checkins.sleep.filter { $0.deletedAt == nil }.sorted { ($0.wakeDate, $0.wakeTime) > ($1.wakeDate, $1.wakeTime) }
+    }
+    private var weightRecords: [WeightLog] {
+        store.state.checkins.weights.filter { $0.deletedAt == nil }.sorted { $0.date > $1.date }
+    }
+    private var supplementRecords: [SupplementDose] {
+        store.state.checkins.doses.filter { $0.deletedAt == nil }.sorted { ($0.date, $0.supplementName) > ($1.date, $1.supplementName) }
+    }
+    private var deletedSupplementDoses: [SupplementDose] { store.recentlyDeletedCheckIns().doses }
+    @State private var doseToDeletePermanently: UUID?
+    private var habitDates: [String] {
+        Set(sleepRecords.map(\.wakeDate) + weightRecords.map(\.date) + supplementRecords.map(\.date)).sorted(by: >)
+    }
+
+    var body: some View {
+        List {
+            switch category {
+            case .sleep:
+                Section("Sleep records") {
+                    if sleepRecords.isEmpty { ContentUnavailableView("No sleep history", systemImage: "moon.zzz", description: Text("Recorded overnight sleep and naps appear here.")) }
+                    ForEach(sleepRecords) { record in
+                        if let date = LocalDay.formatter.date(from: record.wakeDate) {
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .sleep, sleepID: record.id)) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(record.isNap ? "Nap" : "Overnight sleep").font(.headline)
+                                    let quality = record.qualityRating.map { "\($0)/5 stars" } ?? "not rated"
+                                    Text("\(record.wakeDate) · \(record.durationMinutes) min · \(quality)")
+                                        .font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .accessibilityIdentifier("history-sleep-\(record.id.uuidString)")
+                            .swipeActions { Button("Delete", role: .destructive) { store.deleteSleep(record.id) } }
+                        }
+                    }
+                }
+            case .weight:
+                Section("Weight records") {
+                    if weightRecords.isEmpty { ContentUnavailableView("No weight history", systemImage: "scalemass", description: Text("Daily weight entries appear here.")) }
+                    ForEach(weightRecords) { record in
+                        if let date = LocalDay.formatter.date(from: record.date) {
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .weight)) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text("\(record.date) · \(displayedWeight(record.kilograms)) \(store.state.home.preferredWeightUnit)")
+                                    Text("Tap to inspect or edit this measurement").font(.caption).foregroundStyle(.secondary)
+                                }
+                            }
+                            .accessibilityIdentifier("history-weight-\(record.id.uuidString)")
+                            .swipeActions { Button("Delete", role: .destructive) { store.deleteWeight(record.id) } }
+                        }
+                    }
+                }
+            case .supplements:
+                Section("Supplement dose history") {
+                    if supplementRecords.isEmpty { ContentUnavailableView("No supplement history", systemImage: "pills", description: Text("Taken and undone doses appear here.")) }
+                    ForEach(supplementRecords) { record in
+                        if let date = LocalDay.formatter.date(from: record.date) {
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .supplements)) {
+                                LabeledContent(record.supplementName, value: "\(record.date) · \(record.taken ? "Taken" : "Not taken")")
+                            }
+                            .accessibilityIdentifier("history-supplement-\(record.id.uuidString)")
+                            .swipeActions { Button("Delete", role: .destructive) { store.deleteSupplementDose(record.id) } }
+                        }
+                    }
+                }
+                Section("Recently Deleted doses") {
+                    if deletedSupplementDoses.isEmpty { Text("Deleted supplement doses can be restored for 30 days.").font(.footnote).foregroundStyle(.secondary) }
+                    ForEach(deletedSupplementDoses) { dose in
+                        HStack {
+                            Text("\(dose.supplementName) · \(dose.date)")
+                            Spacer()
+                            Button("Restore") { _ = store.restoreDeletedSupplementDose(dose.id) }
+                                .accessibilityIdentifier("restore-history-supplement-dose-\(dose.id.uuidString)")
+                            Button(role: .destructive) { doseToDeletePermanently = dose.id } label: {
+                                Image(systemName: "trash").accessibilityLabel("Delete permanently")
+                            }
+                        }
+                    }
+                }
+            case .habits:
+                Section("Daily completion history") {
+                    if habitDates.isEmpty { ContentUnavailableView("No habit history", systemImage: "checkmark.circle", description: Text("Sleep, weight and scheduled supplement check-ins appear here.")) }
+                    ForEach(habitDates, id: \.self) { key in
+                        if let date = LocalDay.formatter.date(from: key) {
+                            let metrics = DailyHomeMetrics(state: store.state, date: date)
+                            NavigationLink(destination: CheckInScreen(initialDate: date, focusSection: .sleep)) {
+                                LabeledContent(key, value: "\(metrics.completedCount)/\(metrics.eligibleCount) · streak \(metrics.perfectDayStreak)")
+                            }
+                            .accessibilityIdentifier("history-habit-day-\(key)")
+                        }
+                    }
+                }
+            }
+            Section {
+                NavigationLink("Manage Recently Deleted", destination: CheckInScreen())
+                    .accessibilityIdentifier("checkin-history-recently-deleted")
+            } footer: { Text("Deleted check-ins remain recoverable for 30 days from Sleep & Check-ins.") }
+        }
+        .navigationTitle("\(category.title) History")
+        .confirmationDialog("Permanently delete this supplement dose?", isPresented: Binding(
+            get: { doseToDeletePermanently != nil },
+            set: { if !$0 { doseToDeletePermanently = nil } }
+        ), titleVisibility: .visible) {
+            Button("Delete Permanently", role: .destructive) {
+                if let doseToDeletePermanently { store.permanentlyDeleteSupplementDose(doseToDeletePermanently) }
+                doseToDeletePermanently = nil
+            }
+            Button("Cancel", role: .cancel) { doseToDeletePermanently = nil }
+        } message: { Text("This cannot be undone.") }
+    }
+
+    private func displayedWeight(_ kilograms: Double) -> String {
+        let value = store.state.home.preferredWeightUnit == "lb" ? kilograms * 2.2046226218 : kilograms
+        return value.formatted(.number.precision(.fractionLength(1)))
+    }
+}
+
+private struct WorkoutHistoryDetailScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @Environment(\.dismiss) private var dismiss
+    let sessionID: UUID
+    var onCalendarBack: (() -> Void)? = nil
+    @State private var confirmDelete = false
+
+    private var session: WorkoutSession? { store.state.training.visibleCompletedSessions.first { $0.id == sessionID } }
+
+    var body: some View {
+        Group {
+            if let session {
+                List {
+                    Section("Workout") {
+                        LabeledContent("Date", value: session.startedAt.formatted(date: .complete, time: .shortened))
+                        LabeledContent("Duration", value: duration(session))
+                        LabeledContent("Sets", value: "\(session.exercises.flatMap(\.sets).filter(\.completed).count) / \(session.exercises.flatMap(\.sets).count)")
+                    }
+                    ForEach(session.exercises) { exercise in
+                        Section(exercise.name) {
+                            ForEach(exercise.sets) { set in
+                                HistoryWorkoutSetEditor(session: session, exercise: exercise, set: set)
+                            }
+                            TextField("Exercise notes", text: Binding(
+                                get: { store.state.training.visibleCompletedSessions.first(where: { $0.id == sessionID })?.exercises.first(where: { $0.id == exercise.id })?.notes ?? "" },
+                                set: { store.updateCompletedExerciseNotes(sessionID: sessionID, exerciseID: exercise.id, notes: $0) }
+                            ), axis: .vertical)
+                                .lineLimit(1...4)
+                        }
+                    }
+                    Section("Workout notes") {
+                        TextField("Notes", text: Binding(
+                            get: { store.state.training.visibleCompletedSessions.first(where: { $0.id == sessionID })?.notes ?? "" },
+                            set: { store.updateCompletedWorkoutNotes(sessionID: sessionID, notes: $0) }
+                        ), axis: .vertical)
+                            .lineLimit(2...5)
+                            .accessibilityIdentifier("history-workout-notes")
+                    }
+                    let records = store.state.training.personalRecordEvents.filter { $0.sessionID == sessionID }
+                    if !records.isEmpty {
+                        Section("Personal records") {
+                            ForEach(records) { record in
+                                LabeledContent(record.exerciseName, value: "e1RM \(record.estimatedOneRepMaxKg.formatted(.number.precision(.fractionLength(1)))) kg")
+                            }
+                        }
+                    }
+                    Section {
+                        Button("Delete workout", role: .destructive) { confirmDelete = true }
+                    } footer: { Text("The workout moves to Recently Deleted for 30 days. Training rotation does not change.") }
+                }
+                .navigationTitle(session.templateName)
+                .navigationBarTitleDisplayMode(.inline)
+                .navigationBarBackButtonHidden(onCalendarBack != nil)
+                .toolbar {
+                    if let onCalendarBack {
+                        ToolbarItem(placement: .topBarLeading) {
+                            Button("Back", action: onCalendarBack)
+                                .accessibilityIdentifier("workout-history-back")
+                        }
+                    }
+                }
+                .confirmationDialog("Delete this workout?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                    Button("Delete Workout", role: .destructive) {
+                        store.deleteCompletedWorkout(sessionID)
+                        dismiss()
+                    }
+                    Button("Cancel", role: .cancel) { }
+                }
             } else {
-                if towardTop { app.swipeDown() } else { app.swipeUp() }
+                ContentUnavailableView("Workout unavailable", systemImage: "dumbbell")
             }
         }
     }
 
-    private func dismissKeyboard(in app: XCUIApplication) {
-        let done = app.buttons["keyboard-done"]
-        if done.waitForExistence(timeout: 1) { done.tap() }
-        else if app.keyboards.buttons["Done"].exists { app.keyboards.buttons["Done"].tap() }
+    private func duration(_ session: WorkoutSession) -> String {
+        guard let finishedAt = session.finishedAt else { return "—" }
+        let minutes = max(0, Int(finishedAt.timeIntervalSince(session.startedAt) - session.pausedSeconds) / 60)
+        return "\(minutes) min"
+    }
+}
+
+private struct HistoryWorkoutSetEditor: View {
+    @EnvironmentObject private var store: LogbookStore
+    let session: WorkoutSession
+    let exercise: WorkoutExercise
+    let set: WorkoutSet
+
+    var body: some View {
+        HStack(spacing: 9) {
+            Text("Set \((exercise.sets.firstIndex(of: set) ?? 0) + 1)").font(.caption).frame(width: 45, alignment: .leading)
+            switch exercise.trackingMode ?? .weightAndReps {
+            case .weightAndReps:
+                weightField
+                Text("×").foregroundStyle(.secondary)
+                repsField
+            case .repsOnly:
+                repsField
+            case .duration:
+                TextField("sec", value: Binding(
+                    get: { set.durationSeconds ?? 0 },
+                    set: { update(weight: nil, reps: set.reps, completed: set.completed, duration: $0 > 0 ? $0 : nil, distance: nil) }
+                ), format: .number)
+                    .keyboardType(.numberPad).textFieldStyle(.roundedBorder).accessibilityLabel("Duration in seconds")
+            case .weightAndDistance:
+                weightField
+                TextField("m", value: Binding(
+                    get: { set.distanceMeters ?? 0 },
+                    set: { update(weight: set.weightKg, reps: set.reps, completed: set.completed, duration: nil, distance: $0 > 0 ? $0 : nil) }
+                ), format: .number.precision(.fractionLength(0...1)))
+                    .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).accessibilityLabel("Distance in meters")
+            }
+            Button {
+                update(weight: set.weightKg, reps: set.reps, completed: !set.completed, duration: set.durationSeconds, distance: set.distanceMeters)
+            } label: { Image(systemName: set.completed ? "checkmark.circle.fill" : "circle").foregroundStyle(set.completed ? .green : .secondary) }
+                .buttonStyle(.plain).accessibilityLabel(set.completed ? "Mark set incomplete" : "Mark set complete")
+                    .accessibilityIdentifier("history-set-complete")
+        }
     }
 
-    private func replaceText(in field: XCUIElement, with value: String) {
-        field.tap()
-        let current = field.value as? String ?? ""
-        if !current.isEmpty {
-            field.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: current.count))
-        }
-        field.typeText(value)
+    private var weightField: some View {
+        TextField("kg", value: Binding(
+            get: { set.weightKg ?? 0 },
+            set: { update(weight: $0 > 0 ? $0 : nil, reps: set.reps, completed: set.completed, duration: nil, distance: set.distanceMeters) }
+        ), format: .number.precision(.fractionLength(0...2)))
+            .keyboardType(.decimalPad).textFieldStyle(.roundedBorder).accessibilityLabel("Weight in kilograms")
+                .accessibilityIdentifier("history-set-weight")
     }
 
-    func testCheckInSleepNapWeightAndSupplementWorkflow() throws {
-        let app = launchApp()
-        app.buttons["Sleep tab"].tap()
-
-        let sessionType = app.segmentedControls["sleep-session-type"]
-        XCTAssertTrue(sessionType.waitForExistence(timeout: 5))
-        sessionType.buttons["Nap"].tap()
-        let saveSleep = app.buttons["sleep-save"]
-        XCTAssertTrue(saveSleep.waitForExistence(timeout: 5))
-        saveSleep.tap()
-        XCTAssertTrue(app.staticTexts["Nap"].waitForExistence(timeout: 5), "A nap is saved as a separate check-in")
-        let sleepRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "sleep-edit-")).firstMatch
-        XCTAssertTrue(sleepRow.waitForExistence(timeout: 5))
-        let sleepID = String(sleepRow.identifier.dropFirst("sleep-edit-".count))
-        app.buttons["sleep-delete-\(sleepID)"].tap()
-        let restoreSleep = app.buttons["restore-sleep-\(sleepID)"]
-        for _ in 0..<8 {
-            if restoreSleep.isHittable { break }
-            app.swipeUp()
-        }
-        XCTAssertTrue(restoreSleep.waitForExistence(timeout: 5), "A deleted sleep record is listed for recovery")
-        XCTAssertTrue(restoreSleep.isHittable, "The restore action should be reachable in the Recently Deleted section")
-        restoreSleep.tap()
-        let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
-        scrollToElement(restoredSleep, in: app, towardTop: true)
-        XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
-        let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
-        scrollToElement(deleteRestoredSleep, in: app)
-        XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
-        deleteRestoredSleep.tap()
-        let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
-        scrollToElement(permanentlyDeleteSleep, in: app)
-        XCTAssertTrue(permanentlyDeleteSleep.waitForExistence(timeout: 5), "Recently Deleted offers explicit permanent removal")
-        XCTAssertTrue(permanentlyDeleteSleep.isHittable, "Permanent removal must be reachable from the active Recently Deleted list")
-        permanentlyDeleteSleep.tap()
-        app.buttons["Delete Permanently"].tap()
-        XCTAssertFalse(app.buttons["restore-sleep-\(sleepID)"].exists, "Permanent deletion removes the record from recovery")
-        scrollToElement(restoredSleep, in: app, towardTop: true)
-        XCTAssertFalse(restoredSleep.exists, "Permanent deletion removes the record from active history too")
-
-        let weightField = app.textFields["checkin-weight-value"]
-        XCTAssertTrue(weightField.waitForExistence(timeout: 5))
-        weightField.tap()
-        let oldWeight = weightField.value as? String ?? ""
-        if !oldWeight.isEmpty {
-            weightField.typeText(String(repeating: XCUIKeyboardKey.delete.rawValue, count: oldWeight.count))
-        }
-        weightField.typeText("79.5")
-        app.buttons["weight-save"].tap()
-        let replaceWeight = app.buttons["Replace weight"]
-        if replaceWeight.waitForExistence(timeout: 2) { replaceWeight.tap() }
-        let currentWeight = app.descendants(matching: .any)["weight-current-value"]
-        XCTAssertTrue(currentWeight.waitForExistence(timeout: 5), "The selected weight is saved and displayed")
-        XCTAssertTrue(currentWeight.label.contains("79.5"), "Historical weight editing stores the entered measurement")
-
-        app.buttons["supplement-add"].tap()
-        let supplementName = app.textFields["supplement-name"]
-        XCTAssertTrue(supplementName.waitForExistence(timeout: 5))
-        supplementName.tap()
-        supplementName.typeText("QA Vitamin D")
-        app.buttons["supplement-editor-save"].tap()
-        XCTAssertTrue(app.staticTexts["QA Vitamin D"].waitForExistence(timeout: 5))
-
-        let dueVitaminD = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mark QA Vitamin D taken")).firstMatch
-        XCTAssertTrue(dueVitaminD.waitForExistence(timeout: 5), "A newly added daily supplement has a direct Taken action")
-        dueVitaminD.tap()
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Undo QA Vitamin D")).firstMatch.waitForExistence(timeout: 5))
-        attachScreenshot(of: app, named: "Sleep-Weight-Supplements-Candidate")
+    private var repsField: some View {
+        TextField("Reps", value: Binding(
+            get: { set.reps },
+            set: { update(weight: set.weightKg, reps: $0, completed: set.completed, duration: nil, distance: set.distanceMeters) }
+        ), format: .number)
+            .keyboardType(.numberPad).textFieldStyle(.roundedBorder).frame(width: 64).accessibilityLabel("Repetitions")
+                .accessibilityIdentifier("history-set-reps")
     }
 
-    func testCategoryHistoryNavigationAndEditableCheckInRecords() throws {
-        let app = launchApp()
-        app.buttons["Sleep tab"].tap()
+    private func update(weight: Double?, reps: Int, completed: Bool, duration: Int?, distance: Double?) {
+        store.updateCompletedWorkoutSet(sessionID: session.id, exerciseID: exercise.id, setID: set.id, weightKg: weight, reps: reps, completed: completed, durationSeconds: duration, distanceMeters: distance)
+    }
+}
 
-        let sessionType = app.segmentedControls["sleep-session-type"]
-        XCTAssertTrue(sessionType.waitForExistence(timeout: 5))
-        sessionType.buttons["Nap"].tap()
-        app.buttons["sleep-save"].tap()
-        let sleepRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "sleep-edit-")).firstMatch
-        XCTAssertTrue(sleepRow.waitForExistence(timeout: 5))
-        let sleepID = String(sleepRow.identifier.dropFirst("sleep-edit-".count))
+struct WorkoutCalendarScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @Environment(\.dismiss) private var dismiss
+    @State private var month: Date
+    @State private var selectedDate: Date
+    @State private var historyPath: [UUID] = []
 
-        let weightField = app.textFields["checkin-weight-value"]
-        scrollToElement(weightField, in: app)
-        XCTAssertTrue(weightField.waitForExistence(timeout: 5))
-        replaceText(in: weightField, with: "78")
-        dismissKeyboard(in: app)
-        app.buttons["weight-save"].tap()
-        let replaceWeight = app.buttons["Replace weight"]
-        if replaceWeight.waitForExistence(timeout: 2) { replaceWeight.tap() }
-        let savedWeight = app.descendants(matching: .any)["weight-current-value"]
-        XCTAssertTrue(savedWeight.waitForExistence(timeout: 5))
-        XCTAssertTrue(savedWeight.label.contains("78"), "The daily check-in fixture weight is corrected before history inspection")
-
-        let addSupplement = app.buttons["supplement-add"]
-        scrollToElement(addSupplement, in: app)
-        addSupplement.tap()
-        let name = app.textFields["supplement-name"]
-        XCTAssertTrue(name.waitForExistence(timeout: 5))
-        name.tap()
-        name.typeText("QA History Supplement")
-        app.buttons["supplement-editor-save"].tap()
-        let takeSupplement = app.buttons.matching(NSPredicate(format: "label CONTAINS %@", "Mark QA History Supplement taken")).firstMatch
-        XCTAssertTrue(takeSupplement.waitForExistence(timeout: 5))
-        takeSupplement.tap()
-
-        // Check-ins is a pushed screen; return to Home before using the fixed dock.
-        tapBack(in: app)
-        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 5))
-        app.buttons["History tab"].tap()
-        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5))
-        let categoryIDs = [
-            "history-category-training", "history-category-nutrition", "history-category-weight",
-            "history-category-sleep", "history-category-supplements", "history-category-habits"
-        ]
-        for identifier in categoryIDs {
-            scrollToElement(app.buttons[identifier], in: app)
-            XCTAssertTrue(app.buttons[identifier].waitForExistence(timeout: 5), "Missing History category \(identifier)")
-        }
-        attachScreenshot(of: app, named: "History-Categories-Candidate")
-
-        let sleepCategory = app.buttons["history-category-sleep"]
-        scrollToElement(sleepCategory, in: app, towardTop: true)
-        sleepCategory.tap()
-        XCTAssertTrue(app.navigationBars["Sleep History"].waitForExistence(timeout: 5))
-        let sleepHistoryRow = app.buttons["history-sleep-\(sleepID)"]
-        XCTAssertTrue(sleepHistoryRow.waitForExistence(timeout: 5), "Sleep History keeps individual nap records")
-        attachScreenshot(of: app, named: "Sleep-History-Candidate")
-        sleepHistoryRow.tap()
-        XCTAssertTrue(app.buttons["sleep-edit-\(sleepID)"].waitForExistence(timeout: 5), "A history row opens its exact editable check-in record")
-        tapBack(in: app)
-        tapBack(in: app)
-
-        let weightCategory = app.buttons["history-category-weight"]
-        scrollToElement(weightCategory, in: app, towardTop: true)
-        weightCategory.tap()
-        XCTAssertTrue(app.navigationBars["Weight History"].waitForExistence(timeout: 5))
-        let weightHistoryRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-weight-")).firstMatch
-        XCTAssertTrue(weightHistoryRow.waitForExistence(timeout: 5), "Weight History lists the saved daily measurement")
-        attachScreenshot(of: app, named: "Weight-History-Candidate")
-        weightHistoryRow.tap()
-        let currentWeight = app.descendants(matching: .any)["weight-current-value"]
-        XCTAssertTrue(currentWeight.waitForExistence(timeout: 5))
-        XCTAssertTrue(currentWeight.label.contains("78"), "Weight history navigates to the selected date's editable value")
-        tapBack(in: app)
-        tapBack(in: app)
-
-        let supplementCategory = app.buttons["history-category-supplements"]
-        scrollToElement(supplementCategory, in: app, towardTop: true)
-        supplementCategory.tap()
-        XCTAssertTrue(app.navigationBars["Supplements History"].waitForExistence(timeout: 5))
-        let supplementHistoryRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-supplement-")).firstMatch
-        XCTAssertTrue(supplementHistoryRow.waitForExistence(timeout: 5), "Supplement History lists dated dose records")
-        attachScreenshot(of: app, named: "Supplement-History-Candidate")
-        let doseID = String(supplementHistoryRow.identifier.dropFirst("history-supplement-".count))
-        supplementHistoryRow.swipeLeft()
-        app.buttons["Delete"].tap()
-        let restoreDose = app.buttons["restore-history-supplement-dose-\(doseID)"]
-        scrollToElement(restoreDose, in: app)
-        XCTAssertTrue(restoreDose.waitForExistence(timeout: 5), "Deleted supplement doses are retained for recovery")
-        restoreDose.tap()
-        XCTAssertTrue(app.buttons["history-supplement-\(doseID)"].waitForExistence(timeout: 5), "Restoring a dose returns it to dated supplement history")
-        tapBack(in: app)
-
-        let habitsCategory = app.buttons["history-category-habits"]
-        scrollToElement(habitsCategory, in: app, towardTop: true)
-        habitsCategory.tap()
-        XCTAssertTrue(app.navigationBars["Habits History"].waitForExistence(timeout: 5))
-        XCTAssertTrue(app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "history-habit-day-")).firstMatch.waitForExistence(timeout: 5), "Habits History derives dated completion records")
-        attachScreenshot(of: app, named: "Habits-History-Candidate")
+    init(initialDate: Date = .now) {
+        let calendar = Calendar.current
+        _month = State(initialValue: calendar.date(from: calendar.dateComponents([.year, .month], from: initialDate)) ?? initialDate)
+        _selectedDate = State(initialValue: calendar.startOfDay(for: initialDate))
     }
 
-    func testProgressHomeMetricsAndNumberedActivityDayNavigation() throws {
-        let app = launchApp(strengthHistory: true)
-        app.buttons["Progress & History page"].tap()
+    private let calendar = Calendar.current
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 7)
+    private var sessions: [WorkoutSession] { store.state.training.visibleCompletedSessions }
 
-        let metricPicker = app.segmentedControls["progress-metric-picker"]
-        XCTAssertTrue(metricPicker.waitForExistence(timeout: 5), "Progress Home exposes its five approved metrics")
-        for metric in ["Weight", "Strength", "Sleep", "Calories", "Protein"] {
-            let button = metricPicker.buttons[metric]
-            XCTAssertTrue(button.exists, "Missing \(metric) metric")
-            button.tap()
-            XCTAssertTrue(button.isSelected, "Selecting \(metric) updates the chart tab")
-            if metric == "Strength" {
-                let exercisePicker = app.descendants(matching: .any)["progress-strength-exercise"].firstMatch
-                XCTAssertTrue(exercisePicker.waitForExistence(timeout: 5), "Multiple completed exercises expose a selection control")
-                exercisePicker.tap()
-                let rowOption = app.buttons["Seated Row"]
-                XCTAssertTrue(rowOption.waitForExistence(timeout: 5), "The exercise menu includes each completed exercise")
-                rowOption.tap()
-                XCTAssertTrue(exercisePicker.label.contains("Seated Row") || (exercisePicker.value as? String ?? "").contains("Seated Row"), "The selected exercise controls the strength series")
+    private var monthDays: [Date?] {
+        guard let interval = calendar.dateInterval(of: .month, for: month),
+              let dayRange = calendar.range(of: .day, in: .month, for: month) else { return [] }
+        let firstWeekday = calendar.component(.weekday, from: interval.start)
+        let leading = (firstWeekday - calendar.firstWeekday + 7) % 7
+        let days = dayRange.compactMap { calendar.date(byAdding: .day, value: $0 - 1, to: interval.start) }
+        return Array<Date?>(repeating: nil, count: leading) + days.map(Optional.some)
+    }
+
+    private var selectedSessions: [WorkoutSession] {
+        sessions.filter { $0.localDate == LocalDay.string(selectedDate) }.sorted { $0.startedAt < $1.startedAt }
+    }
+
+    private var monthSessionCount: Int {
+        sessions.filter { calendar.isDate($0.startedAt, equalTo: month, toGranularity: .month) }.count
+    }
+
+    private var weekdaySymbols: [String] {
+        let formatter = DateFormatter()
+        let symbols: [String] = formatter.veryShortWeekdaySymbols ?? ["S", "M", "T", "W", "T", "F", "S"]
+        guard !symbols.isEmpty else { return [] }
+        let offset = max(0, calendar.firstWeekday - 1)
+        var ordered: [String] = []
+        ordered.reserveCapacity(symbols.count)
+        for index in symbols.indices {
+            let symbolIndex = (index + offset) % symbols.count
+            ordered.append(symbols[symbolIndex])
+        }
+        return ordered
+    }
+
+    var body: some View {
+        NavigationStack(path: $historyPath) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 16) {
+                    HStack {
+                        Button { changeMonth(by: -1) } label: { Image(systemName: "chevron.left").frame(width: 36, height: 36) }
+                            .accessibilityLabel("Previous month")
+                        Spacer()
+                        VStack(spacing: 3) {
+                            Text(month.formatted(.dateTime.month(.wide).year())).font(.headline)
+                                .accessibilityIdentifier("training-calendar-month-label")
+                            Text("\(monthSessionCount) workouts completed").font(.caption).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Button { changeMonth(by: 1) } label: { Image(systemName: "chevron.right").frame(width: 36, height: 36) }
+                            .accessibilityLabel("Next month")
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.horizontal, 4)
+
+                    LazyVGrid(columns: columns, spacing: 5) {
+                        ForEach(Array(weekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                            Text(symbol.uppercased()).font(.caption2.weight(.semibold)).foregroundStyle(.secondary).frame(maxWidth: .infinity)
+                        }
+                        ForEach(Array(monthDays.enumerated()), id: \.offset) { _, day in
+                            if let day {
+                                calendarCell(day)
+                            } else {
+                                Color.clear.frame(height: 58)
+                            }
+                        }
+                    }
+
+                    Divider()
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text(selectedDate.formatted(date: .complete, time: .omitted)).font(.headline)
+                        if selectedSessions.isEmpty {
+                            Text("No completed workouts on this date.").font(.subheadline).foregroundStyle(.secondary)
+                        } else {
+                            WorkoutDaySessionSummary(sessions: selectedSessions, weightUnit: store.state.home.preferredWeightUnit)
+                            ForEach(selectedSessions) { session in
+                                NavigationLink(value: session.id) {
+                                    HStack {
+                                        VStack(alignment: .leading, spacing: 3) {
+                                            Text(session.templateName).font(.subheadline.weight(.semibold))
+                                            Text("\(session.startedAt.formatted(date: .omitted, time: .shortened)) · \(session.exercises.flatMap(\.sets).filter(\.completed).count) completed sets")
+                                                .font(.caption).foregroundStyle(.secondary)
+                                        }
+                                        Spacer()
+                                        Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+                                    }
+                                    .padding(10)
+                                    .background(.quaternary.opacity(0.4), in: RoundedRectangle(cornerRadius: 12))
+                                }
+                                .accessibilityIdentifier("calendar-workout-\(session.id.uuidString)")
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .padding()
+            }
+            .navigationTitle("Workout Calendar")
+            .navigationBarTitleDisplayMode(.inline)
+            .navigationDestination(for: UUID.self) { sessionID in
+                WorkoutHistoryDetailScreen(sessionID: sessionID) {
+                    if !historyPath.isEmpty { historyPath.removeLast() }
+                }
+            }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        }
+    }
+
+    private func calendarCell(_ date: Date) -> some View {
+        let daySessions = sessions.filter { $0.localDate == LocalDay.string(date) }.sorted { $0.startedAt < $1.startedAt }
+        let isSelected = calendar.isDate(date, inSameDayAs: selectedDate)
+        let isToday = calendar.isDateInToday(date)
+        let isCurrentWeek = calendar.isDate(date, equalTo: .now, toGranularity: .weekOfYear)
+        return Button { selectedDate = date } label: {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(date.formatted(.dateTime.day())).font(.caption.weight(isToday || isSelected ? .bold : .regular))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let first = daySessions.first {
+                    Text(String(first.templateName.prefix(5))).font(.system(size: 8, weight: .medium)).lineLimit(1)
+                    if daySessions.count > 1 { Text("+\(daySessions.count - 1)").font(.system(size: 8, weight: .bold)).foregroundStyle(.secondary) }
+                } else {
+                    Spacer(minLength: 0).frame(height: 12)
+                }
+            }
+            .padding(5)
+            .frame(maxWidth: .infinity, minHeight: 58, maxHeight: 58, alignment: .topLeading)
+            .background(isSelected ? store.state.home.theme.palette.accentColor.opacity(0.22) : (isCurrentWeek ? store.state.home.theme.palette.accentColor.opacity(0.06) : Color.clear), in: RoundedRectangle(cornerRadius: 9))
+            .overlay(RoundedRectangle(cornerRadius: 9).stroke(isToday ? store.state.home.theme.palette.accentColor : Color.clear, lineWidth: 1.4))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(date.formatted(date: .complete, time: .omitted)), \(daySessions.count) workouts")
+        .accessibilityIdentifier("workout-calendar-\(LocalDay.string(date))")
+    }
+
+    private func changeMonth(by amount: Int) {
+        guard let next = calendar.date(byAdding: .month, value: amount, to: month),
+              let start = calendar.date(from: calendar.dateComponents([.year, .month], from: next)) else { return }
+        month = start
+        selectedDate = start
+    }
+}
+
+private struct WorkoutDaySessionSummary: View {
+    let sessions: [WorkoutSession]
+    let weightUnit: String
+
+    private var completedSets: Int {
+        var count = 0
+        for session in sessions {
+            for exercise in session.exercises {
+                count += exercise.sets.filter(\.completed).count
             }
         }
-
-        let activityDay = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "activity-day-")).firstMatch
-        XCTAssertTrue(activityDay.waitForExistence(timeout: 5), "The numbered activity heatmap should be tappable")
-        let dateKey = String(activityDay.identifier.dropFirst("activity-day-".count))
-        activityDay.tap()
-        XCTAssertTrue(app.navigationBars["History"].waitForExistence(timeout: 5), "Selecting a heatmap day navigates to History")
-        let selectedHistoryDate = app.descendants(matching: .any)["history-selected-day-date"]
-        XCTAssertTrue(selectedHistoryDate.waitForExistence(timeout: 5), "Heatmap selection opens and scrolls to that day in History")
-        XCTAssertEqual(selectedHistoryDate.label, dateKey)
-        attachScreenshot(of: app, named: "Progress-Home-Candidate")
+        return count
     }
 
-    private func launchApp(themeID: String? = nil, progressionHistory: Bool = false, trainingSplitCount: Int? = nil, trainingPrograms: Bool = false, singleExercise: Bool = false, strengthHistory: Bool = false) -> XCUIApplication {
-        let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing"]
-        if progressionHistory { app.launchArguments.append("--qa-progression-history") }
-        if trainingSplitCount == 8 { app.launchArguments.append("--qa-training-split-eight") }
-        if trainingPrograms { app.launchArguments.append("--qa-training-programs") }
-        if singleExercise { app.launchArguments.append("--qa-single-exercise") }
-        if strengthHistory { app.launchArguments.append("--qa-strength-history") }
-        app.launchArguments.append("--qa-storage-id=\(UUID().uuidString)")
-        app.launchArguments.append("--qa-theme=\(themeID ?? "default")")
-        app.launch()
-        XCTAssertTrue(app.buttons["home-widget-kcal"].waitForExistence(timeout: 20))
-        return app
+    private var volume: Int {
+        var kg = 0.0
+        for session in sessions {
+            for exercise in session.exercises {
+                for set in exercise.sets where set.completed {
+                    kg += (set.weightKg ?? 0) * Double(set.reps)
+                }
+            }
+        }
+        return Int(weightUnit == "lb" ? kg * 2.2046226218 : kg)
     }
 
-    private func capturePage(_ pageName: String, in app: XCUIApplication) {
-        let pageButton = app.buttons["\(pageName) page"]
-        XCTAssertTrue(pageButton.waitForExistence(timeout: 5), "Missing Home page \(pageName)")
-        pageButton.tap()
-        XCTAssertTrue(app.staticTexts[pageName].waitForExistence(timeout: 5), "Page \(pageName) did not become visible")
-        attachScreenshot(of: app, named: "Home-\(pageName.replacingOccurrences(of: " ", with: "-"))")
+    var body: some View {
+        HStack {
+            Label("\(sessions.count) workouts", systemImage: "dumbbell.fill")
+            Spacer()
+            Text("\(completedSets) sets · \(volume) \(weightUnit) volume")
+        }
+        .font(.caption.weight(.medium))
+        .foregroundStyle(.secondary)
+    }
+}
+
+struct DailyHistoryPoint: Identifiable, Equatable {
+    var id: String { date }
+    let date: String
+    let value: Double
+}
+
+enum NutritionHistorySeries {
+    static func calories(from logs: [FoodLog], since cutoff: String) -> [DailyHistoryPoint] {
+        aggregate(logs, since: cutoff, value: \.calories)
     }
 
-    private func attachScreenshot(of app: XCUIApplication, named name: String) {
-        let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = name
-        attachment.lifetime = .keepAlways
-        add(attachment)
+    static func protein(from logs: [FoodLog], since cutoff: String) -> [DailyHistoryPoint] {
+        aggregate(logs, since: cutoff, value: \.protein)
+    }
+
+    private static func aggregate(_ logs: [FoodLog], since cutoff: String, value: KeyPath<FoodLog, Double>) -> [DailyHistoryPoint] {
+        Dictionary(grouping: logs.filter { $0.deletedAt == nil && $0.date >= cutoff }, by: \.date)
+            .map { date, entries in DailyHistoryPoint(date: date, value: entries.reduce(0) { $0 + $1[keyPath: value] }) }
+            .sorted { $0.date < $1.date }
+    }
+}
+
+private struct HistoryExerciseOption: Identifiable {
+    let id: String
+    let name: String
+}
+
+enum StrengthHistorySeries {
+    static func points(from sessions: [WorkoutSession], exerciseID: String, since cutoff: String) -> [DailyHistoryPoint] {
+        var bestByDate: [String: Double] = [:]
+        for session in sessions where session.finishedAt != nil && session.localDate >= cutoff {
+            for exercise in session.exercises {
+                guard exercise.exerciseID == exerciseID,
+                      (exercise.trackingMode ?? .weightAndReps) == .weightAndReps else { continue }
+                for set in exercise.sets where set.completed && set.reps > 0 {
+                    guard let weight = set.weightKg, weight > 0 else { continue }
+                    let estimate = weight * (1 + Double(set.reps) / 30)
+                    bestByDate[session.localDate] = max(bestByDate[session.localDate] ?? 0, estimate)
+                }
+            }
+        }
+        return bestByDate.keys.sorted().compactMap { date in
+            guard let value = bestByDate[date] else { return nil }
+            return DailyHistoryPoint(date: date, value: value)
+        }
+    }
+}
+
+struct SettingsScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @State private var showThemeGallery = false
+    @State private var showHomeEditor = false
+    @State private var backupURL: URL?
+    @State private var exportError: String?
+
+    var body: some View {
+        List {
+            Section("Appearance") {
+                Button { showThemeGallery = true } label: {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) { Text("Theme").foregroundStyle(.primary); Text(store.state.home.theme.title).font(.caption).foregroundStyle(.secondary) }
+                        Spacer()
+                        Image(store.state.home.theme.rawValue).resizable().scaledToFill().frame(width: 58, height: 44).clipShape(RoundedRectangle(cornerRadius: 10))
+                        Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
+                    }
+                }
+                .buttonStyle(.plain)
+                Toggle("Optional haptic feedback", isOn: Binding(get: { store.state.home.hapticsEnabled }, set: store.setHaptics))
+            }
+            Section("Home Screen") {
+                Button { showHomeEditor = true } label: { Label("Edit pages and widgets", systemImage: "square.grid.2x2") }
+                Text("Four approved default pages; customize page names, widget types, sizes, and placement. System widgets are managed from the iPhone Home Screen.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Fitness & Nutrition") {
+                NavigationLink("Nutrition targets", destination: NutritionTargetsScreen())
+                Picker("Weight unit", selection: Binding(get: { store.state.home.preferredWeightUnit }, set: store.setWeightUnit)) {
+                    Text("Kilograms").tag("kg")
+                    Text("Pounds").tag("lb")
+                }
+                NavigationLink("Training reminders", destination: ReminderSettingsScreen())
+                NavigationLink("Nutrition reminders", destination: ReminderSettingsScreen())
+            }
+            Section("Data & Backup") {
+                Button { createBackup() } label: { Label("Export Logbook backup", systemImage: "square.and.arrow.up") }
+                if let backupURL {
+                    ShareLink(item: backupURL) { Label("Share backup file…", systemImage: "doc.zipper") }
+                }
+                Text("Data stays on this device in a shared App Group file for the app and widgets. Keep a backup before changing devices. Importing existing web-app records is not yet enabled; see the project migration note before moving any real data.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Apple Health") {
+                Label("Health access is off", systemImage: "heart.slash")
+                Text("No HealthKit framework, entitlement, or permission prompt is included, per your choice.")
+                    .font(.footnote).foregroundStyle(.secondary)
+            }
+            Section("Storage") {
+                LabeledContent("Saved locally", value: store.lastSavedAt?.formatted(date: .omitted, time: .shortened) ?? "No changes yet")
+                if let error = store.persistenceError { Text(error).font(.footnote).foregroundStyle(.red) }
+            }
+        }
+        .navigationTitle("Settings")
+        .sheet(isPresented: $showThemeGallery) { ThemeGalleryScreen().presentationDetents([.large]).presentationDragIndicator(.visible) }
+        .sheet(isPresented: $showHomeEditor) { HomeEditorScreen().presentationDetents([.large]).presentationDragIndicator(.visible) }
+        .alert("Backup could not be created", isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })) {
+            Button("OK", role: .cancel) { exportError = nil }
+        } message: { Text(exportError ?? "") }
+    }
+
+    private func createBackup() {
+        do { backupURL = try store.exportBackup() }
+        catch { exportError = error.localizedDescription }
+    }
+}
+
+struct ThemeGalleryScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @Environment(\.dismiss) private var dismiss
+    private let columns = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                LazyVGrid(columns: columns, spacing: 12) {
+                    ForEach(LogbookTheme.allCases) { theme in
+                        Button {
+                            store.setTheme(theme)
+                            dismiss()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Image(theme.rawValue).resizable().scaledToFill().frame(height: 116).clipped()
+                                    .overlay(alignment: .bottomLeading) {
+                                        Text(theme.title.uppercased()).font(.system(size: 10, weight: .bold, design: .rounded)).tracking(0.9)
+                                            .foregroundStyle(theme.palette.textColor).padding(8)
+                                    }
+                                HStack {
+                                    Circle().fill(theme.palette.accentColor).frame(width: 12, height: 12)
+                                    Text(theme.title).font(.system(size: 13, weight: .semibold)).lineLimit(1)
+                                    Spacer(minLength: 0)
+                                    if store.state.home.theme == theme { Image(systemName: "checkmark.circle.fill").foregroundStyle(theme.palette.accentColor) }
+                                }
+                                .padding(10).foregroundStyle(theme.palette.textColor)
+                                .background(theme.palette.surfaceColor.opacity(theme.palette.light ? 0.9 : 0.96))
+                            }
+                            .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                            .overlay(RoundedRectangle(cornerRadius: 18).stroke(theme.palette.accentColor.opacity(0.45), lineWidth: store.state.home.theme == theme ? 2 : 0.6))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Apply \(theme.title) theme")
+                    }
+                }
+                .padding(16)
+            }
+            .background(ThemeBackdrop(theme: store.state.home.theme))
+            .navigationTitle("Theme Gallery")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .topBarTrailing) { Button("Done") { dismiss() } } }
+        }
+    }
+}
+
+struct ReminderSettingsScreen: View {
+    @EnvironmentObject private var store: LogbookStore
+    @State private var permissionMessage: String?
+
+    var body: some View {
+        Form {
+            Section {
+                Toggle("Enable local reminders", isOn: Binding(
+                    get: { store.state.notificationsEnabled },
+                    set: { enabled in
+                        Task {
+                            if enabled {
+                                guard await ReminderService.requestPermission() else { permissionMessage = "Notifications are not authorized in iOS Settings."; return }
+                            }
+                            store.setNotificationsEnabled(enabled)
+                        }
+                    }
+                ))
+                if let permissionMessage { Text(permissionMessage).font(.footnote).foregroundStyle(.orange) }
+            } footer: { Text("Reminders are optional local notifications. iOS Focus and notification settings can delay or silence them.") }
+            Section("Daily reminder times") {
+                reminderRow("Nutrition", route: .food, value: store.state.nutritionReminderTime)
+                reminderRow("Training", route: .training, value: store.state.trainingReminderTime)
+                Text("Leave a time unset to keep that reminder off.").font(.footnote).foregroundStyle(.secondary)
+            }
+        }
+        .navigationTitle("Reminders")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    @ViewBuilder private func reminderRow(_ title: String, route: LogbookRoute, value: String?) -> some View {
+        let enabled = value != nil
+        Toggle(isOn: Binding(get: { enabled }, set: { on in
+            if on && !store.state.notificationsEnabled {
+                Task {
+                    guard await ReminderService.requestPermission() else { permissionMessage = "Notifications are not authorized in iOS Settings."; return }
+                    store.setNotificationsEnabled(true)
+                    store.setReminder(kind: route, time: "19:00")
+                }
+            } else {
+                store.setReminder(kind: route, time: on ? (value ?? "19:00") : nil)
+            }
+        })) { Text(title) }
+        if enabled {
+            DatePicker("Time", selection: Binding(get: { date(from: value ?? "19:00") }, set: { store.setReminder(kind: route, time: time(from: $0)) }), displayedComponents: .hourAndMinute)
+                .datePickerStyle(.compact)
+        }
+    }
+
+    private func date(from value: String) -> Date {
+        let pieces = value.split(separator: ":").compactMap { Int($0) }
+        return Calendar.current.date(bySettingHour: pieces.first ?? 19, minute: pieces.dropFirst().first ?? 0, second: 0, of: .now) ?? .now
+    }
+    private func time(from date: Date) -> String {
+        String(format: "%02d:%02d", Calendar.current.component(.hour, from: date), Calendar.current.component(.minute, from: date))
     }
 }
