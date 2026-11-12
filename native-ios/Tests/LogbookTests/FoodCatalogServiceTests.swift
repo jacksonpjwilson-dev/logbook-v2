@@ -93,6 +93,53 @@ final class FoodCatalogServiceTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testLiveProviderSearchParsingAndDiskCache() async throws {
+        guard ProcessInfo.processInfo.environment["LOGBOOK_LIVE_PROVIDER_TESTS"] == "1" else {
+            throw XCTSkip("Live provider requests run only in the dedicated provider-validation workflow.")
+        }
+
+        let service = FoodCatalogService()
+        let canadianFoods = try await service.searchCanadianNutrientFile("banana")
+        XCTAssertFalse(canadianFoods.isEmpty, "CNF should return live banana data through Logbook's parser.")
+        XCTAssertTrue(canadianFoods.allSatisfy {
+            $0.source == "Canadian Nutrient File · Health Canada" &&
+            $0.sourceURL?.contains("food-nutrition.canada.ca") == true &&
+            $0.basisAmount == 100 && $0.basisUnit == "g" &&
+            [$0.calories, $0.protein, $0.carbohydrates, $0.fat].allSatisfy { $0.isFinite && $0 >= 0 }
+        }, "CNF values should retain provenance and valid per-100-g nutrients.")
+
+        let openFoodFacts = try await service.searchOpenFoodFacts("banana")
+        XCTAssertFalse(openFoodFacts.isEmpty, "Open Food Facts should return live search results through Logbook's parser.")
+        XCTAssertTrue(openFoodFacts.allSatisfy {
+            $0.source == "Open Food Facts · community-contributed" &&
+            $0.sourceURL?.hasPrefix("https://world.openfoodfacts.org/product/") == true &&
+            $0.basisAmount == 100 && $0.basisUnit == "g" &&
+            [$0.calories, $0.protein, $0.carbohydrates, $0.fat].allSatisfy { $0.isFinite && $0 >= 0 }
+        }, "Open Food Facts values should retain product provenance and valid per-100-g nutrients.")
+        XCTAssertTrue(openFoodFacts.allSatisfy { food in
+            food.verifiedServingGrams == nil || food.verifiedServingGrams!.isFinite && food.verifiedServingGrams! > 0
+        }, "Only positive gram servings should be cached as verified serving sizes.")
+
+        let foodsToCache = canadianFoods + openFoodFacts
+        let cacheURL = FileManager.default.temporaryDirectory
+            .appendingPathComponent("LogbookLiveProvider-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent("state.json")
+        let store = LogbookStore(repository: LogbookRepository(url: cacheURL))
+        store.cacheFoodDefinitions(foodsToCache)
+        let reloaded = LogbookStore(repository: LogbookRepository(url: cacheURL)).state.nutrition.foods
+        let cachedByID = Dictionary(uniqueKeysWithValues: reloaded.map { ($0.id, $0) })
+        for food in foodsToCache {
+            let cached = try XCTUnwrap(cachedByID[food.id], "Imported food \(food.id) should survive a disk reload.")
+            XCTAssertEqual(cached.source, food.source)
+            XCTAssertEqual(cached.sourceURL, food.sourceURL)
+            XCTAssertEqual(cached.calories, food.calories, accuracy: 0.001)
+            XCTAssertEqual(cached.protein, food.protein, accuracy: 0.001)
+            XCTAssertEqual(cached.carbohydrates, food.carbohydrates, accuracy: 0.001)
+            XCTAssertEqual(cached.fat, food.fat, accuracy: 0.001)
+        }
+    }
+
     private static func stubbedSession() -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [FoodURLProtocolStub.self]

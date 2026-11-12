@@ -1,0 +1,53 @@
+name: Live Food Provider Validation
+
+on:
+  push:
+    branches:
+      - codex/default-theme-gate1
+    paths:
+      - "native-ios/Sources/Logbook/FoodCatalogService.swift"
+      - "native-ios/Tests/LogbookTests/FoodCatalogServiceTests.swift"
+      - ".github/workflows/live-food-provider.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-provider-validation:
+    name: Live CNF and Open Food Facts parsing and cache
+    runs-on: macos-15
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: ./native-ios/generate-project.sh
+
+      - name: Exercise live provider responses through app service
+        env:
+          LOGBOOK_LIVE_PROVIDER_TESTS: "1"
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project native-ios/Logbook.xcodeproj \
+            -scheme Logbook \
+            -destination "platform=iOS Simulator,name=iPhone 16" \
+            -parallel-testing-enabled NO \
+            -only-testing:LogbookTests/FoodCatalogServiceTests/testLiveProviderSearchParsingAndDiskCache \
+            CODE_SIGNING_ALLOWED=NO test 2>&1 | tee native-ios/QA/live-food-provider-validation.log
+
+      - name: Upload live-provider evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-food-provider-validation
+          path: native-ios/QA/live-food-provider-validation.log
+          if-no-files-found: warn
+          retention-days: 30

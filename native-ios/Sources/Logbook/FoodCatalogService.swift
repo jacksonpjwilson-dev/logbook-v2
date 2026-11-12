@@ -56,7 +56,7 @@ actor FoodCatalogService {
         return (response.products ?? []).compactMap { $0.definition(code: $0.code) }
     }
 
-    private func searchCanadianNutrientFile(_ term: String) async throws -> [FoodDefinition] {
+    func searchCanadianNutrientFile(_ term: String) async throws -> [FoodDefinition] {
         let foods: [CNFFood]
         if let canadianFoodIndex {
             foods = canadianFoodIndex
@@ -97,7 +97,7 @@ actor FoodCatalogService {
         )
     }
 
-    private func searchOpenFoodFacts(_ term: String) async throws -> [FoodDefinition] {
+    func searchOpenFoodFacts(_ term: String) async throws -> [FoodDefinition] {
         // OFF's v2 search endpoint is deprecated and its current v2 server
         // does not provide full-text search. The documented legacy CGI search
         // route remains the full-text endpoint while Search-a-licious is being
