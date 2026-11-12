@@ -32,7 +32,7 @@ jobs:
 
       - name: Exercise live provider responses through app service
         env:
-          LOGBOOK_LIVE_PROVIDER_TESTS: "1"
+          TEST_RUNNER_LOGBOOK_LIVE_PROVIDER_TESTS: "1"
         run: |
           set -o pipefail
           xcodebuild \
@@ -42,6 +42,14 @@ jobs:
             -parallel-testing-enabled NO \
             -only-testing:LogbookTests/FoodCatalogServiceTests/testLiveProviderSearchParsingAndDiskCache \
             CODE_SIGNING_ALLOWED=NO test 2>&1 | tee native-ios/QA/live-food-provider-validation.log
+
+      - name: Confirm the live-provider test actually ran
+        if: always()
+        run: |
+          if ! grep -F "Test Case '-[LogbookTests.FoodCatalogServiceTests testLiveProviderSearchParsingAndDiskCache]' passed" native-ios/QA/live-food-provider-validation.log; then
+            echo "The live CNF/Open Food Facts validation did not pass as an executed test (it may have been skipped)." >&2
+            exit 1
+          fi
 
       - name: Upload live-provider evidence
         if: always()
