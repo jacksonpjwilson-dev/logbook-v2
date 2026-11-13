@@ -1222,9 +1222,11 @@ final class DailyHomeUITests: XCTestCase {
             // Lazy List rows may not enter the accessibility tree until they are
             // scrolled into view; avoid reading a missing element's frame first.
             if lists.count > 0 && list.exists {
-                if towardTop { list.swipeDown() } else { list.swipeUp() }
+                // Swipe up moves later content into view and moves the target
+                // toward the top of the viewport.
+                if towardTop { list.swipeUp() } else { list.swipeDown() }
             } else {
-                if towardTop { app.swipeDown() } else { app.swipeUp() }
+                if towardTop { app.swipeUp() } else { app.swipeDown() }
             }
         }
     }
@@ -1268,12 +1270,10 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoreSleep.isHittable, "The restore action should be reachable in the Recently Deleted section")
         restoreSleep.tap()
         let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
-        scrollToElement(restoredSleep, in: app, towardTop: true)
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
-        let deleteRestoredSleep = app.descendants(matching: .any)["sleep-delete-\(sleepID)"]
+        let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
         XCTAssertTrue(deleteRestoredSleep.waitForExistence(timeout: 5), "Restoring preserves the sleep delete control")
-        // The active record shares the already-visible row with its delete control.
-        // Scrolling down here would move that row off screen on compact devices.
+        XCTAssertTrue(restoredSleep.isHittable, "Restore should reveal the active sleep record")
         XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
