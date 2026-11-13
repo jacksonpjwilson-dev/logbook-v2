@@ -529,8 +529,10 @@ struct HistoryScreen: View {
     @State private var workoutToDeletePermanently: UUID?
     @State private var selectedHistoryDate: String?
     @State private var selectedStrengthExerciseID = ""
+    private let explicitInitialDate: String?
 
     init(initialDate: String? = nil) {
+        explicitInitialDate = initialDate
         _selectedHistoryDate = State(initialValue: initialDate)
     }
     private let ranges = [7, 30, 90]
@@ -573,8 +575,11 @@ struct HistoryScreen: View {
 
     private func consumeFocusedDate(using proxy: ScrollViewProxy) {
         guard let date = store.focusedHistoryDate else { return }
-        selectedHistoryDate = date
         store.consumeHistoryDateFocus()
+        // A date passed directly from a History calendar/widget is authoritative;
+        // a stale focus request from another screen must not replace it.
+        guard explicitInitialDate == nil else { return }
+        selectedHistoryDate = date
         scrollToSelectedDate(using: proxy)
     }
 
