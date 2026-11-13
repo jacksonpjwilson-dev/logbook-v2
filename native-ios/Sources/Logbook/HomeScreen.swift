@@ -435,6 +435,11 @@ private enum ProgressMetric: String, CaseIterable, Identifiable {
 }
 
 private struct DefaultProgressHomeWidget: View {
+    private struct ActivityMonthCell: Identifiable {
+        let id: String
+        let date: Date?
+    }
+
     let widget: HomeWidget
     let palette: ThemePalette
     let state: LogbookState
@@ -601,6 +606,13 @@ private struct DefaultProgressHomeWidget: View {
         return dates
     }
 
+    private var activityMonthCells: [ActivityMonthCell] {
+        activityMonthDates.enumerated().map { index, date in
+            guard let date else { return ActivityMonthCell(id: "blank-\(index)", date: nil) }
+            return ActivityMonthCell(id: "day-\(LocalDay.string(date))", date: date)
+        }
+    }
+
     private var activityWeekdaySymbols: [String] {
         let symbols = activityCalendar.veryShortStandaloneWeekdaySymbols
         guard !symbols.isEmpty else { return [] }
@@ -648,11 +660,13 @@ private struct DefaultProgressHomeWidget: View {
                 }
             }
             LazyVGrid(columns: columns, spacing: 1) {
-                ForEach(Array(activityMonthDates.enumerated()), id: \.offset) { _, date in
-                    if let date {
+                // Date-based identities prevent LazyVGrid from reusing a previous
+                // month's button action for a different day at the same cell index.
+                ForEach(activityMonthCells) { cell in
+                    if let date = cell.date {
                         let key = LocalDay.string(date)
                         Button { openHistoryDate(key) } label: {
-                            Text(String(Calendar.current.component(.day, from: date)))
+                            Text(String(activityCalendar.component(.day, from: date)))
                                 .font(.system(size: 6, weight: .semibold, design: .rounded))
                                 .frame(maxWidth: .infinity).frame(height: 8)
                                 .foregroundStyle(palette.textColor)
