@@ -1,6 +1,6 @@
 # Current Logbook milestone — Daily Tracking & Progress
 
-**Updated:** 2026-11-13 16:44 UTC  
+**Updated:** 2026-11-13 16:48 UTC  
 **Development branch:** `codex/default-theme-gate1`  
 **Current source head:** `1865c1c9ab579fb2e15ffefbfe740018179aec17`  
 **Last fully green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39`. The current head is **not yet verified**.
@@ -8,7 +8,7 @@
 ## Current verification state
 
 - [Actions #171](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457118498), source `a951f680`, completed **failed**. Both available simulator builds and 60 unit tests passed with one skipped test. UI tests failed 2/16 on iPhone SE and 3/16 on iPhone 16. The test source at this intermediate commit had a malformed workout ID interpolation and an off-screen sleep delete assertion.
-- [Actions #172](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457319660), source `e313914d`, iPhone 16 build succeeded, 60 unit tests passed with one skipped test, and 14/16 UI tests passed. Failures: restored sleep delete control was scrolled out of view, and the Workout Calendar test asserted a navigation-bar label instead of the calendar’s stable month label. iPhone SE was still running at this report; iPhone 18 Pro app tests were canceled/skipped and remain untested.
+- [Actions #172](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457319660), source `e313914d`, both available simulator builds succeeded and each passed 60 unit tests with one skipped test. SE UI: 15/16 passed; iPhone 16 UI: 14/16 passed. The SE failure was the restored sleep row visibility assertion; iPhone 16 also failed the Workout Calendar navigation-bar assertion. The next test commit removes the downward scroll from the visible sleep row and targets the calendar’s stable month label. iPhone 18 Pro app tests were canceled/skipped and remain untested.
 - [Actions #173](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43459404652), source `7802a2b5`, exercises the new navigable monthly heatmap. iPhone SE and iPhone 16 jobs were still running when this report was written. iPhone 18 Pro’s simulator availability job succeeded, but its app-test step was skipped; it remains untested.
 - [Actions #174](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43462346727) contains the two UI-test corrections and was queued.
 - [Actions #175](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43463934555) contains the reminder implementation and planner tests and was queued.
