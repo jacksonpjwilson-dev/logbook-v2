@@ -583,7 +583,7 @@ final class DailyHomeUITests: XCTestCase {
         let calendarButton = app.buttons["workout-calendar-open"]
         scrollToElement(calendarButton, in: app)
         calendarButton.tap()
-        XCTAssertTrue(app.navigationBars["Workout Calendar"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["training-calendar-month-label"].waitForExistence(timeout: 5), "Opening Workout Calendar shows its month selector")
 
         // Verify date grouping in the calendar itself. History rows are lazy and
         // their accessibility labels vary with the list's visible child content.
@@ -1272,7 +1272,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
         let deleteRestoredSleep = app.descendants(matching: .any)["sleep-delete-\(sleepID)"]
         XCTAssertTrue(deleteRestoredSleep.waitForExistence(timeout: 5), "Restoring preserves the sleep delete control")
-        scrollToElement(deleteRestoredSleep, in: app)
+        // The active record shares the already-visible row with its delete control.
+        // Scrolling down here would move that row off screen on compact devices.
         XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
