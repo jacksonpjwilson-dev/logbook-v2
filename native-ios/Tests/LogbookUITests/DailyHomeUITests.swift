@@ -1222,11 +1222,11 @@ final class DailyHomeUITests: XCTestCase {
             // Lazy List rows may not enter the accessibility tree until they are
             // scrolled into view; avoid reading a missing element's frame first.
             if lists.count > 0 && list.exists {
-                // Swipe up moves later content into view and moves the target
-                // toward the top of the viewport.
-                if towardTop { list.swipeUp() } else { list.swipeDown() }
+                // Normal search advances down the list by moving its content up.
+                // The explicit towardTop mode reverses direction to scan earlier rows.
+                if towardTop { list.swipeDown() } else { list.swipeUp() }
             } else {
-                if towardTop { app.swipeUp() } else { app.swipeDown() }
+                if towardTop { app.swipeDown() } else { app.swipeUp() }
             }
         }
     }
