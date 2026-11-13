@@ -688,7 +688,7 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoredSessionIDs.contains(deletedWorkoutID), "Recently Deleted restores the same workout identity")
         XCTAssertTrue(restoredSessionIDs.contains(retainedWorkoutID), "Restoration preserves the other same-day session")
         calendarPrevious.tap()
-        XCTAssertTrue(app.buttons["calendar-workout-\\(baselineWorkoutID)"].waitForExistence(timeout: 5),
+        XCTAssertTrue(app.buttons["calendar-workout-\(baselineWorkoutID)"].waitForExistence(timeout: 5),
                       "Workout restoration leaves the prior-day baseline intact")
         calendarToday.tap()
         app.navigationBars["Workout Calendar"].buttons["Done"].tap()
