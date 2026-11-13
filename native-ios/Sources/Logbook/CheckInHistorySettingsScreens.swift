@@ -107,6 +107,7 @@ struct CheckInScreen: View {
                                 .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
                                 .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
                             }
+                            .id("sleep-row-\(record.id.uuidString)")
                         }
                     }
                     Text("Sleep is entered manually. Apple Health access remains disabled.").font(.footnote).foregroundStyle(.secondary)
@@ -400,8 +401,11 @@ struct CheckInScreen: View {
     private func restoreSleep(_ record: SleepLog, using proxy: ScrollViewProxy) {
         guard store.restoreDeletedSleep(record.id) else { return }
         if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(CheckInSection.sleep, anchor: .top) }
+        // Return to the restored record itself so its edit and delete controls
+        // are immediately visible, including on compact screens.
+        let rowID = "sleep-row-\(record.id.uuidString)"
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(rowID, anchor: .center) }
         }
     }
 
