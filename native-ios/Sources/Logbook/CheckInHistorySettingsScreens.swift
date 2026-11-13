@@ -1436,31 +1436,36 @@ struct ReminderSettingsScreen: View {
                 if let permissionMessage { Text(permissionMessage).font(.footnote).foregroundStyle(.orange) }
             } footer: { Text("Reminders are optional local notifications. iOS Focus and notification settings can delay or silence them.") }
             Section("Daily reminder times") {
-                reminderRow("Nutrition", route: .food, value: store.state.nutritionReminderTime)
-                reminderRow("Training", route: .training, value: store.state.trainingReminderTime)
-                Text("Leave a time unset to keep that reminder off.").font(.footnote).foregroundStyle(.secondary)
+                reminderRow("Food", value: store.state.nutritionReminderTime) { store.setReminder(kind: .food, time: $0) }
+                reminderRow("Training", value: store.state.trainingReminderTime) { store.setReminder(kind: .training, time: $0) }
+                reminderRow("Sleep", value: store.state.sleepReminderTime) { store.setReminder(kind: .sleep, time: $0) }
+                reminderRow("Weight", value: store.state.weightReminderTime) { store.setReminder(kind: .weight, time: $0) }
+                reminderRow("Supplements", value: store.state.supplementReminderTime) { store.setReminder(kind: .supplements, time: $0) }
+                Text("Leave a time unset to keep that reminder off. Completed check-ins and days without scheduled supplements are skipped.").font(.footnote).foregroundStyle(.secondary)
             }
         }
         .navigationTitle("Reminders")
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    @ViewBuilder private func reminderRow(_ title: String, route: LogbookRoute, value: String?) -> some View {
+    @ViewBuilder private func reminderRow(_ title: String, value: String?, set: @escaping (String?) -> Void) -> some View {
         let enabled = value != nil
-        Toggle(isOn: Binding(get: { enabled }, set: { on in
+        Toggle(isOn: Binding(get: { value != nil }, set: { on in
             if on && !store.state.notificationsEnabled {
                 Task {
                     guard await ReminderService.requestPermission() else { permissionMessage = "Notifications are not authorized in iOS Settings."; return }
                     store.setNotificationsEnabled(true)
-                    store.setReminder(kind: route, time: "19:00")
+                    set(value ?? "19:00")
                 }
             } else {
-                store.setReminder(kind: route, time: on ? (value ?? "19:00") : nil)
+                set(on ? (value ?? "19:00") : nil)
             }
         })) { Text(title) }
+            .accessibilityIdentifier("reminder-\(title.lowercased())-toggle")
         if enabled {
-            DatePicker("Time", selection: Binding(get: { date(from: value ?? "19:00") }, set: { store.setReminder(kind: route, time: time(from: $0)) }), displayedComponents: .hourAndMinute)
+            DatePicker("Time", selection: Binding(get: { date(from: value ?? "19:00") }, set: { set(time(from: $0)) }), displayedComponents: .hourAndMinute)
                 .datePickerStyle(.compact)
+                .accessibilityIdentifier("reminder-\(title.lowercased())-time")
         }
     }
 

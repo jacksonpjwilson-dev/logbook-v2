@@ -14,6 +14,10 @@ final class LogbookStore: ObservableObject {
 
     private let repository: LogbookRepository
     private(set) var canEdit = true
+    private var lastDailyReminderPlan: [PlannedDailyReminder]?
+    private var lastTrainingReminderTime: String?
+    private var lastReminderPermissionEnabled: Bool?
+    private var reminderRefreshTask: Task<Void, Never>?
 
     private static func bundledJSON(named name: String) -> URL? {
         var bundles = [Bundle.main, Bundle(for: LogbookStore.self)]
@@ -49,6 +53,7 @@ final class LogbookStore: ObservableObject {
             let purgedFoodRecords = Self.purgeExpiredFoodRecords(&loaded.nutrition, asOf: .now)
             let purgedCheckInRecords = Self.purgeExpiredCheckInRecords(&loaded.checkins, asOf: .now)
             state = loaded
+            refreshLocalReminders(for: loaded)
             lastSavedAt = FileManager.default.fileExists(atPath: repository.url.path) ? Date() : nil
             if migratedDailyLayout || migratedTrainingPrograms || purgedWorkoutRecords || purgedFoodRecords || purgedCheckInRecords {
                 do {
@@ -243,8 +248,6 @@ final class LogbookStore: ObservableObject {
 
     func setNotificationsEnabled(_ enabled: Bool) {
         transact { $0.notificationsEnabled = enabled }
-        ReminderService.scheduleNutrition(at: enabled ? state.nutritionReminderTime : nil)
-        ReminderService.scheduleTraining(at: enabled ? state.trainingReminderTime : nil)
     }
 
     func addTemplate(name: String) -> UUID? {
@@ -1431,17 +1434,15 @@ final class LogbookStore: ObservableObject {
         transact { $0.home.preferredWeightUnit = unit }
     }
 
-    func setReminder(kind: LogbookRoute, time: String?) {
+    func setReminder(kind: ReminderKind, time: String?) {
         transact { state in
             switch kind {
             case .food: state.nutritionReminderTime = time
             case .training: state.trainingReminderTime = time
-            default: break
+            case .sleep: state.sleepReminderTime = time
+            case .weight: state.weightReminderTime = time
+            case .supplements: state.supplementReminderTime = time
             }
-        }
-        if state.notificationsEnabled {
-            if kind == .food { ReminderService.scheduleNutrition(at: time) }
-            if kind == .training { ReminderService.scheduleTraining(at: time) }
         }
     }
 
@@ -1452,6 +1453,22 @@ final class LogbookStore: ObservableObject {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("Logbook-Backup-\(LocalDay.string()).json")
         try data.write(to: url, options: [.atomic, .completeFileProtectionUnlessOpen])
         return url
+    }
+
+    private func refreshLocalReminders(for snapshot: LogbookState) {
+        let plan = ReminderService.planDailyReminders(state: snapshot, now: .now)
+        let trainingTime = snapshot.notificationsEnabled ? snapshot.trainingReminderTime : nil
+        let enabled = snapshot.notificationsEnabled
+        guard plan != lastDailyReminderPlan ||
+              trainingTime != lastTrainingReminderTime ||
+              enabled != lastReminderPermissionEnabled else { return }
+
+        lastDailyReminderPlan = plan
+        lastTrainingReminderTime = trainingTime
+        lastReminderPermissionEnabled = enabled
+        reminderRefreshTask?.cancel()
+        ReminderService.scheduleTraining(at: trainingTime)
+        reminderRefreshTask = Task { await ReminderService.refreshDailyReminders(for: snapshot) }
     }
 
     private func transact(_ mutation: (inout LogbookState) -> Void) {
@@ -1469,6 +1486,7 @@ final class LogbookStore: ObservableObject {
             }
             try repository.save(candidate)
             state = candidate
+            refreshLocalReminders(for: candidate)
             persistenceError = nil
             lastSavedAt = .now
             WidgetCenter.shared.reloadAllTimelines()

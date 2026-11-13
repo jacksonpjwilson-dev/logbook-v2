@@ -934,6 +934,9 @@ struct LogbookState: Codable {
     var notificationsEnabled = false
     var nutritionReminderTime: String? = nil
     var trainingReminderTime: String? = nil
+    var sleepReminderTime: String? = nil
+    var weightReminderTime: String? = nil
+    var supplementReminderTime: String? = nil
     var lastModified = Date.now
 
     static var empty: LogbookState { LogbookState() }
