@@ -1,5 +1,42 @@
 # Current Logbook milestone — Daily Tracking & Progress
 
+**Updated:** 2026-11-13 16:44 UTC  
+**Development branch:** `codex/default-theme-gate1`  
+**Current source head:** `1865c1c9ab579fb2e15ffefbfe740018179aec17`  
+**Last fully green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39`. The current head is **not yet verified**.
+
+## Current verification state
+
+- [Actions #171](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457118498), source `a951f680`, completed **failed**. Both available simulator builds and 60 unit tests passed with one skipped test. UI tests failed 2/16 on iPhone SE and 3/16 on iPhone 16. The test source at this intermediate commit had a malformed workout ID interpolation and an off-screen sleep delete assertion.
+- [Actions #172](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457319660), source `e313914d`, iPhone 16 build succeeded, 60 unit tests passed with one skipped test, and 14/16 UI tests passed. Failures: restored sleep delete control was scrolled out of view, and the Workout Calendar test asserted a navigation-bar label instead of the calendar’s stable month label. iPhone SE was still running at this report; iPhone 18 Pro app tests were canceled/skipped and remain untested.
+- [Actions #173](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43459404652), source `7802a2b5`, exercises the new navigable monthly heatmap. iPhone SE and iPhone 16 jobs were still running when this report was written. iPhone 18 Pro’s simulator availability job succeeded, but its app-test step was skipped; it remains untested.
+- [Actions #174](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43462346727) contains the two UI-test corrections and was queued.
+- [Actions #175](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43463934555) contains the reminder implementation and planner tests and was queued.
+- Actions #176 was canceled after a newer branch push.
+- [Actions #177](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43465365651) targets the latest head `1865c1c9` and was queued. It is the combined verification run to use for acceptance evidence. The branch-scoped concurrency setting prevents future stale run accumulation; runs queued before that setting may still finish first.
+
+This workspace has no Xcode or iOS Simulator, so Apple-platform builds, UI tests, and screenshots must come from these GitHub Actions jobs. Do not claim the current source passed until a completed run reports it.
+
+## Changes on the current branch that need verification
+
+1. Progress Home now displays a navigable, date-aligned month calendar in the medium Activity Heatmap widget. Dates retain History navigation; the fixed Home widget geometry is unchanged. A UI test checks previous/next month navigation, full-month date count, and opening History from a selected date.
+2. Workout Calendar and Sleep/Weight UI assertions were corrected to use visible, stable controls and preserve the row in view. App behavior and layouts were not changed for these test fixes.
+3. Reminder settings now include separate Food, Sleep, Weight and Supplements times, all unset by default; the existing Training reminder is preserved. The planner creates local-date requests over a 15-day rolling window, suppresses an on-target Food day, an overnight Sleep record, a Weight record, and fully completed scheduled supplements, and omits days without due supplements. A unit test covers defaults, local time/date planning, completion, deleted records, naps and weekday schedules. Legacy repeating Nutrition requests are removed when rebuilding.
+4. QA now cancels stale Daily Home runs on the same branch for future pushes. No production branch or data was changed.
+
+The food reminder uses the existing Nutrition Adherence status as its completion rule; that is a documented implementation interpretation of “suppress completed,” not a separate product decision. Notification permission prompts and actual iOS delivery remain unverified. The 15-day pending window refreshes on app launch or when relevant saved state changes; delivery behavior after longer inactivity still needs device-level review.
+
+## Existing evidence and remaining gaps
+
+- Live CNF/Open Food Facts parser/cache test: separate [Actions live-provider run #3](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43291785641) passed one real-network test on iPhone 16. This verifies that specific test at its recorded source; it does not settle provider licensing, terms, all error paths, or physical barcode scanning.
+- All new screenshots remain **review candidates**, never approved baselines. Keep all approved theme designs and Home geometry unchanged; do not infer visual approval from layout tests.
+- iPhone 18 Pro app tests remain untested because the runner does not have that simulator.
+- HealthKit remains disabled. No production configuration was changed, and nothing was merged into `main`.
+
+The complete prior audit notes and historical evidence are preserved below; they describe earlier source states and are superseded wherever they conflict with the status above.
+
+# Archived prior milestone notes (historical; superseded by current status above)
+
 **Development branch:** `codex/default-theme-gate1`  
 **Current app-source commit:** `705aec30376cbc9285c7cc4d4e1955666fab0160`  
 **Last fully green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39` — [run #128](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/42767782249). Run #126 (`074ab167f4ea6826f6d9a7c5536257ea2c1bd395`) remains preserved as the prior accepted baseline; repository evidence shows #128 is the newer complete green run.
