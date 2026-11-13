@@ -1,39 +1,35 @@
 # Current Logbook milestone — Daily Tracking & Progress
 
-**Updated:** 2026-11-13 16:53 UTC  
+**Updated:** 2026-11-13 18:42 UTC  
 **Development branch:** `codex/default-theme-gate1`  
-**Current source head:** `1865c1c9ab579fb2e15ffefbfe740018179aec17`  
-**Last fully green app-source baseline:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39`. The current head is **not yet verified**.
+**Current app-source commit:** `7d968256207bdeadd637ed415036b200b81c009b`  
+**Last fully green app-source baseline before the current fixes:** Actions #128, `a79ee507422e7f09d4ad56b9a5a157da17743f39`. Actions #183 is pending; do not treat the new source as verified yet.
 
-## Current verification state
+## Verification state
 
-- [Actions #171](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457118498), source `a951f680`, completed **failed**. Both available simulator builds and 60 unit tests passed with one skipped test. UI tests failed 2/16 on iPhone SE and 3/16 on iPhone 16. The test source at this intermediate commit had a malformed workout ID interpolation and an off-screen sleep delete assertion.
-- [Actions #172](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43457319660), source `e313914d`, both available simulator builds succeeded and each passed 60 unit tests with one skipped test. SE UI: 15/16 passed; iPhone 16 UI: 14/16 passed. The SE failure was the restored sleep row visibility assertion; iPhone 16 also failed the Workout Calendar navigation-bar assertion. The next test commit removes the downward scroll from the visible sleep row and targets the calendar’s stable month label. iPhone 18 Pro app tests were canceled/skipped and remain untested.
-- [Actions #173](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43459404652), source `7802a2b5`, exercises the new navigable monthly heatmap. iPhone SE built successfully and passed 60 unit tests (1 skipped), but failed 2 of 16 UI tests: the restored Sleep delete control was not hittable, and tapping the first heatmap day opened History for Nov 2 while the test expected Nov 1. The actual SE review-candidate screenshots/report are in [artifact 14058508532](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43459404652/artifacts/14058508532). iPhone 16 remained in progress at this update. iPhone 18 Pro’s app-test step was skipped and remains untested.
-- [Actions #174](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43462346727) contains the two UI-test corrections and was queued.
-- [Actions #175](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43463934555) contains the reminder implementation and planner tests and was queued.
-- Actions #176 was canceled after a newer branch push.
-- [Actions #177](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43465365651) targets the latest head `1865c1c9` and was queued. It is the combined verification run to use for acceptance evidence. The branch-scoped concurrency setting prevents future stale run accumulation; runs queued before that setting may still finish first.
+- [Actions #173](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43459404652) failed on the restored Sleep Delete visibility and heatmap exact-date UI assertions. The iPhone SE build and unit suite passed; the iPhone 16 result was incomplete when this run was superseded. iPhone 18 Pro app tests were skipped.
+- [Actions #175](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43463934555), source `912ddff34f94550499dfcd8f7222b070ce0713ab`: iPhone SE passed build and 64 unit tests (1 skipped, 0 failures), with 14/16 UI tests passing; iPhone 16 passed build and 64 unit tests (1 skipped, 0 failures), with 13/16 UI tests passing. Both devices passed category-history/check-in editing and Habits/Check-in widget taps. Remaining UI failures included restored Sleep reachability and heatmap date navigation; Food History also failed on iPhone 16. iPhone 18 Pro app tests were skipped.
+- [Actions #177](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43465365651) was canceled; it produced no app verification.
+- [Actions #182](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43475359926), source `0a753e6d27cab6ff77187e39d096e795152f23b2`: iPhone 16 build passed, 64 unit tests ran (1 skipped, 0 failures), and 16 UI tests ran with 3 failures (Sleep restore visibility, Food History route, heatmap 2026-11-01 selection). The iPhone SE job was canceled; iPhone 18 Pro ran only its availability check, not app tests.
+- [Actions #183](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43483155422) tests source `7d968256207bdeadd637ed415036b200b81c009b`; it is queued. This source targets the three still-failing UI paths without relaxing the acceptance assertions.
 
-This workspace has no Xcode or iOS Simulator, so Apple-platform builds, UI tests, and screenshots must come from these GitHub Actions jobs. Do not claim the current source passed until a completed run reports it.
+## Diagnosis and current fixes
 
-## Changes on the current branch that need verification
+- **Restored Sleep control:** Actions #182 found the restored record and its Delete button in the accessibility tree, but the row remained off-screen (not hittable). The issue is list visibility after the restored active list changes, not a missing Delete action or a test locator. The fix waits for the restored record to enter the active list, scrolls to that exact row and its Delete target, and makes the UI test wait for hittability.
+- **Heatmap date:** Actions #182 tapped the button whose stable ID was `activity-day-2026-11-01`, while History displayed `2026-11-02`. The exact date requirement remains in the test. The fix stores each cell's date key and day label together, uses the key directly in the tap action, and reapplies an explicit History route date on appearance to avoid stale SwiftUI route state.
+- **Food History:** iPhone 16 Actions #182 did not show the Food History destination after the tap. The fix replaces the ambiguous list link with a state-driven navigation destination, retaining the same screen and record editor.
 
-1. Progress Home now displays a navigable, date-aligned month calendar in the medium Activity Heatmap widget. Dates retain History navigation; the fixed Home widget geometry is unchanged. A UI test checks previous/next month navigation, full-month date count, and opening History from a selected date.
-2. Workout Calendar and Sleep/Weight UI assertions were corrected to use visible, stable controls and preserve the row in view. App behavior and layouts were not changed for these test fixes.
-3. Reminder settings now include separate Food, Sleep, Weight and Supplements times, all unset by default; the existing Training reminder is preserved. The planner creates local-date requests over a 15-day rolling window, suppresses an on-target Food day, an overnight Sleep record, a Weight record, and fully completed scheduled supplements, and omits days without due supplements. A unit test covers defaults, local time/date planning, completion, deleted records, naps and weekday schedules. Legacy repeating Nutrition requests are removed when rebuilding.
-4. QA now cancels stale Daily Home runs on the same branch for future pushes. No production branch or data was changed.
+## Coverage already exercised
 
-The food reminder uses the existing Nutrition Adherence status as its completion rule; that is a documented implementation interpretation of “suppress completed,” not a separate product decision. Notification permission prompts and actual iOS delivery remain unverified. The 15-day pending window refreshes on app launch or when relevant saved state changes; delivery behavior after longer inactivity still needs device-level review.
+- Sleep/Weight/Supplement category History navigation and editing, and Habits/Check-in widget region navigation passed on both iPhone SE and iPhone 16 in #175; these paths also passed on iPhone 16 in #182.
+- Unit tests in #182 passed for sleep wake-date/naps/recovery, weight unit comparisons and recovery, supplement schedule/undo/expiry, Habits streak and neutral no-due handling, deleted-food chart aggregation, activity scoring, same-day records, and persistent restore/expiry behavior.
+- The Progress UI test reached its chart metric selection and calendar month controls before failing only on the selected-day value. The #183 run must confirm the corrected route and all end-to-end screens.
 
-## Existing evidence and remaining gaps
+## Screenshots and safety
 
-- Live CNF/Open Food Facts parser/cache test: separate [Actions live-provider run #3](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43291785641) passed one real-network test on iPhone 16. This verifies that specific test at its recorded source; it does not settle provider licensing, terms, all error paths, or physical barcode scanning.
-- All new screenshots remain **review candidates**, never approved baselines. Keep all approved theme designs and Home geometry unchanged; do not infer visual approval from layout tests.
-- iPhone 18 Pro app tests remain untested because the runner does not have that simulator.
-- HealthKit remains disabled. No production configuration was changed, and nothing was merged into `main`.
+Screenshots are simulator-generated review candidates, not approved baselines. Prior complete captures are available in [#175 iPhone SE artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43463934555/artifacts/14061556277) and [#175 iPhone 16 artifact](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43463934555/artifacts/14060254423). #182 has a full iPhone 16 artifact at [artifact 14063903278](https://github.com/jacksonpjwilson-dev/logbook-v2/actions/runs/43475359926/artifacts/14063903278); its iPhone SE job was canceled and did not produce a full capture set. Await #183 for refreshed candidates.
 
-The complete prior audit notes and historical evidence are preserved below; they describe earlier source states and are superseded wherever they conflict with the status above.
+Keep the four Home pages, exact 2-column × 4-row grid, widget dimensions, five-icon dock and all approved themes unchanged. HealthKit stays disabled. Tests use isolated synthetic data. No production settings were changed and nothing was merged to `main`.
 
 # Archived prior milestone notes (historical; superseded by current status above)
 
