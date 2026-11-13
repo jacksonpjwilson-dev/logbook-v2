@@ -1439,6 +1439,17 @@ final class DailyHomeUITests: XCTestCase {
             }
         }
 
+        let activityMonthLabel = app.staticTexts["activity-month-label"]
+        XCTAssertTrue(activityMonthLabel.waitForExistence(timeout: 5), "The activity heatmap shows its displayed calendar month")
+        let startingActivityMonth = activityMonthLabel.label
+        app.buttons["activity-month-previous"].tap()
+        XCTAssertNotEqual(activityMonthLabel.label, startingActivityMonth, "Previous month changes the heatmap calendar")
+        app.buttons["activity-month-next"].tap()
+        XCTAssertEqual(activityMonthLabel.label, startingActivityMonth, "Next month returns the heatmap to the current month")
+        let expectedDaysInMonth = Calendar.current.range(of: .day, in: .month, for: .now)?.count ?? 0
+        let displayedMonthDays = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "activity-day-"))
+        XCTAssertEqual(displayedMonthDays.count, expectedDaysInMonth, "The complete current month remains visible in the fixed heatmap cell")
+
         let activityDay = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "activity-day-")).firstMatch
         XCTAssertTrue(activityDay.waitForExistence(timeout: 5), "The numbered activity heatmap should be tappable")
         let dateKey = String(activityDay.identifier.dropFirst("activity-day-".count))

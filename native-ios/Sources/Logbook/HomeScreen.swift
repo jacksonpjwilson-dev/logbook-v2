@@ -442,6 +442,7 @@ private struct DefaultProgressHomeWidget: View {
     let openHistoryDate: (String) -> Void
     @State private var selectedMetric: ProgressMetric = .weight
     @State private var selectedExerciseID = ""
+    @State private var displayedActivityMonth = Calendar.current.date(from: Calendar.current.dateComponents([.year, .month], from: .now)) ?? .now
 
     private var cutoff: String {
         LocalDay.string(Calendar.current.date(byAdding: .day, value: -29, to: .now) ?? .now)
@@ -583,40 +584,98 @@ private struct DefaultProgressHomeWidget: View {
         .padding(10)
     }
 
+    private var activityCalendar: Calendar { .current }
+
+    private var activityMonthStart: Date? {
+        activityCalendar.date(from: activityCalendar.dateComponents([.year, .month], from: displayedActivityMonth))
+    }
+
+    private var activityMonthDates: [Date?] {
+        guard let firstDay = activityMonthStart,
+              let days = activityCalendar.range(of: .day, in: .month, for: firstDay) else { return [] }
+        let offset = (activityCalendar.component(.weekday, from: firstDay) - activityCalendar.firstWeekday + 7) % 7
+        var dates = Array(repeating: nil as Date?, count: offset)
+        for day in days {
+            dates.append(activityCalendar.date(byAdding: .day, value: day - 1, to: firstDay))
+        }
+        return dates
+    }
+
+    private var activityWeekdaySymbols: [String] {
+        let symbols = activityCalendar.veryShortStandaloneWeekdaySymbols
+        guard !symbols.isEmpty else { return [] }
+        let start = max(0, min(symbols.count - 1, activityCalendar.firstWeekday - 1))
+        return Array(symbols[start...]) + Array(symbols[..<start])
+    }
+
+    private func changeActivityMonth(by amount: Int) {
+        guard let firstDay = activityMonthStart,
+              let changed = activityCalendar.date(byAdding: .month, value: amount, to: firstDay),
+              let monthStart = activityCalendar.date(from: activityCalendar.dateComponents([.year, .month], from: changed)) else { return }
+        displayedActivityMonth = monthStart
+    }
+
     private var heatmapWidget: some View {
-        let dates = (0..<30).compactMap { offset in Calendar.current.date(byAdding: .day, value: offset - 29, to: Calendar.current.startOfDay(for: .now)) }
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 2), count: 10)
-        return VStack(alignment: .leading, spacing: 5) {
-            HStack {
+        let columns = Array(repeating: GridItem(.flexible(), spacing: 1), count: 7)
+        return VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 2) {
                 Label(widget.variant ?? "MONTHLY ACTIVITY", systemImage: "calendar")
-                    .font(.system(size: 9, weight: .bold, design: .rounded)).lineLimit(1)
-                Spacer()
-                Text("30 DAYS").font(.system(size: 8, weight: .semibold))
+                    .font(.system(size: 8, weight: .bold, design: .rounded)).lineLimit(1)
+                Spacer(minLength: 1)
+                Button { changeActivityMonth(by: -1) } label: {
+                    Image(systemName: "chevron.left").font(.system(size: 7, weight: .bold)).frame(width: 12, height: 12)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Previous month")
+                .accessibilityIdentifier("activity-month-previous")
+                Text(displayedActivityMonth.formatted(.dateTime.month(.abbreviated).year()))
+                    .font(.system(size: 7, weight: .semibold))
+                    .lineLimit(1)
+                    .accessibilityIdentifier("activity-month-label")
+                Button { changeActivityMonth(by: 1) } label: {
+                    Image(systemName: "chevron.right").font(.system(size: 7, weight: .bold)).frame(width: 14, height: 14)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Next month")
+                .accessibilityIdentifier("activity-month-next")
             }
-            LazyVGrid(columns: columns, spacing: 3) {
-                ForEach(dates, id: \.self) { date in
-                    let key = LocalDay.string(date)
-                    Button { openHistoryDate(key) } label: {
-                        Text(String(Calendar.current.component(.day, from: date)))
-                            .font(.system(size: 7, weight: .semibold, design: .rounded))
-                            .frame(maxWidth: .infinity).frame(height: 13)
-                            .foregroundStyle(palette.textColor)
-                            .background(palette.accentColor.opacity(activityScore(on: key)), in: RoundedRectangle(cornerRadius: 3))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("\(key), activity score \(Int(activityScore(on: key) * 100)) percent")
-                    .accessibilityIdentifier("activity-day-\(key)")
+            LazyVGrid(columns: columns, spacing: 1) {
+                ForEach(Array(activityWeekdaySymbols.enumerated()), id: \.offset) { _, symbol in
+                    Text(symbol.uppercased())
+                        .font(.system(size: 6, weight: .medium))
+                        .frame(maxWidth: .infinity).frame(height: 7)
+                        .foregroundStyle(palette.mutedColor)
                 }
             }
-            HStack {
-                Text("Activity across training, food, sleep, weight and due supplements")
-                    .font(.system(size: 8, weight: .medium)).lineLimit(2)
-                Spacer()
-                Button("History", action: openHistory).font(.system(size: 9, weight: .semibold))
+            LazyVGrid(columns: columns, spacing: 1) {
+                ForEach(Array(activityMonthDates.enumerated()), id: \.offset) { _, date in
+                    if let date {
+                        let key = LocalDay.string(date)
+                        Button { openHistoryDate(key) } label: {
+                            Text(String(Calendar.current.component(.day, from: date)))
+                                .font(.system(size: 6, weight: .semibold, design: .rounded))
+                                .frame(maxWidth: .infinity).frame(height: 8)
+                                .foregroundStyle(palette.textColor)
+                                .background(palette.accentColor.opacity(max(0.08, activityScore(on: key))), in: RoundedRectangle(cornerRadius: 2))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(key), activity score \(Int(activityScore(on: key) * 100)) percent")
+                        .accessibilityIdentifier("activity-day-\(key)")
+                    } else {
+                        Color.clear.frame(height: 8)
+                    }
+                }
+            }
+            HStack(spacing: 3) {
+                Text("Training · Food · Sleep · Weight · due supplements")
+                    .font(.system(size: 6, weight: .medium)).lineLimit(1).minimumScaleFactor(0.7)
+                Spacer(minLength: 1)
+                Button("History", action: openHistory)
+                    .font(.system(size: 7, weight: .semibold))
             }
         }
         .foregroundStyle(palette.textColor)
-        .padding(9)
+        .padding(6)
     }
 
     private func activityScore(on date: String) -> Double {
