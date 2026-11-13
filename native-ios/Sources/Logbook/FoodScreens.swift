@@ -54,6 +54,7 @@ struct FoodScreen: View {
     @State private var addFoodMenu = false
     @State private var presentedSheet: FoodPresentedSheet?
     @State private var renameMealID: UUID?
+    @State private var showingFoodHistory = false
     @State private var mealNameDraft = ""
 
     private var dateKey: String { LocalDay.string(selectedDate) }
@@ -79,6 +80,7 @@ struct FoodScreen: View {
                 foodToolsSection
             }
             .navigationTitle("Food")
+            .navigationDestination(isPresented: $showingFoodHistory) { FoodHistoryScreen() }
             .onAppear { applyPendingFoodFocus(using: proxy) }
             .onChange(of: store.foodNavigationFocus) { _, _ in applyPendingFoodFocus(using: proxy) }
         }
@@ -348,7 +350,8 @@ struct FoodScreen: View {
 
     private var foodToolsSection: some View {
         Section {
-            NavigationLink("Food History") { FoodHistoryScreen() }.accessibilityIdentifier("food-history-link")
+            Button("Food History") { showingFoodHistory = true }
+                .accessibilityIdentifier("food-history-link")
             NavigationLink("Recently Deleted") { RecentlyDeletedFoodScreen() }.accessibilityIdentifier("food-recently-deleted-link")
             Button { presentedSheet = .copyMeals(date: dateKey) } label: { Label("Copy meals or day…", systemImage: "doc.on.doc") }
                 .accessibilityIdentifier("food-copy-meals")

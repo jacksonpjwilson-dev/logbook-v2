@@ -865,7 +865,8 @@ final class DailyHomeUITests: XCTestCase {
         scrollToElement(foodHistory, in: app)
         XCTAssertTrue(foodHistory.waitForExistence(timeout: 5))
         foodHistory.tap()
-        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5), "Food History navigation opens the persistent record screen")
+        XCTAssertTrue(app.descendants(matching: .any)["food-history-screen"].waitForExistence(timeout: 5), "Food History navigation opens the persistent record screen")
+        XCTAssertTrue(app.navigationBars["Food History"].waitForExistence(timeout: 5), "Food History retains its visible title")
         let historyRow = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "food-history-")).firstMatch
         XCTAssertTrue(historyRow.waitForExistence(timeout: 5), "Food History exposes the saved record row")
         attachScreenshot(of: app, named: "Food-History-Candidate")
@@ -1273,6 +1274,8 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
         let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
         XCTAssertTrue(deleteRestoredSleep.waitForExistence(timeout: 5), "Restoring preserves the sleep delete control")
+        expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: deleteRestoredSleep)
+        waitForExpectations(timeout: 5)
         XCTAssertTrue(restoredSleep.isHittable, "Restore should reveal the active sleep record")
         XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
         deleteRestoredSleep.tap()

@@ -25,6 +25,7 @@ struct CheckInScreen: View {
     @State private var manualDuration = ""
     @State private var qualityRating = 0
     @State private var editingSleepID: UUID?
+    @State private var pendingSleepRevealID: UUID?
     @State private var weight = ""
     @State private var showWeightSaved = false
     @State private var showSleepReplace = false
@@ -106,6 +107,7 @@ struct CheckInScreen: View {
                                 .frame(width: 44, height: 44)
                                 .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
                                 .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
+                                .id("sleep-delete-target-\(record.id.uuidString)")
                             }
                             .id("sleep-row-\(record.id.uuidString)")
                         }
@@ -271,6 +273,23 @@ struct CheckInScreen: View {
                 else { scrollToRequestedSection(using: proxy) }
             }
             .onChange(of: selectedDate) { _, _ in loadWeightForSelectedDate() }
+            .onChange(of: activeSleep.map(\.id)) { _, activeIDs in
+                guard let recordID = pendingSleepRevealID, activeIDs.contains(recordID) else { return }
+                pendingSleepRevealID = nil
+                let rowID = "sleep-row-\(recordID.uuidString)"
+                let deleteID = "sleep-delete-target-\(recordID.uuidString)"
+                Task { @MainActor in
+                    await Task.yield()
+                    await Task.yield()
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(rowID, anchor: .center)
+                    }
+                    try? await Task.sleep(for: .milliseconds(300))
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        proxy.scrollTo(deleteID, anchor: .center)
+                    }
+                }
+            }
             .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
         }
         .navigationTitle("Sleep & Check-ins")
@@ -399,14 +418,12 @@ struct CheckInScreen: View {
     }
 
     private func restoreSleep(_ record: SleepLog, using proxy: ScrollViewProxy) {
-        guard store.restoreDeletedSleep(record.id) else { return }
-        if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
-        // Return to the restored record itself so its edit and delete controls
-        // are immediately visible, including on compact screens.
-        let rowID = "sleep-row-\(record.id.uuidString)"
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo(rowID, anchor: .center) }
+        pendingSleepRevealID = record.id
+        guard store.restoreDeletedSleep(record.id) else {
+            pendingSleepRevealID = nil
+            return
         }
+        if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
     }
 
     private func restoreWeight(_ record: WeightLog, using proxy: ScrollViewProxy) {
@@ -770,7 +787,13 @@ struct HistoryScreen: View {
             }
         }
         .onAppear {
-            consumeFocusedDate(using: proxy)
+            if let explicitInitialDate {
+                // NavigationStack may retain @State when another History route
+                // is reused. Reapply the route's authoritative date every time.
+                selectedHistoryDate = explicitInitialDate
+            } else {
+                consumeFocusedDate(using: proxy)
+            }
             scrollToSelectedDate(using: proxy)
             if selectedStrengthExerciseID.isEmpty { selectedStrengthExerciseID = strengthOptions.first?.id ?? "" }
         }
