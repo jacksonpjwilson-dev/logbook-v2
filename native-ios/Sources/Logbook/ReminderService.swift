@@ -50,7 +50,7 @@ enum ReminderService {
     static func refreshDailyReminders(for state: LogbookState, now: Date = .now, calendar: Calendar = .current) async {
         let center = UNUserNotificationCenter.current()
         let pending = await center.pendingNotificationRequests()
-        let existingIDs = pending.map(\.identifier).filter { $0.hasPrefix("logbook-daily-") }
+        let existingIDs = pending.map(\.identifier).filter { $0.hasPrefix("logbook-daily-") || $0 == "nutrition-reminder" }
         if !existingIDs.isEmpty { center.removePendingNotificationRequests(withIdentifiers: existingIDs) }
         guard state.notificationsEnabled else { return }
 
