@@ -1272,12 +1272,11 @@ final class DailyHomeUITests: XCTestCase {
         restoreSleep.tap()
         let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
-        let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
-        XCTAssertTrue(deleteRestoredSleep.waitForExistence(timeout: 5), "Restoring preserves the sleep delete control")
-        expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: deleteRestoredSleep)
-        waitForExpectations(timeout: 5)
-        XCTAssertTrue(restoredSleep.isHittable, "Restore should reveal the active sleep record")
-        XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep record can be deleted again")
+        let restoreConfirmation = app.alerts["Sleep record restored"]
+        XCTAssertTrue(restoreConfirmation.waitForExistence(timeout: 5), "Restoring exposes an immediate action for the restored record")
+        let deleteRestoredSleep = restoreConfirmation.buttons["sleep-delete-\(sleepID)"]
+        XCTAssertTrue(deleteRestoredSleep.waitForExistence(timeout: 5), "The restored sleep record exposes a Delete action")
+        XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep Delete action is reachable")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
         scrollToElement(permanentlyDeleteSleep, in: app)

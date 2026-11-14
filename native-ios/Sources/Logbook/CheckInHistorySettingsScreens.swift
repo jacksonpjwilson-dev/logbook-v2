@@ -25,7 +25,7 @@ struct CheckInScreen: View {
     @State private var manualDuration = ""
     @State private var qualityRating = 0
     @State private var editingSleepID: UUID?
-    @State private var pendingSleepRevealID: UUID?
+    @State private var restoredSleepForAction: SleepLog?
     @State private var weight = ""
     @State private var showWeightSaved = false
     @State private var showSleepReplace = false
@@ -199,7 +199,7 @@ struct CheckInScreen: View {
                         HStack {
                             Text("\(record.isNap ? "Nap" : "Sleep") · \(record.wakeDate)")
                             Spacer()
-                            Button("Restore") { restoreSleep(record, using: proxy) }
+                            Button("Restore") { restoreSleep(record) }
                                 .accessibilityIdentifier("restore-sleep-\(record.id.uuidString)")
                             Button(role: .destructive) {
                                 permanentDelete = CheckInPermanentDelete(kind: .sleep, id: record.id)
@@ -273,27 +273,19 @@ struct CheckInScreen: View {
                 else { scrollToRequestedSection(using: proxy) }
             }
             .onChange(of: selectedDate) { _, _ in loadWeightForSelectedDate() }
-            .onChange(of: activeSleep.map(\.id)) { _, activeIDs in
-                guard let recordID = pendingSleepRevealID, activeIDs.contains(recordID) else { return }
-                pendingSleepRevealID = nil
-                let rowID = "sleep-row-\(recordID.uuidString)"
-                let deleteID = "sleep-delete-target-\(recordID.uuidString)"
-                Task { @MainActor in
-                    // List only materializes rows after their section is in view.
-                    // Reveal the Sleep section first, then the restored row and its
-                    // delete control once SwiftUI has laid out the updated list.
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(CheckInSection.sleep, anchor: .top)
-                    }
-                    try? await Task.sleep(for: .milliseconds(350))
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        proxy.scrollTo(rowID, anchor: .center)
-                    }
-                    try? await Task.sleep(for: .milliseconds(350))
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        proxy.scrollTo(deleteID, anchor: .center)
-                    }
+            .alert("Sleep record restored", isPresented: Binding(
+                get: { restoredSleepForAction != nil },
+                set: { if !$0 { restoredSleepForAction = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    guard let record = restoredSleepForAction else { return }
+                    store.deleteSleep(record.id)
+                    restoredSleepForAction = nil
                 }
+                .accessibilityIdentifier("sleep-delete-\(restoredSleepForAction?.id.uuidString ?? "")")
+                Button("Done", role: .cancel) { restoredSleepForAction = nil }
+            } message: {
+                Text("The record is restored. You can delete it again now or manage it in Sleep.")
             }
             .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
         }
@@ -422,13 +414,12 @@ struct CheckInScreen: View {
         supplement.schedule.lowercased() == "daily" ? "Daily" : supplement.weekdays.sorted().map { Calendar.current.shortWeekdaySymbols[$0 - 1] }.joined(separator: ", ")
     }
 
-    private func restoreSleep(_ record: SleepLog, using proxy: ScrollViewProxy) {
-        pendingSleepRevealID = record.id
-        guard store.restoreDeletedSleep(record.id) else {
-            pendingSleepRevealID = nil
-            return
-        }
+    private func restoreSleep(_ record: SleepLog) {
+        guard store.restoreDeletedSleep(record.id) else { return }
         if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
+        // A List may restore the row far above the Recently Deleted section.
+        // Expose its destructive action immediately so it remains reachable.
+        restoredSleepForAction = record
     }
 
     private func restoreWeight(_ record: WeightLog, using proxy: ScrollViewProxy) {
@@ -597,6 +588,9 @@ struct HistoryScreen: View {
 
     private func consumeFocusedDate(using proxy: ScrollViewProxy) {
         guard let date = store.focusedHistoryDate else { return }
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            print("[Heatmap QA] history consumes focus key: \(date)")
+        }
         store.consumeHistoryDateFocus()
         // A date passed directly from a History calendar/widget is authoritative;
         // a stale focus request from another screen must not replace it.

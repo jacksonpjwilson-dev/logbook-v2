@@ -361,9 +361,9 @@ private struct HomePageGrid: View {
                 state: store.state,
                 openHistory: { open(.history) },
                 openHistoryDate: { date in
-                    // Store the exact day key before navigating. The destination
-                    // consumes it on appearance, avoiding retained NavigationStack
-                    // state or Date parsing across the route boundary.
+                    if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+                        print("[Heatmap QA] tapped date key: \(date)")
+                    }
                     store.focusHistoryDate(date)
                     open(.history)
                 }
@@ -670,8 +670,8 @@ private struct DefaultProgressHomeWidget: View {
                 }
             }
             LazyVGrid(columns: columns, spacing: 1) {
-                // Date-based identities prevent LazyVGrid from reusing a previous
-                // month's button action for a different day at the same cell index.
+                // Date identities plus a month-scoped grid prevent a reused cell
+                // from retaining a stale action after month navigation.
                 ForEach(activityMonthCells) { cell in
                     if let key = cell.dateKey {
                         Button { openHistoryDate(key) } label: {
@@ -690,6 +690,7 @@ private struct DefaultProgressHomeWidget: View {
                     }
                 }
             }
+            .id("activity-month-grid-\(activityMonthStart.map { "\(activityCalendar.component(.year, from: $0))-\(activityCalendar.component(.month, from: $0))" } ?? "unknown")")
             HStack(spacing: 3) {
                 Text("Training · Food · Sleep · Weight · due supplements")
                     .font(.system(size: 6, weight: .medium)).lineLimit(1).minimumScaleFactor(0.7)
