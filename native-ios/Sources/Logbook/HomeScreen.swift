@@ -361,7 +361,11 @@ private struct HomePageGrid: View {
                 state: store.state,
                 openHistory: { open(.history) },
                 openHistoryDate: { date in
-                    open(.historyDate(date))
+                    // Store the exact day key before navigating. The destination
+                    // consumes it on appearance, avoiding retained NavigationStack
+                    // state or Date parsing across the route boundary.
+                    store.focusHistoryDate(date)
+                    open(.history)
                 }
             )
             .frame(width: width, height: height)

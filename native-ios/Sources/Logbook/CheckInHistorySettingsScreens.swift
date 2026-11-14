@@ -279,12 +279,17 @@ struct CheckInScreen: View {
                 let rowID = "sleep-row-\(recordID.uuidString)"
                 let deleteID = "sleep-delete-target-\(recordID.uuidString)"
                 Task { @MainActor in
-                    await Task.yield()
-                    await Task.yield()
+                    // List only materializes rows after their section is in view.
+                    // Reveal the Sleep section first, then the restored row and its
+                    // delete control once SwiftUI has laid out the updated list.
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        proxy.scrollTo(CheckInSection.sleep, anchor: .top)
+                    }
+                    try? await Task.sleep(for: .milliseconds(350))
                     withAnimation(.easeInOut(duration: 0.25)) {
                         proxy.scrollTo(rowID, anchor: .center)
                     }
-                    try? await Task.sleep(for: .milliseconds(300))
+                    try? await Task.sleep(for: .milliseconds(350))
                     withAnimation(.easeInOut(duration: 0.2)) {
                         proxy.scrollTo(deleteID, anchor: .center)
                     }
