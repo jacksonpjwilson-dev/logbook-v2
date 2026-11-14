@@ -525,7 +525,9 @@ final class DailyHomeUITests: XCTestCase {
         // A one-exercise fixture keeps the complete history edit/recovery flow
         // reachable on compact devices without changing the production layout.
         let app = launchApp(progressionHistory: true, singleExercise: true)
-        app.buttons["Training tab"].tap()
+        let trainingTab = app.buttons["Training tab"]
+        XCTAssertTrue(waitForHittability(of: trainingTab))
+        trainingTab.tap()
         let template = app.buttons.matching(NSPredicate(format: "identifier BEGINSWITH %@", "training-template-")).firstMatch
         XCTAssertTrue(template.waitForExistence(timeout: 5))
         template.tap()
@@ -1232,6 +1234,11 @@ final class DailyHomeUITests: XCTestCase {
         }
     }
 
+    private func waitForHittability(of element: XCUIElement) -> Bool {
+        let expectation = XCTNSPredicateExpectation(predicate: NSPredicate(format: "hittable == true"), object: element)
+        return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+    }
+
     private func dismissKeyboard(in app: XCUIApplication) {
         let done = app.buttons["keyboard-done"]
         if done.waitForExistence(timeout: 1) { done.tap() }
@@ -1272,11 +1279,9 @@ final class DailyHomeUITests: XCTestCase {
         restoreSleep.tap()
         let restoredSleep = app.buttons["sleep-edit-\(sleepID)"]
         XCTAssertTrue(restoredSleep.waitForExistence(timeout: 5), "Restoring returns the sleep record to the active list")
-        let restoreConfirmation = app.alerts["Sleep record restored"]
-        XCTAssertTrue(restoreConfirmation.waitForExistence(timeout: 5), "Restoring exposes an immediate action for the restored record")
-        let deleteRestoredSleep = restoreConfirmation.buttons["sleep-delete-\(sleepID)"]
+        let deleteRestoredSleep = app.buttons["sleep-delete-\(sleepID)"]
         XCTAssertTrue(deleteRestoredSleep.waitForExistence(timeout: 5), "The restored sleep record exposes a Delete action")
-        XCTAssertTrue(deleteRestoredSleep.isHittable, "The restored sleep Delete action is reachable")
+        XCTAssertTrue(waitForHittability(of: deleteRestoredSleep), "The restored sleep Delete action is reachable")
         deleteRestoredSleep.tap()
         let permanentlyDeleteSleep = app.buttons["permanently-delete-sleep-\(sleepID)"]
         scrollToElement(permanentlyDeleteSleep, in: app)

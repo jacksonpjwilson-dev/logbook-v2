@@ -360,13 +360,7 @@ private struct HomePageGrid: View {
                 palette: store.state.home.theme.palette,
                 state: store.state,
                 openHistory: { open(.history) },
-                openHistoryDate: { date in
-                    if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
-                        print("[Heatmap QA] tapped date key: \(date)")
-                    }
-                    store.focusHistoryDate(date)
-                    open(.history)
-                }
+                openHistoryDate: { open(.historyDate($0)) }
             )
             .frame(width: width, height: height)
             .disabled(editing)
@@ -612,13 +606,10 @@ private struct DefaultProgressHomeWidget: View {
     }
 
     private var activityMonthCells: [ActivityMonthCell] {
-        guard let firstDay = activityMonthStart else { return [] }
-        let year = activityCalendar.component(.year, from: firstDay)
-        let month = activityCalendar.component(.month, from: firstDay)
         return activityMonthDates.enumerated().map { index, date in
             guard let date else { return ActivityMonthCell(id: "blank-\(index)", dateKey: nil, dayLabel: nil) }
             let day = activityCalendar.component(.day, from: date)
-            let key = String(format: "%04d-%02d-%02d", year, month, day)
+            let key = LocalDay.string(date)
             return ActivityMonthCell(id: "day-\(key)", dateKey: key, dayLabel: String(day))
         }
     }
@@ -680,6 +671,7 @@ private struct DefaultProgressHomeWidget: View {
                                 .frame(maxWidth: .infinity).frame(height: 8)
                                 .foregroundStyle(palette.textColor)
                                 .background(palette.accentColor.opacity(max(0.08, activityScore(on: key))), in: RoundedRectangle(cornerRadius: 2))
+                                .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .id("activity-day-button-\(key)")

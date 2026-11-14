@@ -10,7 +10,6 @@ final class LogbookStore: ObservableObject {
     @Published private(set) var focusedCheckInSection: CheckInSection?
     @Published private(set) var activeWorkoutPresentationRequest: UUID?
     @Published private(set) var foodNavigationFocus: FoodNavigationFocus?
-    @Published private(set) var focusedHistoryDate: String?
 
     private let repository: LogbookRepository
     private(set) var canEdit = true
@@ -96,14 +95,6 @@ final class LogbookStore: ObservableObject {
 
     func focusFood(_ destination: FoodNavigationFocus) {
         foodNavigationFocus = destination
-    }
-
-    func focusHistoryDate(_ date: String) {
-        focusedHistoryDate = date
-    }
-
-    func consumeHistoryDateFocus() {
-        focusedHistoryDate = nil
     }
 
     func consumeFoodNavigationFocus() -> FoodNavigationFocus? {

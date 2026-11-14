@@ -25,7 +25,7 @@ struct CheckInScreen: View {
     @State private var manualDuration = ""
     @State private var qualityRating = 0
     @State private var editingSleepID: UUID?
-    @State private var restoredSleepForAction: SleepLog?
+    @State private var restoredSleepID: UUID?
     @State private var weight = ""
     @State private var showWeightSaved = false
     @State private var showSleepReplace = false
@@ -107,9 +107,8 @@ struct CheckInScreen: View {
                                 .frame(width: 44, height: 44)
                                 .accessibilityLabel("Delete \(record.isNap ? "nap" : "overnight sleep")")
                                 .accessibilityIdentifier("sleep-delete-\(record.id.uuidString)")
-                                .id("sleep-delete-target-\(record.id.uuidString)")
                             }
-                            .id("sleep-row-\(record.id.uuidString)")
+                            .id(record.id)
                         }
                     }
                     Text("Sleep is entered manually. Apple Health access remains disabled.").font(.footnote).foregroundStyle(.secondary)
@@ -200,12 +199,14 @@ struct CheckInScreen: View {
                             Text("\(record.isNap ? "Nap" : "Sleep") · \(record.wakeDate)")
                             Spacer()
                             Button("Restore") { restoreSleep(record) }
+                                .buttonStyle(.borderless)
                                 .accessibilityIdentifier("restore-sleep-\(record.id.uuidString)")
                             Button(role: .destructive) {
                                 permanentDelete = CheckInPermanentDelete(kind: .sleep, id: record.id)
                             } label: {
                                 Label("Delete Permanently", systemImage: "trash")
                             }
+                            .buttonStyle(.borderless)
                             .accessibilityLabel("Delete Permanently")
                             .accessibilityIdentifier("permanently-delete-sleep-\(record.id.uuidString)")
                         }
@@ -273,19 +274,10 @@ struct CheckInScreen: View {
                 else { scrollToRequestedSection(using: proxy) }
             }
             .onChange(of: selectedDate) { _, _ in loadWeightForSelectedDate() }
-            .alert("Sleep record restored", isPresented: Binding(
-                get: { restoredSleepForAction != nil },
-                set: { if !$0 { restoredSleepForAction = nil } }
-            )) {
-                Button("Delete", role: .destructive) {
-                    guard let record = restoredSleepForAction else { return }
-                    store.deleteSleep(record.id)
-                    restoredSleepForAction = nil
-                }
-                .accessibilityIdentifier("sleep-delete-\(restoredSleepForAction?.id.uuidString ?? "")")
-                Button("Done", role: .cancel) { restoredSleepForAction = nil }
-            } message: {
-                Text("The record is restored. You can delete it again now or manage it in Sleep.")
+            .onChange(of: restoredSleepID) { _, id in
+                guard let id else { return }
+                withAnimation { proxy.scrollTo(id, anchor: .center) }
+                restoredSleepID = nil
             }
             .onChange(of: store.focusedCheckInSection) { _, _ in scrollToRequestedSection(using: proxy) }
         }
@@ -417,9 +409,7 @@ struct CheckInScreen: View {
     private func restoreSleep(_ record: SleepLog) {
         guard store.restoreDeletedSleep(record.id) else { return }
         if let restoredDate = date(from: record.wakeDate) { selectedDate = restoredDate }
-        // A List may restore the row far above the Recently Deleted section.
-        // Expose its destructive action immediately so it remains reachable.
-        restoredSleepForAction = record
+        restoredSleepID = record.id
     }
 
     private func restoreWeight(_ record: WeightLog, using proxy: ScrollViewProxy) {
@@ -542,10 +532,7 @@ struct HistoryScreen: View {
     @State private var workoutToDeletePermanently: UUID?
     @State private var selectedHistoryDate: String?
     @State private var selectedStrengthExerciseID = ""
-    private let explicitInitialDate: String?
-
     init(initialDate: String? = nil) {
-        explicitInitialDate = initialDate
         _selectedHistoryDate = State(initialValue: initialDate)
     }
     private let ranges = [7, 30, 90]
@@ -584,19 +571,6 @@ struct HistoryScreen: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
             withAnimation(.easeInOut(duration: 0.2)) { proxy.scrollTo("history-selected-day-scroll-target", anchor: .top) }
         }
-    }
-
-    private func consumeFocusedDate(using proxy: ScrollViewProxy) {
-        guard let date = store.focusedHistoryDate else { return }
-        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
-            print("[Heatmap QA] history consumes focus key: \(date)")
-        }
-        store.consumeHistoryDateFocus()
-        // A date passed directly from a History calendar/widget is authoritative;
-        // a stale focus request from another screen must not replace it.
-        guard explicitInitialDate == nil else { return }
-        selectedHistoryDate = date
-        scrollToSelectedDate(using: proxy)
     }
 
     var body: some View {
@@ -786,20 +760,8 @@ struct HistoryScreen: View {
             }
         }
         .onAppear {
-            if let explicitInitialDate {
-                // NavigationStack may retain @State when another History route
-                // is reused. Reapply the route's authoritative date every time.
-                selectedHistoryDate = explicitInitialDate
-            } else {
-                consumeFocusedDate(using: proxy)
-            }
             scrollToSelectedDate(using: proxy)
             if selectedStrengthExerciseID.isEmpty { selectedStrengthExerciseID = strengthOptions.first?.id ?? "" }
-        }
-        .onChange(of: store.focusedHistoryDate) { _, _ in consumeFocusedDate(using: proxy) }
-        .onChange(of: selectedHistoryDate) { _, date in
-            guard date != nil else { return }
-            scrollToSelectedDate(using: proxy)
         }
         }
         .navigationTitle("History")
