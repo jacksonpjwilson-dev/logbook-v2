@@ -483,7 +483,7 @@ final class DailyHomeUITests: XCTestCase {
         let finish = app.buttons["finish-workout"]
         XCTAssertTrue(finish.waitForExistence(timeout: 5))
         finish.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
-        let confirm = app.buttons["confirm-finish-workout"]
+        let confirm = app.buttons.matching(identifier: "confirm-finish-workout").firstMatch
         XCTAssertTrue(confirm.waitForExistence(timeout: 5), "Saving a partially completed workout requires an explicit confirmation")
         confirm.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
@@ -543,7 +543,7 @@ final class DailyHomeUITests: XCTestCase {
         app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
         XCTAssertTrue(finish.isHittable, "Finish & Save should remain reachable after set entry")
         finish.tap()
-        let confirmSave = app.buttons["confirm-finish-workout"]
+        let confirmSave = app.buttons.matching(identifier: "confirm-finish-workout").firstMatch
         XCTAssertTrue(confirmSave.waitForExistence(timeout: 5))
         confirmSave.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
@@ -561,8 +561,8 @@ final class DailyHomeUITests: XCTestCase {
         dismissKeyboard(in: app)
         app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
         app.buttons["finish-workout"].tap()
-        XCTAssertTrue(app.buttons["confirm-finish-workout"].waitForExistence(timeout: 5))
-        app.buttons["confirm-finish-workout"].tap()
+        XCTAssertTrue(app.buttons.matching(identifier: "confirm-finish-workout").firstMatch.waitForExistence(timeout: 5))
+        app.buttons.matching(identifier: "confirm-finish-workout").firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         app.buttons["workout-summary-done"].tap()
         tapBack(in: app)
@@ -726,8 +726,8 @@ final class DailyHomeUITests: XCTestCase {
         dismissKeyboard(in: app)
         app.buttons.matching(identifier: "Mark set complete").firstMatch.tap()
         app.buttons["finish-workout"].tap()
-        XCTAssertTrue(app.buttons["confirm-finish-workout"].waitForExistence(timeout: 5))
-        app.buttons["confirm-finish-workout"].tap()
+        XCTAssertTrue(app.buttons.matching(identifier: "confirm-finish-workout").firstMatch.waitForExistence(timeout: 5))
+        app.buttons.matching(identifier: "confirm-finish-workout").firstMatch.tap()
         XCTAssertTrue(app.navigationBars["Workout saved"].waitForExistence(timeout: 5))
         app.buttons["workout-summary-done"].tap()
         tapBack(in: app)
@@ -1288,12 +1288,16 @@ final class DailyHomeUITests: XCTestCase {
         XCTAssertTrue(permanentlyDeleteSleep.waitForExistence(timeout: 5), "Recently Deleted offers explicit permanent removal")
         XCTAssertTrue(permanentlyDeleteSleep.isHittable, "Permanent removal must be reachable from the active Recently Deleted list")
         permanentlyDeleteSleep.tap()
-        app.buttons["Delete Permanently"].tap()
+        let confirmations = app.alerts["Permanently delete this check-in?"].buttons.matching(identifier: "confirm-permanent-checkin-deletion")
+        XCTAssertTrue(confirmations.firstMatch.waitForExistence(timeout: 5), "Permanent removal requires explicit confirmation")
+        let confirmDelete = confirmations.element(boundBy: confirmations.count - 1)
+        confirmDelete.tap()
         XCTAssertFalse(app.buttons["restore-sleep-\(sleepID)"].exists, "Permanent deletion removes the record from recovery")
         scrollToElement(restoredSleep, in: app, towardTop: true)
         XCTAssertFalse(restoredSleep.exists, "Permanent deletion removes the record from active history too")
 
         let weightField = app.textFields["checkin-weight-value"]
+        scrollToElement(weightField, in: app)
         XCTAssertTrue(weightField.waitForExistence(timeout: 5))
         weightField.tap()
         let oldWeight = weightField.value as? String ?? ""

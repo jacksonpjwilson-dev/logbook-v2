@@ -306,12 +306,11 @@ struct CheckInScreen: View {
             }
             Button("Keep existing record", role: .cancel) { }
         } message: { Text("The previous daily measurement is moved to Recently Deleted.") }
-        .confirmationDialog("Permanently delete this check-in?", isPresented: Binding(
+        .alert("Permanently delete this check-in?", isPresented: Binding(
             get: { permanentDelete != nil },
             set: { if !$0 { permanentDelete = nil } }
-        ), titleVisibility: .visible) {
+        ), presenting: permanentDelete) { selection in
             Button("Delete Permanently", role: .destructive) {
-                guard let selection = permanentDelete else { return }
                 switch selection.kind {
                 case .sleep: store.permanentlyDeleteSleep(selection.id)
                 case .weight: store.permanentlyDeleteWeight(selection.id)
@@ -320,8 +319,9 @@ struct CheckInScreen: View {
                 }
                 permanentDelete = nil
             }
+            .accessibilityIdentifier("confirm-permanent-checkin-deletion")
             Button("Cancel", role: .cancel) { permanentDelete = nil }
-        } message: { Text("This cannot be undone.") }
+        } message: { _ in Text("This cannot be undone.") }
     }
 
     private var sleepInputIsValid: Bool {
