@@ -73,6 +73,51 @@ final class LogbookStore: ObservableObject {
         }
     }
 
+    func saveSetupProgress(_ progress: SetupProgress) {
+        guard state.setup != progress else { return }
+        transact { $0.setup = progress }
+    }
+
+    func completeSetup(_ progress: SetupProgress) {
+        guard progress.validationMessage == nil else { return }
+        let targets = NutritionTargets(calories: Double(progress.calories), protein: Double(progress.protein),
+                                       carbohydrates: Double(progress.carbohydrates), fat: Double(progress.fat))
+        transact { state in
+            if state.nutrition.targets != targets {
+                if state.nutrition.targetHistory == nil {
+                    state.nutrition.targetHistory = [NutritionTargetSnapshot(effectiveDate: "0001-01-01", targets: state.nutrition.targets)]
+                }
+                let date = LocalDay.string()
+                state.nutrition.targetHistory?.removeAll { $0.effectiveDate == date }
+                state.nutrition.targetHistory?.append(NutritionTargetSnapshot(effectiveDate: date, targets: targets))
+                state.nutrition.targetHistory?.sort { $0.effectiveDate < $1.effectiveDate }
+                state.nutrition.targets = targets
+                state.home.dailyCalorieGoal = targets.calories
+                state.home.dailyProteinGoal = targets.protein
+            }
+            state.home.preferredWeightUnit = progress.weightUnit
+            state.nutrition.waterGoalMilliliters = Int(progress.waterMilliliters)
+            state.checkins.sleepGoalMinutes = Int((Double(progress.sleepHours) ?? 8) * 60)
+            let workout = progress.workoutName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !workout.isEmpty && !state.training.templates.contains(where: { $0.name == workout }) {
+                Self.migrateLegacyPrograms(&state.training)
+                let template = WorkoutTemplate(name: workout)
+                state.training.templates.append(template)
+                if let index = state.training.programs?.firstIndex(where: { $0.id == state.training.activeProgramID }) {
+                    state.training.programs?[index].templateIDs.append(template.id)
+                }
+            }
+            let supplement = progress.supplementName.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !supplement.isEmpty && !state.checkins.supplements.contains(where: { $0.deletedAt == nil && $0.name == supplement }) {
+                state.checkins.supplements.append(Supplement(name: supplement))
+            }
+            var completed = progress
+            completed.completed = true
+            completed.step = 0
+            state.setup = completed
+        }
+    }
+
     func setTheme(_ theme: LogbookTheme) {
         transact { $0.home.theme = theme }
     }

@@ -1298,12 +1298,22 @@ enum StrengthHistorySeries {
 struct SettingsScreen: View {
     @EnvironmentObject private var store: LogbookStore
     @State private var showThemeGallery = false
+    @State private var showSetup = false
     @State private var showHomeEditor = false
     @State private var backupURL: URL?
     @State private var exportError: String?
 
     var body: some View {
         List {
+            Section("Your setup") {
+                Button("Revisit setup") { showSetup = true }
+                    .accessibilityIdentifier("settings-revisit-setup")
+                if let setup = store.state.setup {
+                    if !setup.name.isEmpty { LabeledContent("Name", value: setup.name) }
+                    LabeledContent("Objective", value: setup.objective)
+                    LabeledContent("Training", value: setup.trainingPreference)
+                }
+            }
             Section("Appearance") {
                 Button { showThemeGallery = true } label: {
                     HStack {
@@ -1314,6 +1324,7 @@ struct SettingsScreen: View {
                     }
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("settings-theme")
                 Toggle("Optional haptic feedback", isOn: Binding(get: { store.state.home.hapticsEnabled }, set: store.setHaptics))
             }
             Section("Home Screen") {
@@ -1349,11 +1360,24 @@ struct SettingsScreen: View {
             }
         }
         .navigationTitle("Settings")
+        .sheet(isPresented: $showSetup) {
+            SetupScreen(progress: setupProgress).environmentObject(store)
+        }
         .sheet(isPresented: $showThemeGallery) { ThemeGalleryScreen().presentationDetents([.large]).presentationDragIndicator(.visible) }
         .sheet(isPresented: $showHomeEditor) { HomeEditorScreen().presentationDetents([.large]).presentationDragIndicator(.visible) }
         .alert("Backup could not be created", isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })) {
             Button("OK", role: .cancel) { exportError = nil }
         } message: { Text(exportError ?? "") }
+    }
+
+    private var setupProgress: SetupProgress {
+        guard let saved = store.state.setup else { return SetupProgress.existing(store.state) }
+        guard saved.completed else { return saved }
+        var progress = SetupProgress.existing(store.state)
+        progress.name = saved.name
+        progress.objective = saved.objective
+        progress.trainingPreference = saved.trainingPreference
+        return progress
     }
 
     private func createBackup() {
@@ -1377,7 +1401,15 @@ struct ThemeGalleryScreen: View {
                             dismiss()
                         } label: {
                             VStack(alignment: .leading, spacing: 0) {
-                                Image(theme.rawValue).resizable().scaledToFill().frame(height: 116).clipped()
+                                GeometryReader { geometry in
+                                    Image(theme.rawValue)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: geometry.size.width, height: 116)
+                                        .clipped()
+                                        .allowsHitTesting(false)
+                                }
+                                .frame(height: 116)
                                     .overlay(alignment: .bottomLeading) {
                                         Text(theme.title.uppercased()).font(.system(size: 10, weight: .bold, design: .rounded)).tracking(0.9)
                                             .foregroundStyle(theme.palette.textColor).padding(8)
@@ -1394,7 +1426,10 @@ struct ThemeGalleryScreen: View {
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 18).stroke(theme.palette.accentColor.opacity(0.45), lineWidth: store.state.home.theme == theme ? 2 : 0.6))
                         }
+                        .contentShape(RoundedRectangle(cornerRadius: 18))
                         .buttonStyle(.plain)
+                        .accessibilityIdentifier("theme-preview-\(theme.rawValue)")
+                        .accessibilityValue(store.state.home.theme == theme ? "Selected" : "")
                         .accessibilityLabel("Apply \(theme.title) theme")
                     }
                 }

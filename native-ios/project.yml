@@ -19,6 +19,8 @@ targets:
     sources:
       - Sources/Logbook
       - Resources/LogbookAssets.xcassets
+      - path: Resources/LogbookLaunch.mp4
+        buildPhase: resources
       - Shared/LogbookModels.swift
       - Shared/SharedStateFile.swift
       - Shared/WatchSnapshot.swift

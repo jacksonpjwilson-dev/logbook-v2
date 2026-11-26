@@ -37,6 +37,20 @@
          </BuildActionEntry>
          <BuildActionEntry
             buildForTesting = "YES"
+            buildForRunning = "NO"
+            buildForProfiling = "NO"
+            buildForArchiving = "NO"
+            buildForAnalyzing = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "975673D3FC02D508B2382E01"
+               BuildableName = "LogbookUITests.xctest"
+               BlueprintName = "LogbookUITests"
+               ReferencedContainer = "container:Logbook.xcodeproj">
+            </BuildableReference>
+         </BuildActionEntry>
+         <BuildActionEntry
+            buildForTesting = "YES"
             buildForRunning = "YES"
             buildForProfiling = "YES"
             buildForArchiving = "YES"
@@ -75,6 +89,17 @@
                BlueprintIdentifier = "03352925B5C82C868A4D483E"
                BuildableName = "LogbookTests.xctest"
                BlueprintName = "LogbookTests"
+               ReferencedContainer = "container:Logbook.xcodeproj">
+            </BuildableReference>
+         </TestableReference>
+         <TestableReference
+            skipped = "NO"
+            parallelizable = "NO">
+            <BuildableReference
+               BuildableIdentifier = "primary"
+               BlueprintIdentifier = "975673D3FC02D508B2382E01"
+               BuildableName = "LogbookUITests.xctest"
+               BlueprintName = "LogbookUITests"
                ReferencedContainer = "container:Logbook.xcodeproj">
             </BuildableReference>
          </TestableReference>

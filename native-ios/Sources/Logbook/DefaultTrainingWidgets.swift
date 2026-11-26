@@ -34,7 +34,7 @@ struct DefaultTrainingWidgetView: View {
         }
     }
 
-    private var tokens: ThemeTokens { LogbookTheme.defaultTheme.tokens }
+    private var tokens: ThemeTokens { state.home.theme.tokens }
     private var templates: [WorkoutTemplate] {
         let lookup = Dictionary(uniqueKeysWithValues: state.training.templates.map { ($0.id, $0) })
         return state.training.activeProgram?.templateIDs.compactMap { lookup[$0] } ?? []

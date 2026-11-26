@@ -925,8 +925,57 @@ struct CheckInState: Codable {
     var sleepGoalMinutes = 480
 }
 
+struct SetupProgress: Codable, Equatable {
+    var step = 0
+    var completed = false
+    var name = ""
+    var objective = "General fitness"
+    var calories = ""
+    var protein = ""
+    var carbohydrates = ""
+    var fat = ""
+    var trainingPreference = "Flexible"
+    var workoutName = ""
+    var sleepHours = "8"
+    var waterMilliliters = ""
+    var weightUnit = "kg"
+    var supplementName = ""
+
+    static func existing(_ state: LogbookState) -> SetupProgress {
+        var value = SetupProgress()
+        let targets = state.nutritionTargets(on: LocalDay.string())
+        value.calories = targets.calories.map { String($0) } ?? ""
+        value.protein = targets.protein.map { String($0) } ?? ""
+        value.carbohydrates = targets.carbohydrates.map { String($0) } ?? ""
+        value.fat = targets.fat.map { String($0) } ?? ""
+        value.sleepHours = String(Double(state.checkins.sleepGoalMinutes) / 60)
+        value.waterMilliliters = state.nutrition.waterGoalMilliliters.map(String.init) ?? ""
+        value.weightUnit = state.home.preferredWeightUnit
+        return value
+    }
+
+    var validationMessage: String? {
+        let fields = [("Calories", calories), ("Protein", protein), ("Carbohydrates", carbohydrates), ("Fat", fat)]
+        for (title, value) in fields where !value.isEmpty {
+            guard let number = Double(value), number.isFinite, number >= 0, number < Double(Int.max) else {
+                return "\(title) must be a positive number or left blank."
+            }
+        }
+        guard let hours = Double(sleepHours), hours.isFinite, hours > 0, hours <= 24 else {
+            return "Sleep should be between 0 and 24 hours."
+        }
+        if !waterMilliliters.isEmpty {
+            guard let water = Int(waterMilliliters), (1...10000).contains(water) else {
+                return "Hydration should be between 1 and 10,000 mL."
+            }
+        }
+        return nil
+    }
+}
+
 struct LogbookState: Codable {
     var schemaVersion = 1
+    var setup: SetupProgress? = nil
     var home = HomeState()
     var training = TrainingState()
     var nutrition = NutritionState()

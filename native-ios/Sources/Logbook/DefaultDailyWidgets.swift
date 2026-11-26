@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// Purpose-built content for the four approved Default Daily widgets. Other
-/// themes and Home pages continue to use their existing widget renderer.
+/// Shared functional content for Daily widgets in every theme.
 struct DefaultDailyWidgetView: View {
     let widget: HomeWidget
     let palette: ThemePalette
@@ -537,10 +536,10 @@ private struct DefaultDailyCardSurface<Content: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background {
                 shape.fill(.ultraThinMaterial)
-                    .overlay(shape.fill(palette.surfaceColor.opacity(0.24)))
-                    .overlay(shape.fill(Color.white.opacity(0.25)))
+                    .overlay(shape.fill(palette.surfaceColor.opacity(palette.light ? 0.24 : 0.65)))
+                    .overlay(shape.fill(Color.white.opacity(palette.light ? 0.25 : 0.03)))
             }
-            .overlay(shape.stroke(Color.white.opacity(0.64), lineWidth: 0.85))
+            .overlay(shape.stroke(Color.white.opacity(palette.light ? 0.64 : 0.16), lineWidth: 0.85))
             .overlay(shape.stroke(palette.accentColor.opacity(0.16), lineWidth: 0.6))
             .clipShape(shape)
             .shadow(color: Color(hex: "#557493").opacity(0.12), radius: 9, x: 0, y: 5)

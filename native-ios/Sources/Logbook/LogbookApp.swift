@@ -4,7 +4,8 @@ import SwiftUI
 struct LogbookApp: App {
     @StateObject private var store = Self.makeStore()
     @State private var path: [LogbookRoute] = []
-    @State private var showLaunchScreen = !Self.isUITesting
+    @State private var showLaunchScreen = !Self.isUITesting || ProcessInfo.processInfo.arguments.contains("--qa-launch-video")
+    @State private var showSetup = false
 
     private static var isUITesting: Bool {
         ProcessInfo.processInfo.arguments.contains("--ui-testing")
@@ -22,6 +23,7 @@ struct LogbookApp: App {
         let shouldSeedFixture = !FileManager.default.fileExists(atPath: url.path)
         let store = LogbookStore(repository: LogbookRepository(url: url))
         guard shouldSeedFixture else { return store }
+        if ProcessInfo.processInfo.arguments.contains("--qa-empty-home") { return store }
         if let themeArgument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--qa-theme=") }),
            let theme = LogbookTheme(rawValue: String(themeArgument.dropFirst("--qa-theme=".count))) {
             store.setTheme(theme)
@@ -105,15 +107,26 @@ struct LogbookApp: App {
                 }
 
                 if showLaunchScreen {
-                    LaunchSplashView()
+                    LaunchSplashView {
+                        withAnimation(.easeOut(duration: 0.35)) { showLaunchScreen = false }
+                    }
                         .transition(.opacity)
                         .zIndex(1)
                 }
             }
             .task {
-                guard !Self.isUITesting else { return }
-                try? await Task.sleep(for: .seconds(3))
-                withAnimation(.easeOut(duration: 0.35)) { showLaunchScreen = false }
+                if Self.isUITesting && ProcessInfo.processInfo.arguments.contains("--qa-show-setup") {
+                    showSetup = true
+                }
+            }
+            .onChange(of: showLaunchScreen) { _, showing in
+                if !showing && !Self.isUITesting && store.state.setup?.completed != true {
+                    showSetup = true
+                }
+            }
+            .sheet(isPresented: $showSetup) {
+                SetupScreen(progress: store.state.setup ?? SetupProgress.existing(store.state))
+                    .environmentObject(store)
             }
         }
     }

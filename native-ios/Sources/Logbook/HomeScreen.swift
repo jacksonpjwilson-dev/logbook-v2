@@ -40,14 +40,14 @@ struct HomeScreen: View {
                                 remove: { id in store.removeHomeWidget(id, pageID: page.id) }
                             )
                             .tag(index)
-                            .padding(.horizontal, 18)
-                            .padding(.top, 4)
+                            .padding(.horizontal, 14)
+                            .padding(.top, 2)
                         }
                     }
                     .tabViewStyle(.page(indexDisplayMode: .never))
                     .frame(maxHeight: .infinity)
                     pageIndicator
-                        .padding(.bottom, 7)
+                        .padding(.bottom, 2)
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
@@ -78,9 +78,19 @@ struct HomeScreen: View {
     }
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(displayDate)
+                .font(.system(size: 10, weight: .medium))
+                .tracking(0.6)
+                .foregroundStyle(palette.mutedColor)
             HStack(spacing: 10) {
-                Spacer()
+                Text("Logbook")
+                    .font(.system(size: 27, weight: .semibold, design: .rounded))
+                Text(currentPageName)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(palette.mutedColor)
+                    .lineLimit(1)
+                Spacer(minLength: 0)
                 if !isEditing, store.state.training.activeSession != nil {
                     Button { path = [.training] } label: {
                         Label("Resume", systemImage: "play.fill")
@@ -121,25 +131,13 @@ struct HomeScreen: View {
                     .accessibilityLabel("Edit Home Screen")
                     .foregroundStyle(palette.textColor)
                 }
+
             }
-            Text(displayDate)
-                .font(.system(size: 10, weight: .medium))
-                .tracking(theme == .defaultTheme ? 0.45 : 1.1)
-                .foregroundStyle(palette.mutedColor)
-                .frame(height: 12, alignment: .leading)
-            HStack(alignment: .firstTextBaseline) {
-                Text("Logbook")
-                    .font(.system(size: theme == .defaultTheme ? 27 : 30, weight: theme == .defaultTheme ? .semibold : .bold, design: .rounded))
-                Spacer()
-                Text(currentPageName).font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(palette.mutedColor).lineLimit(1)
-            }
-            .frame(height: 36, alignment: .leading)
             .foregroundStyle(palette.textColor)
         }
-        .padding(.horizontal, 22)
-        .padding(.top, 8)
-        .padding(.bottom, 9)
+        .padding(.horizontal, 16)
+        .padding(.top, 2)
+        .padding(.bottom, 3)
     }
 
     private var currentPageName: String {
@@ -163,7 +161,7 @@ struct HomeScreen: View {
                 .accessibilityLabel("\(store.state.home.pages[index].name) page")
             }
         }
-        .padding(.vertical, 9)
+        .padding(.vertical, 4)
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Home Screen pages")
     }
@@ -181,51 +179,6 @@ private struct HomePageGrid: View {
     @State private var wigglePhase = false
 
     private let gap: CGFloat = 9
-
-    private var usesApprovedDailyLayout: Bool {
-        guard page.name == "Daily", store.state.home.theme == .defaultTheme,
-              page.widgets.count == HomeState.defaultDailyPage.widgets.count else { return false }
-        return HomeState.defaultDailyPage.widgets.allSatisfy { expected in
-            page.widgets.contains {
-                $0.kind == expected.kind && $0.size == expected.size && $0.row == expected.row &&
-                    $0.column == expected.column && $0.variant == expected.variant
-            }
-        }
-    }
-
-    private var usesApprovedTrainingLayout: Bool {
-        guard page.name == "Training", store.state.home.theme == .defaultTheme,
-              page.widgets.count == 2 else { return false }
-        let expected = HomeState.defaultPages[1].widgets
-        return expected.allSatisfy { item in
-            page.widgets.contains {
-                $0.kind == item.kind && $0.size == item.size && $0.row == item.row &&
-                    $0.column == item.column && $0.variant == item.variant
-            }
-        }
-    }
-
-    private var usesApprovedFoodLayout: Bool {
-        guard page.name == "Food", store.state.home.theme == .defaultTheme,
-              page.widgets.count == HomeState.defaultPages[2].widgets.count else { return false }
-        return HomeState.defaultPages[2].widgets.allSatisfy { expected in
-            page.widgets.contains {
-                $0.kind == expected.kind && $0.size == expected.size && $0.row == expected.row &&
-                    $0.column == expected.column && $0.variant == expected.variant
-            }
-        }
-    }
-
-    private var usesApprovedProgressLayout: Bool {
-        guard page.name == "Progress & History", store.state.home.theme == .defaultTheme,
-              page.widgets.count == HomeState.defaultPages[3].widgets.count else { return false }
-        return HomeState.defaultPages[3].widgets.allSatisfy { expected in
-            page.widgets.contains {
-                $0.kind == expected.kind && $0.size == expected.size && $0.row == expected.row &&
-                    $0.column == expected.column && $0.variant == expected.variant
-            }
-        }
-    }
 
     var body: some View {
         GeometryReader { proxy in
@@ -321,7 +274,7 @@ private struct HomePageGrid: View {
 
     @ViewBuilder
     private func widgetContent(for widget: HomeWidget, width: CGFloat, height: CGFloat) -> some View {
-        if usesApprovedDailyLayout {
+        if [.nextWorkout, .trainingStreak, .vitals].contains(widget.kind) || (widget.kind == .calories && widget.variant != "Nutrition Today") {
             DefaultDailyWidgetView(
                 widget: widget,
                 palette: store.state.home.theme.palette,
@@ -333,7 +286,7 @@ private struct HomePageGrid: View {
             )
             .frame(width: width, height: height)
             .disabled(editing)
-        } else if usesApprovedTrainingLayout {
+        } else if widget.kind == .workoutSplit || (widget.kind == .calendarHeatmap && widget.variant == "Workout Calendar") {
             DefaultTrainingWidgetView(
                 widget: widget,
                 palette: store.state.home.theme.palette,
@@ -342,7 +295,7 @@ private struct HomePageGrid: View {
             )
             .frame(width: width, height: height)
             .disabled(editing)
-        } else if usesApprovedFoodLayout {
+        } else if [.meals, .easyNext].contains(widget.kind) || (widget.kind == .calories && widget.variant == "Nutrition Today") || (widget.kind == .fibre && widget.variant == "Nutrition Streak") {
             DefaultFoodHomeWidgetView(
                 widget: widget,
                 palette: store.state.home.theme.palette,
@@ -354,7 +307,7 @@ private struct HomePageGrid: View {
             .accessibilityIdentifier("home-widget-food-\(widget.kind.rawValue)")
             .accessibilityValue("\(width)|\(height)")
             .disabled(editing)
-        } else if usesApprovedProgressLayout {
+        } else if [.graph, .calendarHeatmap, .personalRecords].contains(widget.kind) || (widget.kind == .mealTiming && widget.variant == "Nutrition Adherence") {
             DefaultProgressHomeWidget(
                 widget: widget,
                 palette: store.state.home.theme.palette,
@@ -1331,6 +1284,7 @@ struct ThemeBackdrop: View {
                 }
         }
         .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 

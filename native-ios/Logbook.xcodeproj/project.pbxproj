@@ -7,35 +7,57 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		41B99FC3478A4197B5648296 /* LaunchSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 626A650B077B40FE90CD4E0E /* LaunchSplashView.swift */; };
-		1A1111111111111111111111 /* LogbookAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222222 /* LogbookAssets.xcassets */; };
-		1A1111111111111111111112 /* exercise-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222223 /* exercise-catalog.json */; };
-		1A1111111111111111111113 /* food-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A2222222222222222222224 /* food-catalog.json */; };
 		03A53D4E466B32FD2E649287 /* LogbookStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */; };
 		049EF6B80F772C3CD6861582 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
+		0CFFE5AB0F62A386C2BE2456 /* FoodCatalogServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F590FA8D26610B8D70BCDB95 /* FoodCatalogServiceTests.swift */; };
+		105CA0CDA349572C788AFE05 /* DailyHomeMetrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 155933B10FD61C987C55AB53 /* DailyHomeMetrics.swift */; };
 		11FD8DE3F0DFF2AD7A22A22B /* LogbookWatchApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D768DBB0C87D0B21E1A30A88 /* LogbookWatchApp.swift */; };
+		20B24920F5FA9573562FE42B /* food-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 458CB5DA70B22AEBBEDBA605 /* food-catalog.json */; };
+		20DC4A2FC0D3177E3E489C32 /* LaunchSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FAADEA022F735667718676E7 /* LaunchSplashView.swift */; };
+		26B31FCB3DCC7DE97A455A9D /* SetupProgressTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E62C1FDE4B60758D70687470 /* SetupProgressTests.swift */; };
+		2987EE7FEF93DB94D5484C54 /* FoodScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EEAD7214E0EC8BA4951C02E /* FoodScreens.swift */; };
 		2F8C337E96A17E091D3E56A7 /* HomeScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */; };
 		38FE7A3DF61D60752A88CB41 /* WatchBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = F2B70F6228C3CA91357AA565 /* WatchBridge.swift */; };
+		41B0EF3AC42EB83F088EEC51 /* RefinementUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD26BC7A308E917A82A7A8BD /* RefinementUITests.swift */; };
 		428F5644E93243A421D3BBEE /* LogbookWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1AD602160788F41D1391E65D /* LogbookWidgets.swift */; };
+		45BDB24A536EF266577C232D /* DailyReminderPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6EEEA6CA75D0CF48DE3DBE3 /* DailyReminderPlannerTests.swift */; };
 		480672D540A045E5A85A64EA /* CheckInHistorySettingsScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD344BA6568B5C8E90D244F0 /* CheckInHistorySettingsScreens.swift */; };
 		581F74784C76530D1C80B371 /* LogbookStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = E53AF4C63550141DCFC86C18 /* LogbookStore.swift */; };
+		593B56EEEB677E405095123F /* FoodCatalogService.swift in Sources */ = {isa = PBXBuildFile; fileRef = E41790F232E617CD6154D5A0 /* FoodCatalogService.swift */; };
 		5B85E9D4CDC93FBE6C426AFC /* ReminderService.swift in Sources */ = {isa = PBXBuildFile; fileRef = B39E1D175BFDFB76BB290D92 /* ReminderService.swift */; };
+		5D07A1BBC4D23A1BE3E9EDAB /* LogbookAssets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = B05DC9992F5170ABFD27D072 /* LogbookAssets.xcassets */; };
 		7B01FC3710F8E2DBB5789DAE /* SharedStateFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */; };
+		81278095F25724614F2DD712 /* DefaultDailyWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2AE9D9573EAF689E28985129 /* DefaultDailyWidgets.swift */; };
 		860497F335ABE38E943277AB /* LogbookWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		9063C04458A798D5F0FA6F25 /* WatchSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856100ACA15B96602A7781D0 /* WatchSnapshot.swift */; };
+		94CCB3DF441DF0CECEB0370B /* DatePersistenceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F30ABEA84B32618DF4114B18 /* DatePersistenceTests.swift */; };
+		999D72BAE3708313556BD5EC /* FoodBarcodeScanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03C3BED48082FE7357811EC9 /* FoodBarcodeScanner.swift */; };
 		9B874B7DD8F6F51B2B726701 /* CoreScreens.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4C05CE8E1E6D633923697B61 /* CoreScreens.swift */; };
+		A0005FA5EDE4368F3AE44D19 /* LogbookLaunch.mp4 in Resources */ = {isa = PBXBuildFile; fileRef = B97D04A9ADE625BB0B336FD8 /* LogbookLaunch.mp4 */; };
 		A4916B143D435336940EC253 /* LogbookApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 353638D52BCBF0B6A2449B92 /* LogbookApp.swift */; };
 		A4EC8E95B985BB2F7A46F723 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
 		A917562132852690E2D1EDBF /* WorkoutActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7FA531ACABA69409EDCA59A7 /* WorkoutActivityController.swift */; };
 		AA4DD10385FC9F20409671CC /* WatchSnapshot.swift in Sources */ = {isa = PBXBuildFile; fileRef = 856100ACA15B96602A7781D0 /* WatchSnapshot.swift */; };
+		ABAA50C44AD4DA88FFE9929E /* DefaultTrainingWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE3F5831FA983C2F7E4E44D1 /* DefaultTrainingWidgets.swift */; };
+		B4434459222B7AF959B71F5F /* DailyHomeUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC5B18A0BAC80439C734A3ED /* DailyHomeUITests.swift */; };
+		BB671AE3CAC4E608EEF14302 /* exercise-catalog.json in Resources */ = {isa = PBXBuildFile; fileRef = 5D11DD51C8B369C6A7EE50C2 /* exercise-catalog.json */; };
 		CC7E98ADB5CC37857127A5A7 /* SharedStateFile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */; };
 		D153F92ADACE0BE8ADF990B2 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */; };
 		DA8C91E03259D6E0D0E700E5 /* LogbookModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = B072F009194A00FC8AB83AB6 /* LogbookModels.swift */; };
+		F21A72E39A65111B431D7B7E /* TrainingPhaseTwoTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AF202AC514F10AD63B66C593 /* TrainingPhaseTwoTests.swift */; };
+		F30C207E6329A495AD612EE1 /* SetupScreen.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AC922890A88B93D9D3664D5 /* SetupScreen.swift */; };
 		F956850456945FB4FF1FC246 /* WorkoutActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		2D8CFDDAB9A8FFA886EBA3F5 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 0500A3EBC5BF2EE039C9F36D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 383D0B41E98F9DA91AA16B62;
+			remoteInfo = Logbook;
+		};
+		A35CAE597B1BB43F234AEAC6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 0500A3EBC5BF2EE039C9F36D /* Project object */;
 			proxyType = 1;
@@ -66,29 +88,45 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		03C3BED48082FE7357811EC9 /* FoodBarcodeScanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodBarcodeScanner.swift; sourceTree = "<group>"; };
+		155933B10FD61C987C55AB53 /* DailyHomeMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyHomeMetrics.swift; sourceTree = "<group>"; };
 		1AD602160788F41D1391E65D /* LogbookWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookWidgets.swift; sourceTree = "<group>"; };
 		1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeScreen.swift; sourceTree = "<group>"; };
+		2AE9D9573EAF689E28985129 /* DefaultDailyWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultDailyWidgets.swift; sourceTree = "<group>"; };
 		2C41D8E2FDDBD36C471158BB /* LogbookWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = LogbookWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		2EEAD7214E0EC8BA4951C02E /* FoodScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodScreens.swift; sourceTree = "<group>"; };
 		353638D52BCBF0B6A2449B92 /* LogbookApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookApp.swift; sourceTree = "<group>"; };
+		458CB5DA70B22AEBBEDBA605 /* food-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "food-catalog.json"; sourceTree = "<group>"; };
 		4C05CE8E1E6D633923697B61 /* CoreScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CoreScreens.swift; sourceTree = "<group>"; };
+		5D11DD51C8B369C6A7EE50C2 /* exercise-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-catalog.json"; sourceTree = "<group>"; };
+		6E049F4BAFA0ED6D4BC5D950 /* LogbookUITests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LogbookUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		7BE4754682E019B766CE2BE0 /* SharedStateFile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedStateFile.swift; sourceTree = "<group>"; };
 		7FA531ACABA69409EDCA59A7 /* WorkoutActivityController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityController.swift; sourceTree = "<group>"; };
 		84FF955D7A0242DDC073D77D /* Logbook.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Logbook.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		856100ACA15B96602A7781D0 /* WatchSnapshot.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSnapshot.swift; sourceTree = "<group>"; };
 		9596F4299ED9B11098CFA817 /* LogbookTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = LogbookTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		9AC922890A88B93D9D3664D5 /* SetupScreen.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupScreen.swift; sourceTree = "<group>"; };
 		A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookStoreTests.swift; sourceTree = "<group>"; };
+		AF202AC514F10AD63B66C593 /* TrainingPhaseTwoTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrainingPhaseTwoTests.swift; sourceTree = "<group>"; };
+		B05DC9992F5170ABFD27D072 /* LogbookAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = LogbookAssets.xcassets; sourceTree = "<group>"; };
 		B072F009194A00FC8AB83AB6 /* LogbookModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookModels.swift; sourceTree = "<group>"; };
 		B39E1D175BFDFB76BB290D92 /* ReminderService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderService.swift; sourceTree = "<group>"; };
+		B97D04A9ADE625BB0B336FD8 /* LogbookLaunch.mp4 */ = {isa = PBXFileReference; path = LogbookLaunch.mp4; sourceTree = "<group>"; };
+		BC5B18A0BAC80439C734A3ED /* DailyHomeUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyHomeUITests.swift; sourceTree = "<group>"; };
 		BD344BA6568B5C8E90D244F0 /* CheckInHistorySettingsScreens.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckInHistorySettingsScreens.swift; sourceTree = "<group>"; };
+		D6EEEA6CA75D0CF48DE3DBE3 /* DailyReminderPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DailyReminderPlannerTests.swift; sourceTree = "<group>"; };
 		D768DBB0C87D0B21E1A30A88 /* LogbookWatchApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookWatchApp.swift; sourceTree = "<group>"; };
+		DD26BC7A308E917A82A7A8BD /* RefinementUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RefinementUITests.swift; sourceTree = "<group>"; };
+		DE3F5831FA983C2F7E4E44D1 /* DefaultTrainingWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DefaultTrainingWidgets.swift; sourceTree = "<group>"; };
+		E41790F232E617CD6154D5A0 /* FoodCatalogService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodCatalogService.swift; sourceTree = "<group>"; };
 		E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = "wrapper.app-extension"; path = LogbookWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E53AF4C63550141DCFC86C18 /* LogbookStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LogbookStore.swift; sourceTree = "<group>"; };
+		E62C1FDE4B60758D70687470 /* SetupProgressTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupProgressTests.swift; sourceTree = "<group>"; };
 		F2B70F6228C3CA91357AA565 /* WatchBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchBridge.swift; sourceTree = "<group>"; };
+		F30ABEA84B32618DF4114B18 /* DatePersistenceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatePersistenceTests.swift; sourceTree = "<group>"; };
+		F590FA8D26610B8D70BCDB95 /* FoodCatalogServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FoodCatalogServiceTests.swift; sourceTree = "<group>"; };
+		FAADEA022F735667718676E7 /* LaunchSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSplashView.swift; sourceTree = "<group>"; };
 		FFA9FF8E8CCB64A2B6788EFB /* WorkoutActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkoutActivityAttributes.swift; sourceTree = "<group>"; };
-		1A2222222222222222222222 /* LogbookAssets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = LogbookAssets.xcassets; sourceTree = "<group>"; };
-		1A2222222222222222222223 /* exercise-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "exercise-catalog.json"; sourceTree = "<group>"; };
-		1A2222222222222222222224 /* food-catalog.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "food-catalog.json"; sourceTree = "<group>"; };
-		626A650B077B40FE90CD4E0E /* LaunchSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LaunchSplashView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -97,15 +135,33 @@
 			children = (
 				BD344BA6568B5C8E90D244F0 /* CheckInHistorySettingsScreens.swift */,
 				4C05CE8E1E6D633923697B61 /* CoreScreens.swift */,
+				155933B10FD61C987C55AB53 /* DailyHomeMetrics.swift */,
+				2AE9D9573EAF689E28985129 /* DefaultDailyWidgets.swift */,
+				DE3F5831FA983C2F7E4E44D1 /* DefaultTrainingWidgets.swift */,
+				03C3BED48082FE7357811EC9 /* FoodBarcodeScanner.swift */,
+				E41790F232E617CD6154D5A0 /* FoodCatalogService.swift */,
+				2EEAD7214E0EC8BA4951C02E /* FoodScreens.swift */,
 				1E01EA3BDB7FE86F2E70E861 /* HomeScreen.swift */,
+				FAADEA022F735667718676E7 /* LaunchSplashView.swift */,
 				353638D52BCBF0B6A2449B92 /* LogbookApp.swift */,
-				626A650B077B40FE90CD4E0E /* LaunchSplashView.swift */,
 				E53AF4C63550141DCFC86C18 /* LogbookStore.swift */,
 				B39E1D175BFDFB76BB290D92 /* ReminderService.swift */,
+				9AC922890A88B93D9D3664D5 /* SetupScreen.swift */,
 				F2B70F6228C3CA91357AA565 /* WatchBridge.swift */,
 				7FA531ACABA69409EDCA59A7 /* WorkoutActivityController.swift */,
 			);
 			path = Logbook;
+			sourceTree = "<group>";
+		};
+		13AA3C761D967458F725DB13 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				5D11DD51C8B369C6A7EE50C2 /* exercise-catalog.json */,
+				458CB5DA70B22AEBBEDBA605 /* food-catalog.json */,
+				B05DC9992F5170ABFD27D072 /* LogbookAssets.xcassets */,
+				B97D04A9ADE625BB0B336FD8 /* LogbookLaunch.mp4 */,
+			);
+			path = Resources;
 			sourceTree = "<group>";
 		};
 		162406791E92F35C20CD50DE /* LogbookWidgets */ = {
@@ -119,7 +175,7 @@
 		26FA94A0FE4A162D33B7DC0E = {
 			isa = PBXGroup;
 			children = (
-				1A3333333333333333333333 /* Resources */,
+				13AA3C761D967458F725DB13 /* Resources */,
 				CBEFA84B7EF53663171F6E17 /* Shared */,
 				4B01441FC1EAE042DBABEA5E /* Sources */,
 				F7189BF1BE2C454986E3AAA3 /* Tests */,
@@ -153,10 +209,20 @@
 			children = (
 				84FF955D7A0242DDC073D77D /* Logbook.app */,
 				9596F4299ED9B11098CFA817 /* LogbookTests.xctest */,
+				6E049F4BAFA0ED6D4BC5D950 /* LogbookUITests.xctest */,
 				2C41D8E2FDDBD36C471158BB /* LogbookWatch.app */,
 				E4D44AD7193185A3F5F59065 /* LogbookWidgets.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		DE6D279CB1AD4626935D30E2 /* LogbookUITests */ = {
+			isa = PBXGroup;
+			children = (
+				BC5B18A0BAC80439C734A3ED /* DailyHomeUITests.swift */,
+				DD26BC7A308E917A82A7A8BD /* RefinementUITests.swift */,
+			);
+			path = LogbookUITests;
 			sourceTree = "<group>";
 		};
 		E5B5E4BBCEDC9B0018C18675 /* LogbookWatch */ = {
@@ -170,7 +236,12 @@
 		E8CE13D89A079CB4A451FFB4 /* LogbookTests */ = {
 			isa = PBXGroup;
 			children = (
+				D6EEEA6CA75D0CF48DE3DBE3 /* DailyReminderPlannerTests.swift */,
+				F30ABEA84B32618DF4114B18 /* DatePersistenceTests.swift */,
+				F590FA8D26610B8D70BCDB95 /* FoodCatalogServiceTests.swift */,
 				A6EF3EBF6E51EFF7C6382A6E /* LogbookStoreTests.swift */,
+				E62C1FDE4B60758D70687470 /* SetupProgressTests.swift */,
+				AF202AC514F10AD63B66C593 /* TrainingPhaseTwoTests.swift */,
 			);
 			path = LogbookTests;
 			sourceTree = "<group>";
@@ -179,11 +250,11 @@
 			isa = PBXGroup;
 			children = (
 				E8CE13D89A079CB4A451FFB4 /* LogbookTests */,
+				DE6D279CB1AD4626935D30E2 /* LogbookUITests */,
 			);
 			path = Tests;
 			sourceTree = "<group>";
 		};
-		1A3333333333333333333333 /* Resources */ = {isa = PBXGroup; children = (1A2222222222222222222222 /* LogbookAssets.xcassets */, 1A2222222222222222222223 /* exercise-catalog.json */, 1A2222222222222222222224 /* food-catalog.json */, ); path = Resources; sourceTree = "<group>"; };
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -227,7 +298,7 @@
 			buildConfigurationList = C40AF4A55C9F8036AD8DF72A /* Build configuration list for PBXNativeTarget "Logbook" */;
 			buildPhases = (
 				4E02F5D04B39C010513237BF /* Sources */,
-				1A4444444444444444444444 /* Resources */,
+				3B8DC109072CC518BC5C8D69 /* Resources */,
 				A53C433B6F0A4F0B1C46C4FF /* Embed Foundation Extensions */,
 			);
 			buildRules = (
@@ -241,6 +312,24 @@
 			productName = Logbook;
 			productReference = 84FF955D7A0242DDC073D77D /* Logbook.app */;
 			productType = "com.apple.product-type.application";
+		};
+		975673D3FC02D508B2382E01 /* LogbookUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4358401031D8591E5BA03851 /* Build configuration list for PBXNativeTarget "LogbookUITests" */;
+			buildPhases = (
+				E57A6E77D7B9253655DB4BE7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				C34EA6111B59D6F71CB84B21 /* PBXTargetDependency */,
+			);
+			name = LogbookUITests;
+			packageProductDependencies = (
+			);
+			productName = LogbookUITests;
+			productReference = 6E049F4BAFA0ED6D4BC5D950 /* LogbookUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
 		};
 		ACD16791B3F7EC12B1AF3F87 /* LogbookWidgets */ = {
 			isa = PBXNativeTarget;
@@ -277,6 +366,10 @@
 					383D0B41E98F9DA91AA16B62 = {
 						ProvisioningStyle = Automatic;
 					};
+					975673D3FC02D508B2382E01 = {
+						ProvisioningStyle = Automatic;
+						TestTargetID = 383D0B41E98F9DA91AA16B62;
+					};
 					ACD16791B3F7EC12B1AF3F87 = {
 						ProvisioningStyle = Automatic;
 					};
@@ -300,18 +393,20 @@
 				ACD16791B3F7EC12B1AF3F87 /* LogbookWidgets */,
 				130EBC2ADEB90058429957C9 /* LogbookWatch */,
 				03352925B5C82C868A4D483E /* LogbookTests */,
+				975673D3FC02D508B2382E01 /* LogbookUITests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		1A4444444444444444444444 /* Resources */ = {
+		3B8DC109072CC518BC5C8D69 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				1A1111111111111111111111 /* LogbookAssets.xcassets in Resources */,
-				1A1111111111111111111112 /* exercise-catalog.json in Resources */,
-				1A1111111111111111111113 /* food-catalog.json in Resources */,
+				5D07A1BBC4D23A1BE3E9EDAB /* LogbookAssets.xcassets in Resources */,
+				A0005FA5EDE4368F3AE44D19 /* LogbookLaunch.mp4 in Resources */,
+				BB671AE3CAC4E608EEF14302 /* exercise-catalog.json in Resources */,
+				20B24920F5FA9573562FE42B /* food-catalog.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -334,12 +429,19 @@
 			files = (
 				480672D540A045E5A85A64EA /* CheckInHistorySettingsScreens.swift in Sources */,
 				9B874B7DD8F6F51B2B726701 /* CoreScreens.swift in Sources */,
+				105CA0CDA349572C788AFE05 /* DailyHomeMetrics.swift in Sources */,
+				81278095F25724614F2DD712 /* DefaultDailyWidgets.swift in Sources */,
+				ABAA50C44AD4DA88FFE9929E /* DefaultTrainingWidgets.swift in Sources */,
+				999D72BAE3708313556BD5EC /* FoodBarcodeScanner.swift in Sources */,
+				593B56EEEB677E405095123F /* FoodCatalogService.swift in Sources */,
+				2987EE7FEF93DB94D5484C54 /* FoodScreens.swift in Sources */,
 				2F8C337E96A17E091D3E56A7 /* HomeScreen.swift in Sources */,
+				20DC4A2FC0D3177E3E489C32 /* LaunchSplashView.swift in Sources */,
 				A4916B143D435336940EC253 /* LogbookApp.swift in Sources */,
-				41B99FC3478A4197B5648296 /* LaunchSplashView.swift in Sources */,
 				A4EC8E95B985BB2F7A46F723 /* LogbookModels.swift in Sources */,
 				581F74784C76530D1C80B371 /* LogbookStore.swift in Sources */,
 				5B85E9D4CDC93FBE6C426AFC /* ReminderService.swift in Sources */,
+				F30C207E6329A495AD612EE1 /* SetupScreen.swift in Sources */,
 				CC7E98ADB5CC37857127A5A7 /* SharedStateFile.swift in Sources */,
 				38FE7A3DF61D60752A88CB41 /* WatchBridge.swift in Sources */,
 				9063C04458A798D5F0FA6F25 /* WatchSnapshot.swift in Sources */,
@@ -352,7 +454,21 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				45BDB24A536EF266577C232D /* DailyReminderPlannerTests.swift in Sources */,
+				94CCB3DF441DF0CECEB0370B /* DatePersistenceTests.swift in Sources */,
+				0CFFE5AB0F62A386C2BE2456 /* FoodCatalogServiceTests.swift in Sources */,
 				03A53D4E466B32FD2E649287 /* LogbookStoreTests.swift in Sources */,
+				26B31FCB3DCC7DE97A455A9D /* SetupProgressTests.swift in Sources */,
+				F21A72E39A65111B431D7B7E /* TrainingPhaseTwoTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		E57A6E77D7B9253655DB4BE7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B4434459222B7AF959B71F5F /* DailyHomeUITests.swift in Sources */,
+				41B0EF3AC42EB83F088EEC51 /* RefinementUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,6 +491,11 @@
 			target = ACD16791B3F7EC12B1AF3F87 /* LogbookWidgets */;
 			targetProxy = EDDC9297DD5C36F802D2F263 /* PBXContainerItemProxy */;
 		};
+		C34EA6111B59D6F71CB84B21 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 383D0B41E98F9DA91AA16B62 /* Logbook */;
+			targetProxy = A35CAE597B1BB43F234AEAC6 /* PBXContainerItemProxy */;
+		};
 		C5F70A4122C525BDFBF0AF7B /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 383D0B41E98F9DA91AA16B62 /* Logbook */;
@@ -383,6 +504,24 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		0C85F687F5AF181F6E419305 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Logbook;
+			};
+			name = Release;
+		};
 		0C9B1F328A9CD500932FB7BF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -497,6 +636,24 @@
 				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
+		};
+		A58654D1C6CE79402B1B4FC3 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.example.logbook.uitests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Logbook;
+			};
+			name = Debug;
 		};
 		B13A5C6202ED8B429E198F2A /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -645,6 +802,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4358401031D8591E5BA03851 /* Build configuration list for PBXNativeTarget "LogbookUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A58654D1C6CE79402B1B4FC3 /* Debug */,
+				0C85F687F5AF181F6E419305 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
 		623221470DB21605DC50CD0A /* Build configuration list for PBXNativeTarget "LogbookWidgets" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
