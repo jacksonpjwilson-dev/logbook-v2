@@ -11,6 +11,7 @@ final class RefinementUITests: XCTestCase {
             for (index, id) in ids.enumerated() {
                 app.buttons["Settings tab"].tap()
                 app.buttons["settings-theme"].tap()
+                XCTAssertTrue(app.navigationBars["Theme Gallery"].waitForExistence(timeout: 5), "The visible theme row opens the gallery")
                 let preview = app.buttons["theme-preview-\(id)"]
                 for _ in 0..<12 {
                     if preview.exists && preview.isHittable { break }

@@ -1322,6 +1322,8 @@ struct SettingsScreen: View {
                         Image(store.state.home.theme.rawValue).resizable().scaledToFill().frame(width: 58, height: 44).clipShape(RoundedRectangle(cornerRadius: 10))
                         Image(systemName: "chevron.right").font(.caption.weight(.bold)).foregroundStyle(.tertiary)
                     }
+                    .frame(minHeight: 44)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("settings-theme")
