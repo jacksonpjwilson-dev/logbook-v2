@@ -201,15 +201,13 @@ private struct HomePageGrid: View {
     }
 
     private func gridBody(size: CGSize) -> some View {
-        // One scalar controls both axes: the eight cells are true squares.
-        // Constrain the grid by the safe vertical space first when needed,
-        // then center the two-column grid instead of stretching its rows.
-        let cellSide = max(1, min((size.width - gap) / 2, (size.height - gap * 3) / 4))
-        let gridWidth = cellSide * 2 + gap
-        let gridLeading = max(0, (size.width - gridWidth) / 2)
+        // November 27 approval: fill the inset width and fit four rows above
+        // the dock, allowing rectangular cells instead of extra side margins.
+        let cellWidth = max(1, (size.width - gap) / 2)
+        let cellHeight = max(1, (size.height - gap * 3) / 4)
         return ZStack(alignment: .topLeading) {
             ForEach(page.widgets) { widget in
-                widgetCell(widget, cellSide: cellSide, gridLeading: gridLeading)
+                widgetCell(widget, cellWidth: cellWidth, cellHeight: cellHeight)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -226,17 +224,17 @@ private struct HomePageGrid: View {
 
     private func widgetCell(
         _ widget: HomeWidget,
-        cellSide: CGFloat,
-        gridLeading: CGFloat
+        cellWidth: CGFloat,
+        cellHeight: CGFloat
     ) -> some View {
         let isSmall = widget.size == .small
         let isLarge = widget.size == .large
         let columns: CGFloat = isSmall ? 1 : 2
         let rows: CGFloat = isLarge ? 2 : 1
-        let width = cellSide * columns + gap * (columns - 1)
-        let height = cellSide * rows + gap * (rows - 1)
-        let originX = gridLeading + CGFloat(widget.column) * (cellSide + gap)
-        let originY = CGFloat(widget.row) * (cellSide + gap)
+        let width = cellWidth * columns + gap * (columns - 1)
+        let height = cellHeight * rows + gap * (rows - 1)
+        let originX = CGFloat(widget.column) * (cellWidth + gap)
+        let originY = CGFloat(widget.row) * (cellHeight + gap)
         let angle = (widget.row + widget.column).isMultiple(of: 2) ? -1.0 : 1.0
         let rotation = editing ? angle * (wigglePhase ? 0.6 : -0.6) : 0
 

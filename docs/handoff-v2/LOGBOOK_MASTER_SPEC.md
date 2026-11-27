@@ -27,6 +27,8 @@ After initial account sign-in/activation, the app must remain fully usable witho
 ## 2. Home design: mandatory exact layout contracts
 
 ### 2.1 Universal Home navigation
+
+**November 27, 2026 user override:** Allow rectangular cells to fill the available width with 12–16 point side insets. Keep the 2-column × 4-row grid, small 1×1 / medium 2×1 / large 2×2 footprints, four pages and fixed dock without vertical scrolling. This supersedes the square-cell geometry below; other layout/content requirements remain in force.
 - Four horizontally swipable pages in order **Daily**, **Training**, **Food**, **Progress & History**; visible page indicators/dots.
 - Fixed, floating five-icon **athlete** dock: **Training**, **Food**, **History**, **Sleep & Check-ins**, **Settings**. The dock is never a sixth Home page, and does not obstruct Home widgets. Icons, dimensions, labels, alignment, drop shadows, surface treatment and active states must match approved source art; do not choose new icons on convenience grounds.
 - Strict **2 columns × 4 rows** of square small-grid cells, **8 cells/page**, with consistent grid gap. Supported widgets: **small = 1×1 square**, **medium = 2×1 wide rectangle with same height as small**, **large = 2×2 square in grid coordinates**. Design illustrative dimensions recorded earlier: small ~176×176, medium ~360×176, large ~360×360 with ~8 unit gap. Treat these as **reference proportions**, not unconditional device-independent point sizes; derive actual sizes from safe width/height, respect dock/safe areas and match screenshot at target iPhones.

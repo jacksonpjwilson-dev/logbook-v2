@@ -21,8 +21,8 @@ If two approved requirements conflict or an essential visual source is missing, 
 - Work on a development branch. Do not change production configuration or merge to `main` without explicit approval.
 
 ## Visual constraints
-- Preserve four horizontally swipeable Home pages, in their approved order, and the fixed 2-column × 4-row square-cell grid.
-- Preserve small 1×1 square, medium 2×1, and large 2×2 sizing, no Home vertical scroll, and the five-icon athlete dock.
+- Preserve four horizontally swipeable Home pages, in their approved order, and the fixed 2-column × 4-row grid.
+- Preserve small 1×1, medium 2×1, and large 2×2 grid footprints, no Home vertical scroll, and the five-icon athlete dock. The November 27 user decision permits rectangular cells to fill the available width with 12–16 point side insets; it supersedes the earlier square-cell requirement.
 - Follow approved reference content and appearance. Concept images are not permission to change layout or widget content. Do not propagate themes until Default receives explicit visual approval.
 
 ## Verification and reporting
