@@ -192,8 +192,8 @@ private struct NutritionRemainingContent: View {
                     Spacer(minLength: compact ? 4 : 7)
 
                     HStack(alignment: .center, spacing: compact ? 6 : 9) {
-                        calorieRing(diameter: compact ? 69 : 83)
-                        VStack(spacing: compact ? 4 : 6) {
+                        calorieRing(diameter: min(116, max(60, geometry.size.width * 0.32)))
+                        VStack(spacing: compact ? 4 : 8) {
                             macroRow("Protein", symbol: "dumbbell.fill", consumed: totals.protein ?? 0, goal: goals.protein, color: palette.accentColor, iconColor: palette.accentColor, unit: "g", compact: compact)
                             macroRow("Carbs", symbol: "leaf.fill", consumed: totals.carbohydrates ?? 0, goal: goals.carbohydrates, color: Color(hex: "#426B8D"), iconColor: Color(hex: "#426B8D"), unit: "g", compact: compact)
                             macroRow("Fat", symbol: "drop.fill", consumed: totals.fat ?? 0, goal: goals.fat, color: Color(hex: "#A8C7E7"), iconColor: Color(hex: "#6D94BC"), unit: "g", compact: compact)
@@ -227,7 +227,7 @@ private struct NutritionRemainingContent: View {
                     .rotationEffect(.degrees(-90))
                 VStack(spacing: 0) {
                     Text(calorieGoal == nil ? "—" : caloriesRemaining.formatted())
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
+                        .font(.system(size: diameter * 0.19, weight: .semibold, design: .rounded))
                         .lineLimit(1)
                         .minimumScaleFactor(0.68)
                     Text("kcal left").font(.system(size: 7.5, weight: .medium))
@@ -252,10 +252,10 @@ private struct NutritionRemainingContent: View {
                 Image(systemName: symbol)
                     .font(.system(size: 8, weight: .semibold))
                     .foregroundStyle(iconColor)
-                Text(name).font(.system(size: compact ? 7.8 : 8.5, weight: .semibold))
+                Text(name).font(.system(size: compact ? 7.8 : 10, weight: .semibold))
                 Spacer(minLength: 1)
                 Text(goal.map { "\(Int(max(0, $0 - consumed))) left" } ?? "Set goal")
-                    .font(.system(size: compact ? 6.7 : 7.4, weight: .regular))
+                    .font(.system(size: compact ? 6.7 : 9, weight: .regular))
                     .lineLimit(1)
                     .minimumScaleFactor(0.58)
             }
@@ -268,7 +268,7 @@ private struct NutritionRemainingContent: View {
                     .foregroundStyle(palette.mutedColor)
             } else {
                 Text(goal.map { "\(Int(consumed))/\(Int($0)) \(unit)" } ?? "Set a \(name.lowercased()) goal")
-                    .font(.system(size: 6.8, weight: .regular))
+                    .font(.system(size: 8.5, weight: .regular))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .foregroundStyle(palette.mutedColor)
@@ -280,7 +280,7 @@ private struct NutritionRemainingContent: View {
                     Capsule().fill(color).frame(width: proxy.size.width * fraction)
                 }
             }
-            .frame(height: compact ? 3.5 : 4)
+            .frame(height: compact ? 3.5 : 5)
             .accessibilityLabel("\(name), \(Int(consumed)) of \(Int(goal ?? 0)) \(unit), \(Int(max(0, (goal ?? 0) - consumed))) remaining")
         }
     }

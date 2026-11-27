@@ -1409,7 +1409,6 @@ struct ThemeGalleryScreen: View {
                                         .scaledToFill()
                                         .frame(width: geometry.size.width, height: 116)
                                         .clipped()
-                                        .allowsHitTesting(false)
                                 }
                                 .frame(height: 116)
                                     .overlay(alignment: .bottomLeading) {
@@ -1425,10 +1424,10 @@ struct ThemeGalleryScreen: View {
                                 .padding(10).foregroundStyle(theme.palette.textColor)
                                 .background(theme.palette.surfaceColor.opacity(theme.palette.light ? 0.9 : 0.96))
                             }
+                            .contentShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                             .overlay(RoundedRectangle(cornerRadius: 18).stroke(theme.palette.accentColor.opacity(0.45), lineWidth: store.state.home.theme == theme ? 2 : 0.6))
                         }
-                        .contentShape(RoundedRectangle(cornerRadius: 18))
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("theme-preview-\(theme.rawValue)")
                         .accessibilityValue(store.state.home.theme == theme ? "Selected" : "")

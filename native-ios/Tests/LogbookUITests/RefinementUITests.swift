@@ -20,6 +20,8 @@ final class RefinementUITests: XCTestCase {
                 XCTAssertTrue(preview.waitForExistence(timeout: 3), id)
                 XCTAssertTrue(preview.isHittable, id)
                 preview.tap()
+                let closed = XCTNSPredicateExpectation(predicate: NSPredicate(format: "exists == false"), object: app.navigationBars["Theme Gallery"])
+                XCTAssertEqual(XCTWaiter.wait(for: [closed], timeout: 5), .completed, "Applying a preview closes the gallery")
                 XCTAssertTrue(app.staticTexts[titles[index]].waitForExistence(timeout: 3), "Selected theme must match the preview")
                 app.terminate()
                 app.launch()

@@ -3,6 +3,20 @@ import XCTest
 
 @MainActor
 final class SetupProgressTests: XCTestCase {
+    func testEveryThemePersistsWithoutChangingTheLayout() throws {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
+        defer { try? FileManager.default.removeItem(at: url) }
+        let repository = LogbookRepository(url: url)
+        let store = LogbookStore(repository: repository)
+        let pages = store.state.home.pages
+        for theme in LogbookTheme.allCases {
+            store.setTheme(theme)
+            let reloaded = LogbookStore(repository: repository)
+            XCTAssertEqual(reloaded.state.home.theme, theme)
+            XCTAssertEqual(reloaded.state.home.pages, pages)
+        }
+    }
+
     func testLegacyStateAndExistingPreferencesSurviveSetup() throws {
         var original = LogbookState.empty
         original.nutrition.targets = NutritionTargets(calories: 2100, protein: 135.5, carbohydrates: 240, fat: 70)
