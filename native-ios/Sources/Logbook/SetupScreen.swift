@@ -150,7 +150,7 @@ struct SetupScreen: View {
     private func saveProgress() { store.saveSetupProgress(draft) }
 
     private func advance() {
-        guard draft.validationMessage == nil else { error = draft.validationMessage; return }
+        if let message = draft.validationMessage(forStep: draft.step) { error = message; return }
         if draft.step < titles.count - 1 { changeStep(by: 1); return }
         store.completeSetup(draft)
         if store.persistenceError == nil { dismiss() }

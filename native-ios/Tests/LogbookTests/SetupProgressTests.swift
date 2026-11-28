@@ -3,6 +3,26 @@ import XCTest
 
 @MainActor
 final class SetupProgressTests: XCTestCase {
+    func testInvalidFutureFieldsDoNotBlockEarlierSetupNavigation() {
+        var progress = SetupProgress()
+        progress.calories = "-5"
+        progress.sleepHours = "invalid"
+        for step in [0, 1, 2, 4, 6, 7] {
+            XCTAssertNil(progress.validationMessage(forStep: step), "Earlier steps must remain navigable so invalid fields can be corrected")
+        }
+        XCTAssertNotNil(progress.validationMessage(forStep: 3))
+        progress.calories = "2200"
+        XCTAssertNil(progress.validationMessage(forStep: 3), "A later sleep error must not trap the user on nutrition")
+        XCTAssertNotNil(progress.validationMessage(forStep: 5))
+        XCTAssertNotNil(progress.validationMessage(forStep: 8), "Completion still validates all preferences")
+        progress.sleepHours = "8"
+        XCTAssertNil(progress.validationMessage(forStep: 5))
+        progress.waterMilliliters = "invalid"
+        XCTAssertNil(progress.validationMessage(forStep: 2))
+        XCTAssertNotNil(progress.validationMessage(forStep: 5))
+        XCTAssertNotNil(progress.validationMessage)
+    }
+
     func testEveryThemePersistsWithoutChangingTheLayout() throws {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString + ".json")
         defer { try? FileManager.default.removeItem(at: url) }

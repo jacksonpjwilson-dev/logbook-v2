@@ -954,13 +954,17 @@ struct SetupProgress: Codable, Equatable {
         return value
     }
 
-    var validationMessage: String? {
+    private var nutritionValidationMessage: String? {
         let fields = [("Calories", calories), ("Protein", protein), ("Carbohydrates", carbohydrates), ("Fat", fat)]
         for (title, value) in fields where !value.isEmpty {
             guard let number = Double(value), number.isFinite, number >= 0, number < Double(Int.max) else {
                 return "\(title) must be a positive number or left blank."
             }
         }
+        return nil
+    }
+
+    private var wellbeingValidationMessage: String? {
         guard let hours = Double(sleepHours), hours.isFinite, hours > 0, hours <= 24 else {
             return "Sleep should be between 0 and 24 hours."
         }
@@ -971,6 +975,20 @@ struct SetupProgress: Codable, Equatable {
         }
         return nil
     }
+
+    var validationMessage: String? {
+        nutritionValidationMessage ?? wellbeingValidationMessage
+    }
+
+    func validationMessage(forStep step: Int) -> String? {
+        switch step {
+        case 3: nutritionValidationMessage
+        case 5: wellbeingValidationMessage
+        case 8: validationMessage
+        default: nil
+        }
+    }
+
 }
 
 struct LogbookState: Codable {
