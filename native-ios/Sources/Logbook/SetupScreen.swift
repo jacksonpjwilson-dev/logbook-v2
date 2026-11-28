@@ -49,7 +49,6 @@ struct SetupScreen: View {
                 }
             }
             .sheet(isPresented: $showThemes) { ThemeGalleryScreen() }
-            .onChange(of: draft) { _, _ in saveProgress() }
         }
         .interactiveDismissDisabled()
         .tint(store.state.home.theme.palette.accentColor)
@@ -71,38 +70,38 @@ struct SetupScreen: View {
             }
         case 2:
             Section("Personal profile") {
-                TextField("Preferred name", text: $draft.name).textContentType(.givenName)
-                Picker("Fitness objective", selection: $draft.objective) {
+                TextField("Preferred name", text: persisted(\.name)).textContentType(.givenName)
+                Picker("Fitness objective", selection: persisted(\.objective)) {
                     ForEach(["General fitness", "Build strength", "Build muscle", "Improve endurance", "Manage weight"], id: \.self) { Text($0) }
                 }
             }
         case 3:
             Section("Your daily targets") {
                 Text("Enter your own targets. Leave any target blank to keep it unset.")
-                target("Calories (kcal)", text: $draft.calories)
-                target("Protein (g)", text: $draft.protein)
-                target("Carbohydrates (g)", text: $draft.carbohydrates)
-                target("Fat (g)", text: $draft.fat)
+                target("Calories (kcal)", text: persisted(\.calories))
+                target("Protein (g)", text: persisted(\.protein))
+                target("Carbohydrates (g)", text: persisted(\.carbohydrates))
+                target("Fat (g)", text: persisted(\.fat))
             }
         case 4:
             Section("Training preferences") {
-                Picker("Approach", selection: $draft.trainingPreference) {
+                Picker("Approach", selection: persisted(\.trainingPreference)) {
                     ForEach(["Flexible", "Strength", "Hypertrophy", "Endurance"], id: \.self) { Text($0) }
                 }
-                TextField("Optional first workout name", text: $draft.workoutName)
+                TextField("Optional first workout name", text: persisted(\.workoutName))
                 Text("Your workout will be added to your active program.")
                 NavigationLink("Configure workout split", destination: TrainingScreen())
                 Text("Workouts edited here are saved immediately in Training.")
             }
         case 5:
             Section("Daily wellbeing") {
-                target("Sleep goal (hours)", text: $draft.sleepHours)
-                target("Hydration goal (mL)", text: $draft.waterMilliliters)
-                Picker("Weight unit", selection: $draft.weightUnit) {
+                target("Sleep goal (hours)", text: persisted(\.sleepHours))
+                target("Hydration goal (mL)", text: persisted(\.waterMilliliters))
+                Picker("Weight unit", selection: persisted(\.weightUnit)) {
                     Text("Kilograms").tag("kg")
                     Text("Pounds").tag("lb")
                 }
-                TextField("Optional daily supplement", text: $draft.supplementName)
+                TextField("Optional daily supplement", text: persisted(\.supplementName))
                 Text("Existing measurements, sleep records and supplement schedules are preserved.")
             }
         case 6:
@@ -136,6 +135,16 @@ struct SetupScreen: View {
     private func changeStep(by amount: Int) {
         error = nil
         draft.step = max(0, min(titles.count - 1, draft.step + amount))
+        saveProgress()
+    }
+
+    // Persist inside the edit binding: a later render callback can be lost
+    // when the process exits immediately after the final keystroke.
+    private func persisted<Value>(_ keyPath: WritableKeyPath<SetupProgress, Value>) -> Binding<Value> {
+        Binding(get: { draft[keyPath: keyPath] }, set: { value in
+            draft[keyPath: keyPath] = value
+            saveProgress()
+        })
     }
 
     private func saveProgress() { store.saveSetupProgress(draft) }

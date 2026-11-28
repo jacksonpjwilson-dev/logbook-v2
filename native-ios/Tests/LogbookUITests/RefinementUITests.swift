@@ -51,6 +51,7 @@ final class RefinementUITests: XCTestCase {
         app.buttons["setup-continue"].tap()
         app.textFields["Preferred name"].tap()
         app.textFields["Preferred name"].typeText("Synthetic athlete")
+        XCTAssertEqual(app.textFields["Preferred name"].value as? String, "Synthetic athlete", "All input must reach the field before interruption")
         app.terminate()
         app.launch()
         XCTAssertTrue(app.navigationBars["About you"].waitForExistence(timeout: 10))
